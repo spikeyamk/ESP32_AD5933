@@ -1,0 +1,3 @@
+[submodule "main/trielo"]
+	path = main/trielo
+	url = https://github.com/spikeyamk/trielo
