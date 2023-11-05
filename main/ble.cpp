@@ -2,6 +2,7 @@
 #include <thread>
 #include <chrono>
 #include <cstring>
+#include <memory>
 
 #include "nvs_flash.h"
 #include "nimble/nimble_port.h"
@@ -14,6 +15,7 @@
 
 #include "ble.hpp"
 #include "trielo/trielo.hpp"
+#include "ad5933.hpp"
 
 namespace NimBLE {
     #define APPEARANCE_GENERIC_SENSOR_UUID 0x0540
@@ -68,10 +70,12 @@ namespace NimBLE {
     }
 
     void heartbeat_cb(void *arg) {
-        const char hello_world[] = "hello_world!";
+        char write_buffer[20];
         struct os_mbuf *txom;
         while(1) {
-            txom = ble_hs_mbuf_from_flat(hello_world, sizeof(hello_world));
+            const float temperature = AD5933_Tests::ad5933.load()->measure_temperature().value_or(0xFFFF'FFFF);
+            std::sprintf(write_buffer, "%f °C", temperature);
+            txom = ble_hs_mbuf_from_flat(write_buffer, sizeof(write_buffer));
             Trielo::trielo<&ble_gatts_indicate_custom>(Trielo::OkErrCode(0), conn_handle, body_composition_measurement_characteristic_handle, txom);
             std::this_thread::sleep_for(std::chrono::seconds(1));
         } 
