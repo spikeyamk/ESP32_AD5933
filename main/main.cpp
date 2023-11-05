@@ -17,6 +17,9 @@ extern "C" void app_main() {
 	i2c_bus.scan();
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 
+	auto ds3231 = run_ds3231(i2c_bus);
+	std::this_thread::sleep_for(std::chrono::seconds(1));
+
 	AD5933_Tests::init_ad5933(i2c_bus);
 
 	NimBLE::run();
