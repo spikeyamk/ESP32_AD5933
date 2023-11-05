@@ -1,4 +1,6 @@
 #include <iostream>
+#include <thread>
+#include <chrono>
 #include <cstring>
 
 #include "nvs_flash.h"
@@ -12,7 +14,6 @@
 
 #include "ble.hpp"
 #include "trielo/trielo.hpp"
-#include "util.hpp"
 
 namespace NimBLE {
     #define APPEARANCE_GENERIC_SENSOR_UUID 0x0540
@@ -72,7 +73,7 @@ namespace NimBLE {
         while(1) {
             txom = ble_hs_mbuf_from_flat(hello_world, sizeof(hello_world));
             Trielo::trielo<&ble_gatts_indicate_custom>(Trielo::OkErrCode(0), conn_handle, body_composition_measurement_characteristic_handle, txom);
-            Util::sleep_ms(3000);
+            std::this_thread::sleep_for(std::chrono::seconds(1));
         } 
     }
 
