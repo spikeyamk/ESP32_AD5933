@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+#include <bitset>
 #include <optional>
 #include <vector>
 #include <array>
@@ -8,6 +10,8 @@
 #include <thread>
 #include <functional>
 #include <memory>
+#include <cassert>
+#include <cmath>
 
 #include "util.hpp"
 #include "trielo/trielo.hpp"
@@ -29,6 +33,72 @@ public:
 
 	class RegisterAddrs {
 	public:
+		/* Upon powerup default ad5933->dump_all_registers():
+		 * AD5933: Register[0x80]: CONTROL_HB: '0xA0'
+		 * AD5933: Register[0x81]: CONTROL_LB: '0x00'
+		 * AD5933: Register[0x82]: FREQ_START_HB: '0xFD'
+		 * AD5933: Register[0x83]: FREQ_START_MB: '0xD7'
+		 * AD5933: Register[0x84]: FREQ_START_LB: '0xED'
+		 * AD5933: Register[0x85]: FREQ_INC_HB: '0xBF'
+		 * AD5933: Register[0x86]: FREQ_INC_MB: '0xB7'
+		 * AD5933: Register[0x87]: FREQ_INC_LB: '0xFC'
+		 * AD5933: Register[0x88]: INC_NUM_HB: '0x01'
+		 * AD5933: Register[0x89]: INC_NUM_LB: '0xF7'
+		 * AD5933: Register[0x8A]: SETTLING_CYCLES_HB: '0x07'
+		 * AD5933: Register[0x8B]: SETTLING_CYCLES_LB: '0xEB'
+		 * AD5933: Register[0x8F]: STATUS: '0x70'
+		 * AD5933: Register[0x92]: TEMP_DATA_HB: '0x00'
+		 * AD5933: Register[0x93]: TEMP_DATA_LB: '0x00'
+		 * AD5933: Register[0x94]: REAL_DATA_HB: '0x7F'
+		 * AD5933: Register[0x95]: REAL_DATA_LB: '0xEF'
+		 * AD5933: Register[0x96]: IMAG_DATA_HB: '0xFD'
+		 * AD5933: Register[0x97]: IMAG_DATA_HB: '0xBF'
+		 */
+
+		/* Read/Write registers initial default state upon powerup:
+		 * AD5933: Register[0x80]: CONTROL_HB: '0xA0': '0b1010'0000'
+		       ControlHB::Commands::POWER_DOWN_MODE: '0b1010'
+		       ControlHB::OutputExcitationVoltageRange::TWO_VOLT_PPK: '0b00'
+			   ControlHB::PGA_Gain::FiveTimes: '0b1'
+
+		 * AD5933: Register[0x81]: CONTROL_LB: '0x00'
+		       ControlLB::SYSCLK::INT_SYSCLK: '0b0'
+		       ControlLB::RESET: '0b0'
+
+		 * AD5933: Register[0x82]: FREQ_START_HB: '0xFD'
+		 * AD5933: Register[0x83]: FREQ_START_MB: '0xD7'
+		 * AD5933: Register[0x84]: FREQ_START_LB: '0xED'
+		 *     FREQ_START == around 516'456 Hz
+		 * 
+		 * AD5933: Register[0x85]: FREQ_INC_HB: '0xBF'
+		 * AD5933: Register[0x86]: FREQ_INC_MB: '0xB7'
+		 * AD5933: Register[0x87]: FREQ_INC_LB: '0xFC'
+		 *     FREQ_INC == around 390'060 Hz
+		 * 
+		 * AD5933: Register[0x88]: INC_NUM_HB: '0x01'
+		 * AD5933: Register[0x89]: INC_NUM_LB: '0xF7'
+		 *     INC_NUM == 503 times
+		 * 
+		 * AD5933: Register[0x8A]: SETTLING_CYCLES_HB: '0x07'
+		 *     SettlingCyclesHB::Multiplier::FOUR_TIMES: '0b11'
+		 * AD5933: Register[0x8B]: SETTLING_CYCLES_LB: '0xEB'
+		 *     Settling Cycles == 491 times
+		 * 
+		 * Special STATUS register initial default state upon powerup:
+		 * AD5933: Register[0x8F]: STATUS: '0x70'
+		 *     TEMP_DATA_VALID == 0b0 == false
+		 *     REAL_DATA_VALID == 0b0 == false
+		 *     IMAG_DATA_VALID == 0b0 == false
+		 * 
+		 * Read-only registers initial default state upon powerup:
+		 * AD5933: Register[0x92]: TEMP_DATA_HB: '0x00'
+		 * AD5933: Register[0x93]: TEMP_DATA_LB: '0x00'
+		 * AD5933: Register[0x94]: REAL_DATA_HB: '0x7F'
+		 * AD5933: Register[0x95]: REAL_DATA_LB: '0xEF'
+		 * AD5933: Register[0x96]: IMAG_DATA_HB: '0xFD'
+		 * AD5933: Register[0x97]: IMAG_DATA_HB: '0xBF'
+		 */
+
 		/* Read/Write Register addresses */
 		static constexpr RegisterAddr_RW CONTROL_HB			{ 0x80 };
 		static constexpr RegisterAddr_RW CONTROL_LB		    { 0x81 }; // Done
@@ -164,7 +234,8 @@ public:
 		};
 	};
 
-	enum class ControlLB {
+	class ControlLB {
+	public:
 		/* D7 Reserved; set to 0
 		 * D6 Reserved; set to 0
 		 * D5 Reserved; set to 0
@@ -174,15 +245,16 @@ public:
 		 * D2 Reserved; set to 0
 		 * D1 Reserved; set to 0
 		 * D0 Reserved; set to 0 */
-		RESET      = (0x1 << 4),
-		INT_SYSCLK = (0x0 << 3),
-		EXT_SYSCLK = (0x1 << 3)
+		enum class Command {
+			RESET      = (0x1 << 4)
+		};
+
+		enum class SYSCLK_SRC {
+			INT_SYSCLK = (0x0 << 3),
+			EXT_SYSCLK = (0x1 << 3)
+		};
 	};
 
-	enum class SYSCLK_SRC {
-		INT_SYSCLK = (0x0 << 3),
-		EXT_SYSCLK = (0x1 << 3)
-	};
 
 	class SettlingCyclesHB {
 	public:
@@ -191,6 +263,7 @@ public:
 			TWO_TIMES  = ( 0b01 << 1),
 			FOUR_TIMES = ( 0b11 << 1),
 		};
+
 	};
 
 	enum class Status {
@@ -237,6 +310,7 @@ public:
 	}
 
 	void dump_all_registers() const override {
+		std::printf("\nAD5933: Dumping all registers\n");
 		const auto rw_ret = block_read_register(
 			AD5933::RegisterAddrs::CONTROL_HB,
 			AD5933::RegisterAddrs::SETTLING_CYCLES_LB.unwrap() - AD5933::RegisterAddrs::CONTROL_HB.unwrap() + 1
@@ -259,6 +333,7 @@ public:
 				std::printf("AD5933: Register[0x%02X]: 0x%02X\n", AD5933::RegisterAddrs::TEMP_DATA_HB.unwrap() + i, ro_ret.value()[i]);
 			}
 		}
+		std::printf("\n");
 	}
 
 	template<typename T_Collection>
@@ -384,7 +459,7 @@ public:
 		
 		const uint8_t reset_command = (
 			control_lb_state_before_reset.value()
-			| static_cast<uint8_t>(AD5933::ControlLB::RESET)
+			| static_cast<uint8_t>(AD5933::ControlLB::Command::RESET)
 		);
 		write_to_register_wo_check(RegisterAddrs::CONTROL_LB, reset_command);
 
@@ -413,7 +488,7 @@ public:
 		return true;
 	}
 
-	bool set_sysclk(const SYSCLK_SRC clk_src) {
+	bool set_sysclk_src(const ControlLB::SYSCLK_SRC clk_src) {
 		const std::optional<uint8_t> control_lb_state_before_set_sysclk { read_register(RegisterAddrs::CONTROL_LB).value() };
 		if(control_lb_state_before_set_sysclk.has_value() == false) {
 			std::printf("AD5933: Reset: Failed to read the CONTROL_LB register\n");
@@ -425,14 +500,14 @@ public:
 			default:
 				sysclk_message = (
 					(control_lb_state_before_set_sysclk.value() & 0b1111'01111)
-					| static_cast<uint8_t>(ControlLB::INT_SYSCLK)
+					| static_cast<uint8_t>(ControlLB::SYSCLK_SRC::INT_SYSCLK)
 				);
 				active_sysclk_freq = static_cast<uint32_t>(Specifications::INTERNAL_SYS_CLK);
 				break;
-			case static_cast<uint8_t>(SYSCLK_SRC::EXT_SYSCLK):
+			case static_cast<uint8_t>(ControlLB::SYSCLK_SRC::EXT_SYSCLK):
 				sysclk_message = (
 					(control_lb_state_before_set_sysclk.value() & 0b1111'01111)
-					| static_cast<uint8_t>(ControlLB::EXT_SYSCLK)
+					| static_cast<uint8_t>(ControlLB::SYSCLK_SRC::EXT_SYSCLK)
 				);
 				active_sysclk_freq = static_cast<uint32_t>(Specifications::EXTERNAL_SYS_CLK);
 				break;
@@ -578,7 +653,36 @@ public:
 		}
 	}
 
+	std::optional<uint32_t> convert_binary_coded_frequency_message_to_frequency(const std::array<uint8_t, 3> binary_coded_frequency_message) { 
+		const uint32_t binary_coded_frequency = (
+		    (static_cast<uint32_t>(binary_coded_frequency_message[0]) << (2 * 8)) |
+		    (static_cast<uint32_t>(binary_coded_frequency_message[1]) << (1 * 8)) |
+		    (static_cast<uint32_t>(binary_coded_frequency_message[2]) << (0 * 8))
+		);
+
+		const uint32_t twenty_four_bit_max_number = 0xFFFFFF;
+		if(binary_coded_frequency > twenty_four_bit_max_number) {
+			std::printf("AD5933: Overflow: Failed to convert binary coded frequency message to frequency from: 0x%02X%02X%02X\n", 
+				binary_coded_frequency_message[0],
+				binary_coded_frequency_message[1],
+				binary_coded_frequency_message[2]
+			);
+			return std::nullopt;
+		}
+		uint32_t frequency = static_cast<uint32_t>(
+			(
+				(static_cast<double>(binary_coded_frequency) / 4.00f) *
+				static_cast<double>(active_sysclk_freq)
+			) / static_cast<double>(pow_2_27)
+		);
+		return std::optional<uint32_t> { frequency };
+	}
+
 	bool set_freq(const RegisterAddr_RW freq_register, const uint32_t freq) {
+		assert(
+			(freq_register == RegisterAddrs::FREQ_START_HB) ||
+			(freq_register == RegisterAddrs::FREQ_INC_HB)
+		);
 		const std::optional<std::array<uint8_t, 3>> frequency_message = convert_frequency_to_binary_coded_frequency_message(freq);
 		if(frequency_message.has_value() == false) {
 			std::printf("AD5933: Failed to set frequency to: %lu\n", freq);
@@ -694,7 +798,7 @@ public:
 		return true;
 	}
 
-	bool set_settling_time_cycles(const uint16_t cycles_num) {
+	bool set_settling_time_cycles_number(const uint16_t cycles_num) {
 		if(cycles_num > static_cast<uint16_t>(Specifications::MAX_CYCLES_NUM)) {
 			std::printf("AD5933: Overflow: Failed to set the settling time cycles number to: %u\n", cycles_num);
 			std::printf("AD5933: Maximum settling time cycles number: %u\n", static_cast<uint16_t>(Specifications::MAX_CYCLES_NUM));
@@ -772,10 +876,167 @@ public:
 		}
 	}
 
+	std::optional<SettlingCyclesHB::Multiplier> read_settling_time_cycles_multiplier() {
+		const std::optional<uint8_t> settling_cycles_HB_state = read_register(RegisterAddrs::SETTLING_CYCLES_HB);
+		if(settling_cycles_HB_state.has_value() == false) {
+			std::printf("AD5933: Failed to read the settling cycles multiplier: Failed to read the SETTLING_CYCLES_HB register\n");
+			return std::nullopt;
+		}
+
+		const uint8_t settling_cycles_multiplier_bits = (settling_cycles_HB_state.value() && 0b0000'0110);
+		switch(settling_cycles_multiplier_bits) {
+			default:
+				return AD5933::SettlingCyclesHB::Multiplier::ONE_TIME;
+			case static_cast<uint8_t>(AD5933::SettlingCyclesHB::Multiplier::TWO_TIMES):
+				return AD5933::SettlingCyclesHB::Multiplier::TWO_TIMES;
+			case static_cast<uint8_t>(AD5933::SettlingCyclesHB::Multiplier::FOUR_TIMES):
+				return AD5933::SettlingCyclesHB::Multiplier::FOUR_TIMES;
+		}
+	}
+
+	std::optional<uint16_t> read_settling_time_cycles() {
+		const size_t HB_index = 0;
+		const size_t LB_index = 1;
+		const std::optional<std::vector<uint8_t>> settling_cycles_HB_LB_state = block_read_register(RegisterAddrs::SETTLING_CYCLES_HB, 2);
+		if(settling_cycles_HB_LB_state.has_value() == false) {
+			std::printf("AD5933: Failed to read the settling cycles multiplier:\n\tAD5933: Failed to read the SETTLING_CYCLES_HB and SETTLING_CYCLES_LB registers\n");
+			return std::nullopt;
+		}
+
+		const uint16_t settling_time_cycles = (
+			(settling_cycles_HB_LB_state.value()[LB_index]) |
+			((settling_cycles_HB_LB_state.value()[HB_index] & 0b0000'0001) << (1 * 8))
+		);
+		return std::optional { settling_time_cycles };
+	}
+
+	std::optional<uint16_t> read_inc_num() {
+		const size_t HB_index = 0;
+		const size_t LB_index = 1;
+		const std::optional<std::vector<uint8_t>> inc_num_HB_LB_state = block_read_register(RegisterAddrs::INC_NUM_HB, 2);
+		if(inc_num_HB_LB_state.has_value() == false) {
+			std::printf("AD5933: Failed to read the Frequency increment number:\n\tAD5933: Failed to read the INC_NUM_HB and INC_NUM_HB registers\n");
+			return std::nullopt;
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+		const uint16_t inc_num = (
+			(inc_num_HB_LB_state.value()[LB_index]) |
+			((inc_num_HB_LB_state.value()[HB_index] & 0b0000'0001) << (1 * 8))
+		);
+		return std::optional<uint16_t> { inc_num };
+	}
+
+	std::optional<ControlLB::SYSCLK_SRC> read_sysclk_src() {
+		const std::optional<uint8_t> control_LB_state = read_register(RegisterAddrs::CONTROL_LB);
+		if(control_LB_state.has_value() == false) {
+			std::printf("AD5933: Failed to read the SYSCLK_SRC by reading the CONTROL_LB register\n");
+			return std::nullopt;
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+		const uint8_t sysclk_src_bit = control_LB_state.value() & 0b0000'1000;
+		return std::optional<ControlLB::SYSCLK_SRC> { ControlLB::SYSCLK_SRC { sysclk_src_bit } };
+	}
+
+	std::optional<ControlHB::OutputExcitationVoltageRange> read_output_excitation_voltage_range() {
+		const std::optional<uint8_t> control_HB_state = read_register(RegisterAddrs::CONTROL_HB);
+		if(control_HB_state.has_value() == false) {
+			std::printf("AD5933: Failed to read the Output Excitation Voltage Range by reading the CONTROL_HB register\n");
+			return std::nullopt;
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+		const uint8_t output_excitation_voltage_range_bits = control_HB_state.value() & 0b0000'0110;
+		return std::optional<ControlHB::OutputExcitationVoltageRange> {
+			ControlHB::OutputExcitationVoltageRange { output_excitation_voltage_range_bits }
+		};
+	}
+
+	std::optional<ControlHB::PGA_Gain> read_pga_gain() {
+		const std::optional<uint8_t> control_HB_state = read_register(RegisterAddrs::CONTROL_HB);
+		if(control_HB_state.has_value() == false) {
+			std::printf("AD5933: Failed to read the PGA Gain by reading the CONTROL_HB register\n");
+			return std::nullopt;
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+		const uint8_t pga_gain_bits = control_HB_state.value() & 0b0000'0001;
+		return std::optional<ControlHB::PGA_Gain> { ControlHB::PGA_Gain { pga_gain_bits } };
+	}	
+
+	std::optional<uint32_t> read_frequency(const RegisterAddr_RW freq_register) {
+		assert(
+			(freq_register == RegisterAddrs::FREQ_START_HB) ||
+			(freq_register == RegisterAddrs::FREQ_INC_HB)
+		);
+
+		const auto freq_register_HB_MB_LB_state = block_read_register(freq_register, 3);
+		if(freq_register_HB_MB_LB_state.has_value() == false) {
+			std::printf("AD5933: Failed to read frequency by reading: %s registers\n", freq_register == RegisterAddrs::FREQ_START_HB ? "FREQ_START_HB_MB_LB": "FREQ_INC_HB_MB_LB");
+			return std::nullopt;
+		}
+
+		const auto frequency = convert_binary_coded_frequency_message_to_frequency( 
+			std::array<uint8_t, 3> { 
+				freq_register_HB_MB_LB_state.value()[0],
+				freq_register_HB_MB_LB_state.value()[1],
+				freq_register_HB_MB_LB_state.value()[2]
+			}
+		);
+
+		if(frequency.has_value() == false) {
+			std::printf("AD5933: Failed to read frequency: Failed to convert binary coded frequency message to frequency\n");
+			return std::nullopt;
+		}
+
+		return frequency;
+	}
+
+	std::optional<std::array<int16_t, 2>> read_impedance_data() {
+		const auto real_HB_LB_imag_HB_LB_state = block_read_register(AD5933::RegisterAddrs::REAL_DATA_HB, 4);
+		if(real_HB_LB_imag_HB_LB_state.has_value() == false) {
+			std::printf("AD5933: Failed to read the impedance data\n");
+			return std::nullopt;
+		}
+		const int16_t real_value = (
+			(static_cast<int16_t>(real_HB_LB_imag_HB_LB_state.value()[0]) << (1 * 8)) |
+			(static_cast<int16_t>(real_HB_LB_imag_HB_LB_state.value()[1]) << (0 * 8))
+		);
+
+		const int16_t imag_value = (
+			(static_cast<int16_t>(real_HB_LB_imag_HB_LB_state.value()[3]) << (1 * 8)) |
+			(static_cast<int16_t>(real_HB_LB_imag_HB_LB_state.value()[4]) << (0 * 8))
+		);
+		return std::optional<std::array<int16_t, 2>> { std::array<int16_t, 2> { real_value, imag_value } };
+	}
+
+	inline double calculate_magnitude(const std::array<int16_t, 2> &impedance_data) {
+		return sqrt(  static_cast<double>( ((impedance_data[0] * impedance_data[0]) + (impedance_data[1] * impedance_data[1])) )  );
+	}
+
+	inline double calculate_gain_factor(const double calibration_impedance, const double magnitude) {
+		const double admittance = 1.0f / calibration_impedance;
+		return admittance / magnitude;
+	}
+
+	inline double calculate_impedance(const double magnitude, const double gain_factor) {
+		const double gain_factor_multiplied_by_magnitude = gain_factor * magnitude;
+		const double result = 1.00f / gain_factor_multiplied_by_magnitude;
+		return result;
+	}
+
+	inline double calculate_phase(const std::array<int16_t, 2> &impedance_data) {
+		const double imag_divided_by_real = static_cast<double>(impedance_data[1]) / static_cast<double>(impedance_data[0]);
+		return atanf(imag_divided_by_real);
+	}
 };
 
 namespace AD5933_Tests {
 	bool run_test_read_write_registers(AD5933 &ad5933);
 	extern std::atomic<std::shared_ptr<AD5933>> ad5933;
 	void init_ad5933(I2CBus &i2c_bus);
+	bool manual_config();
+	bool test_auto_config();
+	bool impedance_try();
 }
