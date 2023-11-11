@@ -9,9 +9,9 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif()
 
 set(TRIELO_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/trielo)
-set(SDL2_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/SDL2-2.28.5)
-set(IMGUI_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/imgui-1.89.9)
-set(IMPLOT_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/implot-master)
+set(SDL2_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/SDL2)
+set(IMGUI_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/imgui)
+set(IMPLOT_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/implot)
 
 add_subdirectory(${TRIELO_DIR})
 add_subdirectory(${SDL2_DIR})
