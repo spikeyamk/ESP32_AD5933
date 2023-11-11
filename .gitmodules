@@ -1,3 +1,9 @@
 [submodule "main/trielo"]
 	path = main/trielo
 	url = https://github.com/spikeyamk/trielo
+[submodule "misc/imgui_sdl2/lib/trielo"]
+	path = misc/imgui_sdl2/lib/trielo
+	url = https://www.github.com/spikeyamk/trielo
+[submodule "misc/imgui_sdl2/lib/implot"]
+	path = misc/imgui_sdl2/lib/implot
+	url = https://github.com/epezent/implot
