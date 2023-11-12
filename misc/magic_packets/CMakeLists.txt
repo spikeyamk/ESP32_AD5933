@@ -12,6 +12,6 @@ add_library(magic_packets STATIC
 	lib/magic_packets.cpp
 	)
 
-target_include_directories(main PRIVATE
+target_include_directories(magic_packets PRIVATE
 	${CMAKE_CURRENT_LIST_DIR}/include
 	)
