@@ -16,3 +16,6 @@
 [submodule "misc/imgui_sdl2/lib/SimpleBLE"]
 	path = misc/imgui_sdl2/lib/SimpleBLE
 	url = https://github.com/OpenBluetoothToolbox/SimpleBLE
+[submodule "misc/magic_packets/urazr"]
+	path = misc/magic_packets/urazr
+	url = https://www.github.com/spikeyamk/urazr
