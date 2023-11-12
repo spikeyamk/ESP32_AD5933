@@ -9,14 +9,18 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif()
 
 set(TRIELO_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/trielo)
+set(SIMPLEBLE_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/SimpleBLE/simpleble)
 set(SDL2_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/SDL2)
 set(IMGUI_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/imgui)
 set(IMPLOT_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/implot)
 
 add_subdirectory(${TRIELO_DIR})
+add_subdirectory(${SIMPLEBLE_DIR})
 add_subdirectory(${SDL2_DIR})
 
 add_executable(main main.cpp
+	lib/ad5933_config.cpp
+	lib/ble.cpp
 	lib/dark_mode_switcher.cpp
 	lib/imgui_sdl.cpp
 	${IMGUI_DIR}/backends/imgui_impl_sdl2.cpp
@@ -33,6 +37,7 @@ add_executable(main main.cpp
 target_include_directories(main PRIVATE
 	${CMAKE_CURRENT_LIST_DIR}/include
 	${TRIELO_DIR}/include
+	${SIMPLEBLE_DIR}/include
 	${SDL2_DIR}/include
 	${IMGUI_DIR}
 	${IMPLOT_DIR}
@@ -40,6 +45,7 @@ target_include_directories(main PRIVATE
 
 target_link_libraries(main PRIVATE
 	trielo
+	simpleble::simpleble
 	SDL2::SDL2main
 	SDL2::SDL2-static
 	windowsapp

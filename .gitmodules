@@ -13,3 +13,6 @@
 [submodule "misc/imgui_sdl2/lib/SDL2"]
 	path = misc/imgui_sdl2/lib/SDL2
 	url = https://github.com/libsdl-org/SDL
+[submodule "misc/imgui_sdl2/lib/SimpleBLE"]
+	path = misc/imgui_sdl2/lib/SimpleBLE
+	url = https://github.com/OpenBluetoothToolbox/SimpleBLE

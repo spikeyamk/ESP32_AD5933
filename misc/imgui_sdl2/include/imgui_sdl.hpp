@@ -1,3 +1,7 @@
 #pragma once
 
-void imgui_sdl_thread_loop();
+#include "ble.hpp"
+
+namespace ImGuiSDL {
+    void loop();
+}
