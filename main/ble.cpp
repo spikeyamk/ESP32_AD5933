@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstring>
 #include <memory>
+#include <atomic>
 
 #include "nvs_flash.h"
 #include "nimble/nimble_port.h"
@@ -36,7 +37,8 @@ namespace NimBLE {
     static uint16_t conn_handle;
     static uint16_t body_composition_feature_characteristic_handle;
     static uint16_t body_composition_measurement_characteristic_handle;
-    static uint8_t notify_state;
+    std::atomic<bool> heartbeat_running = false;
+    std::optional<std::thread> heartbeat_thread = std::nullopt;
 
     static char characteristic_received_value[500];
     
@@ -56,7 +58,6 @@ namespace NimBLE {
     void stopBLE() {//! Call this function to stop BLE 
         //! Below is the sequence of APIs to be called to disable/deinit NimBLE host and ESP controller:
         printf("\n Stoping BLE and notification task \n");
-        // vTaskDelete(xHandle);
         int ret = nimble_port_stop();
         if(ret == 0) {
             nimble_port_deinit();
@@ -69,33 +70,27 @@ namespace NimBLE {
         }
     }
 
-    void heartbeat_cb(void *arg) {
+    void heartbeat_cb() {
         char write_buffer[20];
         struct os_mbuf *txom;
-        while(1) {
+        while(heartbeat_running) {
+            std::printf("From heartbeat callback\n");
             const float temperature = AD5933_Tests::ad5933.load()->measure_temperature().value_or(0xFFFF'FFFF);
             std::sprintf(write_buffer, "%f °C", temperature);
+            std::printf("Heartbeat callback: write_buffer: %s\n", write_buffer);
             txom = ble_hs_mbuf_from_flat(write_buffer, sizeof(write_buffer));
             Trielo::trielo<&ble_gatts_indicate_custom>(Trielo::OkErrCode(0), conn_handle, body_composition_measurement_characteristic_handle, txom);
             std::this_thread::sleep_for(std::chrono::seconds(1));
         } 
     }
 
-    static TaskHandle_t heartbeat_task_handle = nullptr;
-
 	void create_heartbeat_task() {
-		const uint32_t STACK_SIZE = 2*1024;
-		const uint32_t priority = 1;
-
-		/* Create the task, storing the handle. */
-		xTaskCreate(
-			heartbeat_cb, /* Function that implements the task. */
-			"heartbeat_task", /* Text name for the task. */
-			STACK_SIZE,       /* Stack size in words, not bytes. */
-			nullptr,        /* Parameter passed into the task. */
-			priority, /* Priority at which the task is created. */
-            &heartbeat_task_handle
-		);      
+        if(heartbeat_running == true && heartbeat_thread != std::nullopt) {
+            return;
+        }
+        heartbeat_running = true;
+        std::thread tmp_thread(heartbeat_cb);
+        heartbeat_thread = std::move(tmp_thread);
 	}
 
     static int gap_event_cb(struct ble_gap_event *event, void *arg) {
@@ -127,8 +122,10 @@ namespace NimBLE {
 			MODLOG_DFLT(INFO, "\n");
 
 			/* Connection terminated; resume advertising. */
-            if(notify_state != 0) {
-                vTaskDelete(heartbeat_task_handle);
+            if(heartbeat_running == true) {
+                std::cout << "Deleting heartbeat task\n";
+                heartbeat_running = false;
+                heartbeat_thread.value().join();
             }
 			advertise();
             break;
@@ -146,8 +143,10 @@ namespace NimBLE {
 		case BLE_GAP_EVENT_ADV_COMPLETE:
 			MODLOG_DFLT(INFO, "advertise complete; reason=%d",
 						event->adv_complete.reason);
-            if(notify_state != 0) {
-                vTaskDelete(heartbeat_task_handle);
+            if(heartbeat_running == true) {
+                std::cout << "Deleting heartbeat task\n";
+                heartbeat_running = false;
+                heartbeat_thread.value().join();
             }
 			advertise();
             break;
@@ -168,12 +167,14 @@ namespace NimBLE {
 
 			if (event->subscribe.attr_handle == body_composition_measurement_characteristic_handle) {
 				printf("\nSubscribed with body_composition_measurement_characteristic_handle =%d\n", event->subscribe.attr_handle);
-				notify_state = event->subscribe.cur_indicate; //!! As the client is now subscribed to notifications, the value is set to 1
-				printf("notify_state=%u\n", notify_state);
-                if(notify_state != 0) {
+                if(event->subscribe.cur_indicate != 0) {
                     create_heartbeat_task();
                 } else {
-                    vTaskDelete(heartbeat_task_handle);
+                    if(heartbeat_running == true) {
+                        std::cout << "Deleting heartbeat task\n";
+                        heartbeat_running = false;
+                        heartbeat_thread.value().join();
+                    }
                 }
 			}
             break;
@@ -212,25 +213,16 @@ namespace NimBLE {
         void *arg
     ) {
         int rc;
-        const char hello_world[] = "hello_world!";
+        struct os_mbuf *txom;
         switch(ctxt->op) {
-        case BLE_GATT_ACCESS_OP_READ_CHR: //!! In case user accessed this characterstic to read its value, bellow lines will execute
-            rc = os_mbuf_append(ctxt->om, &hello_world ,
-                                sizeof(hello_world));
-            return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
-        /*
         case BLE_GATT_ACCESS_OP_WRITE_CHR: //!! In case user accessed this characterstic to write, bellow lines will executed.
             rc = gatt_svr_chr_write(ctxt->om, 1, 700, &characteristic_received_value, NULL); //!! Function "gatt_svr_chr_write" will fire.
             printf("Received=%s\n", characteristic_received_value);  // Print the received value
             //! Use received value in you code. For example
-            char stp[]="stop";
-            int x=strcmp(characteristic_received_value,stp);
-            if(x==0){
-                stopBLE();
-            }
+            txom = ble_hs_mbuf_from_flat(characteristic_received_value, strlen(characteristic_received_value));
+            ble_gatts_notify_custom(conn_handle, body_composition_measurement_characteristic_handle, txom);
+            memset(characteristic_received_value, 0, sizeof(characteristic_received_value));
             return rc;
-        }
-        */
         }
         return BLE_ATT_ERR_UNLIKELY;
     }
@@ -357,6 +349,15 @@ namespace NimBLE {
         struct ble_gatt_access_ctxt *ctxt,
         void *arg
     ) {
+        /*
+        switch(ctxt->op) {
+        case BLE_GATT_ACCESS_OP_READ_CHR: //!! In case user accessed this characterstic to read its value, bellow lines will execute
+            const char hello_world[] = "hello_world!";
+            int rc = os_mbuf_append(ctxt->om, &hello_world ,
+                                sizeof(hello_world));
+            return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+        }
+        */
         return 0;
     }
 }
@@ -398,7 +399,7 @@ namespace NimBLE {
             .access_cb = body_composition_feature_characteristic_access_cb,
             .arg = nullptr,  // Replace with your actual argument.
             .descriptors = nullptr,
-            .flags = BLE_GATT_CHR_F_READ,  // Replace with your flags.
+            .flags = BLE_GATT_CHR_F_WRITE,  // Replace with your flags.
             .min_key_size = 0,  // Replace with your minimum key size.
             .val_handle = &body_composition_feature_characteristic_handle,  // The value handle will be filled in at registration time.
         };
@@ -409,30 +410,17 @@ namespace NimBLE {
             .access_cb = body_composition_measurement_characteristic_access_cb,
             .arg = nullptr,  // Replace with your actual argument.
             .descriptors = nullptr,
-            .flags = BLE_GATT_CHR_F_INDICATE,
-//                | (0x01 << 1) /* Time stamp bit is set */
-//                | (0x01 << 2) /* UserID bit is set*/
-//                | (0x01 << 9),/* Impedance bit is set */
+            .flags = BLE_GATT_CHR_F_INDICATE | BLE_GATT_CHR_F_NOTIFY,
             .min_key_size = 0,  // Replace with your minimum key size.
             .val_handle = &body_composition_measurement_characteristic_handle,  // The value handle will be filled in at registration time.
         };
-
-        /*
-        std::printf("body_composition_feature_characteristic:");
-        for(size_t i = sizeof(body_composition_feature_characteristic) - 1; i > 0; i--) {
-            std::printf("%02X, ", reinterpret_cast<const uint8_t*>(&body_composition_feature_characteristic)[i]);
-            if(i % 8 == 0) {
-                std::printf("\n");
-            }
-        }
-        */
 
         static constinit const ble_uuid16_t body_composition_service_uuid {
             .u = BLE_UUID_TYPE_16,
             .value = 0x181B
         };
 
-        static constinit const ble_gatt_chr_def body_composition_service_characteristics[] { 
+        static const ble_gatt_chr_def body_composition_service_characteristics[] { 
             body_composition_feature_characteristic,
             body_composition_measurement_characteristic,
             {0}
@@ -445,7 +433,7 @@ namespace NimBLE {
             .characteristics = body_composition_service_characteristics,
         };
 
-        static constinit const ble_gatt_svc_def gatt_services[] {
+        static const ble_gatt_svc_def gatt_services[] {
             body_composition_service,
             {0}
         };
@@ -460,7 +448,8 @@ namespace NimBLE {
             gatt_services
         );
        
-        ble_svc_gap_device_name_set("nimble-ble"); //!! Set the name of this device
+        //ble_svc_gap_device_name_set("nimble-ble"); //!! Set the name of this device
+        Trielo::trielo<ble_att_set_preferred_mtu>(Trielo::OkErrCode(0), 23);
         nimble_port_freertos_init(&task_cb);
     }
 }
