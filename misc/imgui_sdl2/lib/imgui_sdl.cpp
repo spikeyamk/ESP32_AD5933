@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sstream>
 #include <chrono>
 #include <functional>
 #include <tuple>
@@ -19,6 +20,7 @@
 #include "dark_mode_switcher.hpp"
 #include "imgui_sdl.hpp"
 #include "ble.hpp"
+#include "ad5933_config.hpp"
 
 #if !SDL_VERSION_ATLEAST(2,0,17)
 #error This backend requires SDL 2.0.17+ because of SDL_RenderGeometry() function
@@ -88,7 +90,7 @@ namespace ImGuiSDL {
         ImGui::Checkbox("Toggle Temperature Measurement: ", &toggle_capture);
         if(esp32_ad5933.has_value() && (toggle_capture != toggle_capture_prev)) {
             if(toggle_capture == true) {
-                esp32_ad5933.value().subscribe_to_body_composition_measurement();
+                esp32_ad5933.value().subscribe_to_body_composition_measurement_indicate();
             } else {
                 esp32_ad5933.value().unsubscribe_from_body_composistion_measurement();
             }
@@ -100,10 +102,148 @@ namespace ImGuiSDL {
         ImGui::End();
     }
 
-    inline void imgui_create_window(ImVec4 &clear_color) {
+    static const auto default_config = AD5933_Config::get_default();
+    void debug_registers_window() {
+        static constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize;
+        ImGui::Begin("Register Debug", NULL, flags);                          // Create a window called "Hello, world!" and append into it.
+
+        ImGui::Button("Dump All Registers");
+        ImGui::Text("Decoded Register Values");
+        ImGui::Separator();
+
+        std::ostringstream control_HB_command_oss;
+        control_HB_command_oss << default_config.get_command();
+        std::ostringstream range_oss;
+        range_oss << default_config.get_voltage_range();
+        std::ostringstream pga_gain_oss;
+        pga_gain_oss << default_config.get_pga_gain();
+
+        std::ostringstream reset_oss;
+        reset_oss << default_config.get_reset();
+        std::ostringstream sysclk_src_oss;
+        sysclk_src_oss << default_config.get_sysclk_src();
+
+        std::ostringstream freq_start_oss;
+        freq_start_oss << default_config.get_start_freq();
+        std::ostringstream freq_inc_oss;
+        freq_inc_oss << default_config.get_inc_freq();
+        std::ostringstream num_of_inc_oss;
+        num_of_inc_oss << default_config.get_num_of_inc();
+        std::ostringstream num_of_settling_time_cycles_oss;
+        num_of_settling_time_cycles_oss << default_config.get_settling_time_cycles_number();
+        std::ostringstream settling_time_cycles_multiplier_oss;
+        //settling_time_cycles_multiplier_oss << default_config.get_settling_time_cycles_multiplier();
+
+        //std::ostringstream reset_oss;
+        //reset_oss << default_config.has();
+
+        //std::ostringstream temp_data_oss;
+        //temp_data_oss << default_config.read();
+        //std::ostringstream real_data_oss;
+        //imag_data_oss << default_config.read();
+        //std::ostringstream imag_data_oss ;
+        //imag_data_oss  << default_config.read();
+
+        ImGui::Text("ControlHB:");
+        ImGui::Text("\tControlHB Command: %s", control_HB_command_oss.str().data());
+        ImGui::Text("\tExcitation Output Voltage Range: %s", range_oss.str().data());
+        ImGui::Text("\tPGA Gain: %s", pga_gain_oss.str().data());
+        ImGui::Separator();
+
+        ImGui::Text("ControlLB:");
+        ImGui::Text("\tReset: %s", reset_oss.str().data());
+        ImGui::Text("\tSystem Clock Source: %s", sysclk_src_oss.str().data());
+        ImGui::Separator();
+
+        ImGui::Text("Start Frequency: %s", freq_start_oss.str().data());
+        ImGui::Text("Frequency Increment: %s", freq_inc_oss.str().data());
+        ImGui::Text("Number of Increments: %s", num_of_inc_oss.str().data());
+        ImGui::Text("Number of Settling Time Cycles: %s", num_of_settling_time_cycles_oss.str().data());
+        ImGui::Text("Settling Time Cycles Multiplier: %s", settling_time_cycles_multiplier_oss.str().data());
+        ImGui::Separator();
+
+        ImGui::Text("Status: ");
+        ImGui::Separator();
+
+        ImGui::Text("Temperature Data: ");
+        ImGui::Text("Real Data: ");
+        ImGui::Text("Imaginary Data: ");
+        ImGui::Separator();
+
+        int control_HB_capture = 0;
+        int control_LB_capture = 0;
+        int freq_start_capture[3] { 0, 0, 0};
+        int freq_inc_capture[3] { 0, 0, 0 };
+        int num_of_inc_capture[2] { 0, 0 };
+        int num_of_settling_time_cycles_capture[2] { 0, 0 };
+
+        int status_capture = 0;
+
+        int temp_data_capture[2] { 0, 0 };
+        int real_data_capture[2] { 0, 0 };
+        int imag_data_capture[2] { 0, 0 };
+
+        ImGui::Text("Read/Write Registers");
+        ImGui::InputInt("ControlHB", &control_HB_capture, 0, 0, 0);
+        ImGui::InputInt("ControlLB", &control_LB_capture, 0, 0, 0); 
+        ImGui::InputInt3("FREQ_START", freq_start_capture); 
+        ImGui::InputInt3("FREQ_INC", freq_inc_capture); 
+        ImGui::InputInt2("NUM_OF_INC", num_of_inc_capture);
+        ImGui::InputInt2("NUM_OF_SETTLING_TIME_CYCLES", num_of_settling_time_cycles_capture);
+
+        ImGui::Button("Program Read/Write Registers");
+        ImGui::Separator();
+
+        ImGui::Text("Special Status Register");
+        ImGui::InputInt("STATUS", &status_capture, 0, 0, ImGuiInputTextFlags_ReadOnly);
+
+        ImGui::Text("Read-only Registers");
+        ImGui::InputInt2("TEMP_DATA", temp_data_capture, ImGuiInputTextFlags_ReadOnly);
+        ImGui::InputInt2("REAL_DATA", real_data_capture, ImGuiInputTextFlags_ReadOnly);
+        ImGui::InputInt2("IMAG_DATA", imag_data_capture, ImGuiInputTextFlags_ReadOnly);
+
+        ImGui::Text("Send Control Register Command Controls");
+        ImGui::Button("Power-down mode"); ImGui::SameLine();
+            ImGui::Button("Standby mode"); ImGui::SameLine();
+            ImGui::Button("No operation");
+
+        ImGui::Button("Measure temperature");
+        ImGui::Button("Initialize with start frequency"); ImGui::SameLine();
+            ImGui::Button("Start frequency sweep"); ImGui::SameLine();
+            ImGui::Button("Increment frequency"); ImGui::SameLine();
+            ImGui::Button("Repeat frequency"); ImGui::SameLine();
+
+        ImGui::End();
+    }
+
+    inline void ble_hello_world_window() {
+        static constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize;
+        ImGui::Begin("BLE Hello World", NULL, flags);                          // Create a window called "Hello, world!" and append into it.
+        ImGui::Text("BLE Hello World Demo");
+        static char tx_buf[20];
+        ImGui::InputText("TX", tx_buf, sizeof(tx_buf) / sizeof(tx_buf[0]));
+        if(ImGui::Button("Send") && esp32_ad5933.has_value()) {
+            esp32_ad5933.value().send(std::string(tx_buf));
+        }
+        static char rx_buf[20];
+        static std::string received_label {};
+        if(esp32_ad5933.has_value()) {
+            ImGui::InputText(
+                "RX",
+                esp32_ad5933.value().rx_payload.value_or("0xFFFF'FFFF").data(),
+                esp32_ad5933.value().rx_payload.value_or("0xFFFF'FFFF").size(),
+                ImGuiInputTextFlags_ReadOnly
+            );
+        }
+        ImGui::End();
+    }
+
+    inline void imgui_create_window() {
         ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
         ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
-        periodic_temperature_measurement_demo_window();
+        //periodic_temperature_measurement_demo_window();
+        //debug_registers_window();
+        ble_hello_world_window();
     }
 
     std::tuple<SDL_Window*, SDL_Renderer*> init() {
@@ -178,7 +318,7 @@ namespace ImGuiSDL {
         while(done == false) {
             process_events(window, &done);
             start_new_frame();
-            imgui_create_window(clear_color);
+            imgui_create_window();
             render(renderer, clear_color);
         }
         shutdown(renderer, window);

@@ -78,7 +78,19 @@ bool is_peripheral_esp32_ad5933(SimpleBLE::Peripheral &peripheral) {
 }
 
 bool is_characteristic_body_composition_measurement(SimpleBLE::Characteristic &characteristic) {
-    if(characteristic.uuid() == BODY_COMPOSITION_MEASUREMENT_UUID && characteristic.can_indicate()) {
+    if(characteristic.uuid() == BODY_COMPOSITION_MEASUREMENT_UUID &&
+      (characteristic.can_indicate() && characteristic.can_notify()))
+    {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool is_characteristic_body_composition_feature(SimpleBLE::Characteristic &characteristic) {
+    if(characteristic.uuid() == BODY_COMPOSITION_FEATURE_UUID &&
+      (characteristic.can_write_request()) 
+    ) {
         return true;
     } else {
         return false;
@@ -110,10 +122,15 @@ bool ESP32_AD5933::initialize_connection() {
             std::cout << "BLE: ESP32_AD5933: Connecting...\n";
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         } else {
-            return true;
+            break;
         }
     }
 
+    if(peripheral.is_connected()) {
+        std::cout << "BLE: Succesfully connected to ESP32_AD5933" << std::endl;
+        std::cout << peripheral << std::endl;
+        return true;
+    }
     return false;
 }
 
@@ -128,8 +145,9 @@ bool ESP32_AD5933::connect() {
     }
     
     for(auto &service: peripheral.services()) {
-        std::cout << service << std::endl;
         if(is_service_body_composition(service)) {
+            std::cout << "BLE: ESP32_AD5933: Found Body composition service:\n";
+            std::cout << service << std::endl;
             body_composistion_service = service;
         }
     }
@@ -140,9 +158,14 @@ bool ESP32_AD5933::connect() {
     }
 
     for(auto &characteristic: body_composistion_service.value().characteristics()) {
-        if(is_characteristic_body_composition_measurement(characteristic)) {
-            std::cout << "BLE: ESP32_AD5933: Found Body Composition Measurement Characteristic UUID: " << characteristic.uuid() << std::endl;
+       if(is_characteristic_body_composition_measurement(characteristic)) {
+            std::cout << "BLE: ESP32_AD5933: Found Body Composition Measurement Characteristic:" << std::endl;
+            std::cout << characteristic << std::endl;
             body_composition_measurement_chacteristic = characteristic;
+        } else if(is_characteristic_body_composition_feature(characteristic)) {
+            std::cout << "BLE: ESP32_AD5933: Found Body Composition Feature Characteristic:" << std::endl;
+            std::cout << characteristic << std::endl;
+            body_composition_feature_chacteristic = characteristic;
         }
     }
 
@@ -150,13 +173,19 @@ bool ESP32_AD5933::connect() {
         fmt::print(fmt::fg(fmt::color::red), "ERROR: BLE: ESP32_AD5933: Body composition measurement characteristic not found\n");
         return false;
     }
+
+    if(body_composition_feature_chacteristic.has_value() == false) {
+        fmt::print(fmt::fg(fmt::color::red), "ERROR: BLE: ESP32_AD5933: Body composition feature characteristic not found\n");
+        return false;
+    }
+
     return true;
 }
 
-void ESP32_AD5933::subscribe_to_body_composition_measurement() { 
+void ESP32_AD5933::subscribe_to_body_composition_measurement_indicate() { 
     if(body_composistion_service.has_value() &&
     body_composition_measurement_chacteristic.has_value() &&
-    is_subscribed_to_body_composition_measurement_chacteristic == false) {
+    is_subscribed_to_body_composition_measurement_chacteristic_indicate == false) {
         std::cout << "ESP32_AD5933: Subscribing: Body composition measurement...\n";
         peripheral.indicate(
             body_composistion_service.value().uuid(),
@@ -166,29 +195,29 @@ void ESP32_AD5933::subscribe_to_body_composition_measurement() {
                 temp_payload = payload;
             }
         );
-        is_subscribed_to_body_composition_measurement_chacteristic = true;
+        is_subscribed_to_body_composition_measurement_chacteristic_indicate = true;
     }
 }
 
 void ESP32_AD5933::unsubscribe_from_body_composistion_measurement() { 
     if(body_composistion_service.has_value() &&
     body_composition_measurement_chacteristic.has_value() &&
-    is_subscribed_to_body_composition_measurement_chacteristic == true) {
+    is_subscribed_to_body_composition_measurement_chacteristic_indicate == true) {
         std::cout << "ESP32_AD5933: Unsubscribing: Body composition measurement...\n";
         peripheral.unsubscribe(
             body_composistion_service.value().uuid(),
             body_composition_measurement_chacteristic.value().uuid()
         );
-        is_subscribed_to_body_composition_measurement_chacteristic = false;
+        is_subscribed_to_body_composition_measurement_chacteristic_indicate = false;
     }
     temp_payload = std::nullopt;
 }
 
 void ESP32_AD5933::toggle_subscribe_to_body_composition_measurement() {
-    if(is_subscribed_to_body_composition_measurement_chacteristic) {
+    if(is_subscribed_to_body_composition_measurement_chacteristic_indicate) {
         unsubscribe_from_body_composistion_measurement();
     } else {
-        subscribe_to_body_composition_measurement();
+        subscribe_to_body_composition_measurement_indicate();
     }
 }
 
@@ -201,17 +230,39 @@ void ESP32_AD5933::disconnect() {
     }
 }
 
+void ESP32_AD5933::send(const SimpleBLE::ByteArray &data) {
+    if(peripheral.is_connected() && body_composistion_service.has_value() && body_composition_feature_chacteristic.has_value()) {
+        peripheral.write_request(body_composistion_service.value().uuid(), body_composition_feature_chacteristic.value().uuid(), data);
+    }
+}
+
+void ESP32_AD5933::subscribe_to_body_composition_measurement_notify() {
+    if(peripheral.is_connected() && body_composistion_service.has_value() && body_composition_measurement_chacteristic.has_value()) {
+        peripheral.notify(
+            body_composistion_service.value().uuid(),
+            body_composition_measurement_chacteristic.value().uuid(),
+            [&](SimpleBLE::ByteArray payload) {
+                rx_payload = payload;
+            }
+        );
+    }
+}
+
+
 ESP32_AD5933::~ESP32_AD5933() {
     disconnect();
 }
 
+
 std::optional<SimpleBLE::Peripheral> find_esp32_ad5933() {
     if(Trielo::trielo<SimpleBLE::Adapter::bluetooth_enabled>(Trielo::OkErrCode(true)) == false) {
+        std::cout << "ERROR: BLE: Bleutooth disabled\n";
         return std::nullopt;
     }
 
     auto adapters = Trielo::trielo<SimpleBLE::Adapter::get_adapters>();
     if(adapters.empty()) {
+        std::cout << "ERROR: BLE: Could not find a Bluetooth adapter\n";
         return std::nullopt;
     }
 
@@ -251,25 +302,14 @@ std::optional<SimpleBLE::Peripheral> find_esp32_ad5933() {
             }
         }
     });
-
-    //adapter.scan_for(10'000);
-    adapter.scan_start();
-    for(size_t i = 0; i < 20; i++) {
-        if(adapter.scan_is_active()) {
-            std::cout << "BLE: Scanning...\n";
-            std::this_thread::sleep_for(std::chrono::seconds(3));
-        } else {
-            break;
-        }
-    }
+    
+    adapter.scan_for(10'000);
 
     if(esp32_ad5933_peripheral.has_value() == false) {
         fmt::print(fmt::fg(fmt::color::red), "ERROR: BLE: Default adapter: Failed to find ESP32 AD5933\n");
         return std::nullopt;
     }
     
-    std::cout << "Default adapter: Found EPS32_AD5933: " << esp32_ad5933_peripheral.value() << "\n\n\n";
-
     return std::optional { esp32_ad5933_peripheral };
 }
 

@@ -393,7 +393,7 @@ inline ControlLB::SYSCLK_SRC_OrMask AD5933_Config::get_sysclk_src() const {
 	return ControlLB::SYSCLK_SRC_OrMask(static_cast<uint8_t>(sysclk_src_state.to_ulong()));
 }
 
-inline bool AD5933_Config::get_reset() const {
+bool AD5933_Config::get_reset() const {
 	const std::bitset<8> reset_state { control_LB.HB & ControlLB::RESET_ExtractMask };
 	if(reset_state == ControlLB::RESET_SetMask) {
 		return true;
@@ -507,4 +507,28 @@ void AD5933_Config::set_start_freq(uint32_t freq) {
 
 void AD5933_Config::set_inc_freq(uint32_t freq) {
 	inc_freq = get_freq_register(freq);
+}
+
+AD5933_Config AD5933_Config::get_default() {
+	const ControlHB::CommandOrMask command = ControlHB::CommandOrMask::POWER_DOWN_MODE;
+	const ControlHB::OutputVoltageRangeOrMask range = ControlHB::OutputVoltageRangeOrMask::TWO_VOLT_PPK;
+	const ControlHB::PGA_GainOrMask pga_gain = ControlHB::PGA_GainOrMask::ONE_TIME;
+	const ControlLB::SYSCLK_SRC_OrMask sysclk_src = ControlLB::SYSCLK_SRC_OrMask::INTERNAL;
+	const uint32_t start_freq = 30'000;
+	const uint32_t inc_freq = 2;
+	const uint9_t num_of_inc = 100;
+	const uint9_t settling_cycles_number = 15;
+	const SettlingTimeCyclesMultiplierOrMask settling_cycles_multiplier = SettlingTimeCyclesMultiplierOrMask::ONE_TIME;
+	AD5933_Config default_config (
+		command,
+		range,
+		pga_gain,
+		sysclk_src,
+		start_freq,
+		inc_freq,
+		num_of_inc,
+		settling_cycles_number,
+		settling_cycles_multiplier
+	);
+	return default_config;
 }

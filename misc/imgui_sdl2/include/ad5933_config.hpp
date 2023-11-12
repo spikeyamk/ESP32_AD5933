@@ -156,7 +156,7 @@ public:
     inline ControlHB::OutputVoltageRangeOrMask get_voltage_range() const;
     inline ControlHB::PGA_GainOrMask get_pga_gain() const;
     inline ControlLB::SYSCLK_SRC_OrMask get_sysclk_src() const;
-    inline bool get_reset() const;
+    bool get_reset() const;
     inline SettlingTimeCyclesMultiplierOrMask get_settling_time_cycles_multiplier() const;
     inline uint9_t get_uint9_t(const Register16_t state) const;
     inline uint9_t get_settling_time_cycles_number() const;
@@ -178,4 +178,5 @@ public:
 	void set_reset();
 
 	void print() const;
+	static AD5933_Config get_default();
 };
