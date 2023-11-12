@@ -29,4 +29,9 @@ namespace MagicPackets {
 		0xec, 0xe4, 0x7b, 0x0f, 0x4b, 0x61, 0x3a, 0xa4, 
 		0xd0, 0x5c, 0xe7, 0xd5, 
 	};
+	const std::array<std::array<uint8_t, 20>, 5> magic_packets {
+		debug_start,
+		dump_all_registers, program_all_registers, control_HB_command,
+		debug_end,
+	};
 }

@@ -15,3 +15,12 @@ add_library(magic_packets STATIC
 target_include_directories(magic_packets PRIVATE
 	${CMAKE_CURRENT_LIST_DIR}/include
 	)
+
+add_executable(magic_packets_test main.cpp
+	lib/magic_packets.cpp
+	lib/test.cpp
+)
+
+target_include_directories(magic_packets_test PRIVATE
+	${CMAKE_CURRENT_LIST_DIR}/include
+)
