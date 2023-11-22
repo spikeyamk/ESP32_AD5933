@@ -12,6 +12,7 @@
 #include <memory>
 #include <cassert>
 #include <cmath>
+#include <atomic>
 
 #include "util.hpp"
 #include "trielo/trielo.hpp"
@@ -335,6 +336,47 @@ public:
 		}
 		std::printf("\n");
 	}
+
+	std::optional<std::array<uint8_t, 19>> dump_all_registers_as_array() {
+		std::printf("\nAD5933: Dumping all registers\n");
+		const auto rw_ret = block_read_register(
+			AD5933::RegisterAddrs::CONTROL_HB,
+			AD5933::RegisterAddrs::SETTLING_CYCLES_LB.unwrap() - AD5933::RegisterAddrs::CONTROL_HB.unwrap() + 1
+		);
+		if(rw_ret.has_value()) {
+			for(uint8_t i = 0; i < rw_ret.value().size(); i++) {
+				std::printf("AD5933: Register[0x%02X]: 0x%02X\n", AD5933::RegisterAddrs::CONTROL_HB.unwrap() + i, rw_ret.value()[i]);
+			}
+		} else {
+			return std::nullopt;
+		}
+		const auto status_ret = read_register(AD5933::RegisterAddrs::STATUS);
+		if(status_ret.has_value()) {
+			std::printf("AD5933: Register[0x%02X]: 0x%02X\n", AD5933::RegisterAddrs::STATUS.unwrap(), status_ret.value());
+		} else {
+			return std::nullopt;
+		}
+		const auto ro_ret = block_read_register(
+			AD5933::RegisterAddrs::TEMP_DATA_HB,
+			AD5933::RegisterAddrs::IMAG_DATA_LB.unwrap() - AD5933::RegisterAddrs::TEMP_DATA_HB.unwrap() + 1
+		);
+		if(ro_ret.has_value()) {
+			for(uint8_t i = 0; i < ro_ret.value().size(); i++) {
+				std::printf("AD5933: Register[0x%02X]: 0x%02X\n", AD5933::RegisterAddrs::TEMP_DATA_HB.unwrap() + i, ro_ret.value()[i]);
+			}
+		} else {
+			return std::nullopt;
+		}
+		std::printf("\n");
+
+		std::vector<uint8_t> ret_vector { rw_ret.value().begin(), rw_ret.value().end() };
+		ret_vector.push_back(status_ret.value());
+		ret_vector.insert(ret_vector.end(), ro_ret.value().begin(), ro_ret.value().end());
+		std::array<uint8_t, 19> ret_array;
+		std::copy(ret_vector.begin(), ret_vector.end(), ret_array.begin());
+		return ret_array;
+	}
+
 
 	template<typename T_Collection>
 	bool block_write_to_register(const RegisterAddr_RW &register_address, const T_Collection &message) const {
@@ -1033,6 +1075,7 @@ public:
 };
 
 namespace AD5933_Tests {
+	extern std::atomic<std::shared_ptr<AD5933>> ad5933;
 	bool run_test_read_write_registers(AD5933 &ad5933);
 	extern std::atomic<std::shared_ptr<AD5933>> ad5933;
 	void init_ad5933(I2CBus &i2c_bus);
