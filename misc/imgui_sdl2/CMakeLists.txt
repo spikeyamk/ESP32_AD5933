@@ -23,6 +23,7 @@ add_executable(main main.cpp
 	lib/ble.cpp
 	lib/dark_mode_switcher.cpp
 	lib/imgui_sdl.cpp
+	lib/magic_packets.cpp
 	${IMGUI_DIR}/backends/imgui_impl_sdl2.cpp
 	${IMGUI_DIR}/backends/imgui_impl_sdlrenderer2.cpp
 	${IMGUI_DIR}/imgui.cpp
