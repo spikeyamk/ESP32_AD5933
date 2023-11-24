@@ -15,8 +15,9 @@ int main(int argc, char* argv[]) {
         esp32_ad5933 = ESP32_AD5933 { esp32_ret.value() };
         if(esp32_ad5933.value().connect() == false) {
             std::cout << "BLE: could not connect to ESP32_AD5933\n";
+        } else {
+            esp32_ad5933.value().subscribe_to_body_composition_measurement_notify();
         }
-        esp32_ad5933.value().subscribe_to_body_composition_measurement_notify();
     }
     imgui_sdl_thread.join();
     return 0;

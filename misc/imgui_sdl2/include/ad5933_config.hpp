@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <iostream>
 #include <map>
+#include <unordered_map>
 #include <string>
 
 #include "types.hpp"
@@ -17,7 +18,8 @@ enum class SYSCLK_FREQ {
 enum class SettlingTimeCyclesMultiplierOrMask {
 	ONE_TIME   = 0b0000'0000,
 	TWO_TIMES  = 0b0000'0010,
-	FOUR_TIMES = 0b0000'0100,
+	RESERVED   = 0b0000'0100,
+	FOUR_TIMES = 0b0000'0110,
 };
 extern const std::map<SettlingTimeCyclesMultiplierOrMask, const char*> SettlingTimeCyclesMultiplierOrMaskStringMap;
 constexpr std::bitset<8> SettlingTimeCyclesMultiplierAndMask { 0b0000'0110 };
@@ -56,7 +58,7 @@ public:
 
 extern const std::map<ControlHB::CommandOrMask, const char*> ControlHB_CommandOrMaskStringMap;
 extern const std::map<ControlHB::OutputVoltageRangeOrMask, const char*> ControlHB_OutputVoltageRangeOrMaskStringMap;
-extern const std::map<ControlHB::PGA_GainOrMask, const char*> ControlHB_PGA_GainOrMaskStringMap;
+extern const std::unordered_map<ControlHB::PGA_GainOrMask, const char*> ControlHB_PGA_GainOrMaskStringMap;
 
 class ControlLB {
 public:
@@ -71,6 +73,19 @@ public:
 };
 constexpr std::bitset<16> UINT9_T_ExtractMask { 0b0000'0001'1111'1111 };
 extern const std::map<ControlLB::SYSCLK_SRC_OrMask, const char*> ControlLB_SYSCLK_SRC_OrMaskStringMap;
+
+class Status {
+public:
+	enum class STATUS_OrMask {
+		NO_STATUS = 0b0000'0000,
+		VALID_TEMP = 0b0000'0001,
+		VALID_DATA = 0b0000'0010,
+		FREQ_SWEEP_COMPLETE = 0b0000'0100,
+	}; friend std::ostream& operator<<(std::ostream& os, Status::STATUS_OrMask value);
+
+	static constexpr std::bitset<8> STATUS_AndMask { 0b0000'0111 };
+};
+extern const std::unordered_map<Status::STATUS_OrMask, const char*> STATUS_OrMaskStringMap;
 
 class AD5933_Config {
 private:
@@ -99,6 +114,8 @@ public:
         const uint9_t settling_time_cycles_number,
         const SettlingTimeCyclesMultiplierOrMask settling_time_cycles_multiplier
     );
+
+	AD5933_Config(const std::array<uint8_t, 12> &in_config_message_raw);
 
 public:
     inline std::array<std::bitset<8>, 12> get_ad5933_config_message() const;
@@ -179,4 +196,19 @@ public:
 
 	void print() const;
 	static AD5933_Config get_default();
+};
+
+class AD5933_Data {
+private:
+	Register8_t status;
+	Register16_t temp_data;
+	Register16_t real_data;
+	Register16_t imag_data;
+public:
+	AD5933_Data() = default;
+	AD5933_Data(std::array<uint8_t, 7> &in_data_message_raw);
+	Status::STATUS_OrMask get_status();
+	float get_temperature();
+	std::string get_real_data();
+	std::string get_imag_data();
 };
