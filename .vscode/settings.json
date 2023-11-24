@@ -1,6 +1,6 @@
 {
     "idf.flashType": "UART",
-    "idf.port": "/dev/ttyUSB0",
+    "idf.port": "/dev/ttyACM0",
     "idf.adapterTargetName": "esp32c6",
     "idf.openOcdConfigs": [
         "board/esp32c6-builtin.cfg"

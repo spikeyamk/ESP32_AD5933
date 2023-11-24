@@ -3,6 +3,9 @@
 #include <chrono>
 #include <thread>
 #include <optional>
+#include <utility>
+#include <atomic>
+#include <memory>
 
 #include <simpleble/SimpleBLE.h>
 #include "trielo.hpp"
@@ -69,6 +72,25 @@ std::ostream& operator<<(std::ostream& os, std::vector<SimpleBLE::Adapter> &adap
     return os;
 }
 
+Payload::Payload(const Payload &other) :
+    read_ready { other.read_ready.load() },
+    content { other.content }
+{}
+
+Payload& Payload::operator=(const Payload &&other) {
+    return *this;
+}
+
+void Payload::clean() {
+    content = std::string {};
+    read_ready.store(false);
+}
+
+std::string Payload::read() {
+    read_ready.wait(false);
+    return content;
+}
+
 bool is_peripheral_esp32_ad5933(SimpleBLE::Peripheral &peripheral) {
     if(peripheral.address() == BLE_ESP_ADDRESS && peripheral.identifier() == BLE_ESP_IDENTIFIER) {
         return true;
@@ -106,6 +128,7 @@ bool is_service_body_composition(SimpleBLE::Service &service) {
 }
 
 bool ESP32_AD5933::initialize_connection() {
+    std::cout << "ESP32_AD5933: Trying to initialize connection\n";
     if(peripheral.is_connectable() == false) {
         fmt::print(fmt::fg(fmt::color::red), "ERROR: BLE: ESP32_AD5933: is not connectable\n");
         return false;
@@ -117,13 +140,8 @@ bool ESP32_AD5933::initialize_connection() {
     }
 
     peripheral.connect();
-    for(size_t i = 0; i < 20; i++) {
-        if(peripheral.is_connected() == false) {
-            std::cout << "BLE: ESP32_AD5933: Connecting...\n";
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        } else {
-            break;
-        }
+    while(peripheral.is_connected() == false) {
+        std::cout << "BLE: ESP32_AD5933: Connecting...\n";
     }
 
     if(peripheral.is_connected()) {
@@ -138,7 +156,22 @@ ESP32_AD5933::ESP32_AD5933(SimpleBLE::Peripheral in_peripheral) :
     peripheral{in_peripheral}
 {}
 
+ESP32_AD5933::ESP32_AD5933(const ESP32_AD5933 &other) :
+    peripheral { other.peripheral },
+    body_composistion_service { other.body_composistion_service },
+    body_composition_measurement_chacteristic { other.body_composition_measurement_chacteristic },
+    body_composition_feature_chacteristic { other.body_composition_feature_chacteristic },
+    is_subscribed_to_body_composition_measurement_chacteristic_indicate { other.is_subscribed_to_body_composition_measurement_chacteristic_indicate },
+    is_subscribed_to_body_composition_measurement_chacteristic_notify { other.is_subscribed_to_body_composition_measurement_chacteristic_notify },
+    rx_payload { other.rx_payload }
+{}
+
+ESP32_AD5933& ESP32_AD5933::operator=(const ESP32_AD5933& other) {
+    return *this;
+}
+
 bool ESP32_AD5933::connect() {
+    std::cout << "ESP32_AD5933: connect() method called\n";
     if(initialize_connection() == false) {
         fmt::print(fmt::fg(fmt::color::red), "ERROR: BLE: ESP32_AD5933: could not initialize connection\n");
         return false;
@@ -225,7 +258,6 @@ void ESP32_AD5933::disconnect() {
     if(peripheral.is_connected()) {
         std::cout << "ESP32_AD5933: Disconnecting...\n";
         unsubscribe_from_body_composistion_measurement();
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         peripheral.disconnect();
     }
 }
@@ -241,18 +273,28 @@ void ESP32_AD5933::subscribe_to_body_composition_measurement_notify() {
         peripheral.notify(
             body_composistion_service.value().uuid(),
             body_composition_measurement_chacteristic.value().uuid(),
-            [&](SimpleBLE::ByteArray payload) {
-                rx_payload = payload;
+            [&](SimpleBLE::ByteArray captured_payload) {
+                // Only for debugging
+                /*
+                std::cout << "Printing from subscribe_to_body_composition_measurement_notify lambda\n";
+                for(size_t i = 0; i < payload.size(); i++) {
+                    std::printf("Byte[%zu]: 0x%02X\n", static_cast<uint8_t>(payload[i]));
+                }
+                */
+                while(rx_payload.read_ready.load() == true) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                }
+                rx_payload.content = captured_payload;
+                rx_payload.read_ready.store(true);
+                rx_payload.read_ready.notify_all();
             }
         );
     }
 }
 
-
 ESP32_AD5933::~ESP32_AD5933() {
     disconnect();
 }
-
 
 std::optional<SimpleBLE::Peripheral> find_esp32_ad5933() {
     if(Trielo::trielo<SimpleBLE::Adapter::bluetooth_enabled>(Trielo::OkErrCode(true)) == false) {
@@ -313,4 +355,16 @@ std::optional<SimpleBLE::Peripheral> find_esp32_ad5933() {
     return std::optional { esp32_ad5933_peripheral };
 }
 
+bool ESP32_AD5933::is_connected() {
+    return peripheral.is_connected();
+}
+
+void ESP32_AD5933::print_mtu() {
+    std::cout << "ESP32_AD5933: MTU: " << peripheral.mtu() << std::endl;
+}
+
 std::optional<ESP32_AD5933> esp32_ad5933 = std::nullopt;
+
+namespace BLE_Payloads {
+    //std::atomic<std::shared_ptr<std::string>> rx_payload;
+}

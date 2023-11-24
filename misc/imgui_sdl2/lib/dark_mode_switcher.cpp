@@ -3,15 +3,16 @@
 
 #include "dark_mode_switcher.hpp"
 
+/*
 DarkModeSwitcher::DarkModeSwitcher(SDL_Window* in_window) : 
     window {in_window} 
 {
     assert(in_window != nullptr);
     if(isGlobalDarkModeActive()) {
-        setTitleBarDarkMode(true);
+        //setTitleBarDarkMode(true);
         dark_mode_active = true;
     } else {
-        setTitleBarDarkMode(false);
+        //setTitleBarDarkMode(false);
         dark_mode_active = false;
     }
 }
@@ -83,3 +84,4 @@ void DarkModeSwitcher::enable_dynamic_switching() {
         }
     });
 }
+*/

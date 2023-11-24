@@ -4,6 +4,7 @@
 #include <bitset>
 #include <cassert>
 #include <cmath>
+#include <unordered_map>
 
 #include "ad5933_config.hpp"
 #include "types.hpp"
@@ -11,6 +12,7 @@
 const std::map<SettlingTimeCyclesMultiplierOrMask, const char*> SettlingTimeCyclesMultiplierOrMaskStringMap {
 	{ SettlingTimeCyclesMultiplierOrMask::ONE_TIME, "ONE_TIME" },
 	{ SettlingTimeCyclesMultiplierOrMask::TWO_TIMES, "TWO_TIMES" },
+	{ SettlingTimeCyclesMultiplierOrMask::RESERVED, "RESERVED" },
 	{ SettlingTimeCyclesMultiplierOrMask::FOUR_TIMES, "FOUR_TIMES" }
 };
 
@@ -35,7 +37,7 @@ const std::map<ControlHB::OutputVoltageRangeOrMask, const char*> ControlHB_Outpu
 	{ ControlHB::OutputVoltageRangeOrMask::TWO_HUNDRED_MILI_VOLT_PPK, "TWO_HUNDRED_MILI_VOLT_PPK" }
 };
 
-const std::map<ControlHB::PGA_GainOrMask, const char*> ControlHB_PGA_GainOrMaskStringMap {
+const std::unordered_map<ControlHB::PGA_GainOrMask, const char*> ControlHB_PGA_GainOrMaskStringMap {
 	{ ControlHB::PGA_GainOrMask::ONE_TIME, "ONE_TIME" },
 	{ ControlHB::PGA_GainOrMask::FIVE_TIMES, "FIVE_TIMES" }
 };
@@ -43,6 +45,13 @@ const std::map<ControlHB::PGA_GainOrMask, const char*> ControlHB_PGA_GainOrMaskS
 const std::map<ControlLB::SYSCLK_SRC_OrMask, const char*> ControlLB_SYSCLK_SRC_OrMaskStringMap {
 	{ ControlLB::SYSCLK_SRC_OrMask::INTERNAL, "INTERNAL" },
 	{ ControlLB::SYSCLK_SRC_OrMask::EXTERNAL, "EXTERNAL" }
+};
+
+const std::unordered_map<Status::STATUS_OrMask, const char*> STATUS_OrMaskStringMap {
+	{ Status::STATUS_OrMask::NO_STATUS, "NO_STATUS" },
+	{ Status::STATUS_OrMask::VALID_TEMP, "VALID_TEMP" },
+	{ Status::STATUS_OrMask::VALID_DATA, "VALID_DATA" },
+	{ Status::STATUS_OrMask::FREQ_SWEEP_COMPLETE, "FREQ_SWEEP_COMPLETE" },
 };
 
 std::ostream& operator<<(std::ostream& os, SYSCLK_FREQ value) {
@@ -123,6 +132,27 @@ std::ostream& operator<<(std::ostream& os, ControlLB::SYSCLK_SRC_OrMask value) {
     return os;
 }
 
+std::ostream& operator<<(std::ostream& os, Status::STATUS_OrMask value) {
+    switch (value) {
+        case Status::STATUS_OrMask::NO_STATUS:
+            os << "NO_STATUS";
+            break;
+        case Status::STATUS_OrMask::VALID_TEMP:
+            os << "VALID_TEMP";
+            break;
+        case Status::STATUS_OrMask::VALID_DATA:
+            os << "VALID_DATA";
+            break;
+        case Status::STATUS_OrMask::FREQ_SWEEP_COMPLETE:
+            os << "FREQ_SWEEP_COMPLETE";
+            break;
+		default:
+			os << "UNKNOWN";
+			break;
+    }
+    return os;
+}
+
 std::ostream& operator<<(std::ostream& os, ControlHB::OutputVoltageRangeOrMask value) {
     switch (value) {
         case ControlHB::OutputVoltageRangeOrMask::TWO_VOLT_PPK:
@@ -177,6 +207,36 @@ AD5933_Config::AD5933_Config(
     settling_time_cycles { get_settling_time_cycles(settling_time_cycles_number, settling_time_cycles_multiplier) },
     ad5933_config_message { get_ad5933_config_message() },
     ad5933_config_message_raw { get_ad5933_config_message_raw() }
+{}
+
+AD5933_Config::AD5933_Config(const std::array<uint8_t, 12> &in_config_message_raw) :
+	control_HB { std::bitset<8> { in_config_message_raw[0] } },
+	control_LB { std::bitset<8> { in_config_message_raw[1] } },
+	active_sysclk_freq { 
+		static_cast<uint8_t>(ControlLB::SYSCLK_SRC_OrMask::INTERNAL) == static_cast<uint8_t>((control_LB.HB & std::bitset<8> { ControlLB::SYSCLK_SRC_AndMask }).to_ulong()) ? 
+			static_cast<uint32_t>(SYSCLK_FREQ::INTERNAL) :
+			static_cast<uint32_t>(SYSCLK_FREQ::EXTERNAL) 
+	},
+	start_freq { 
+		std::bitset<8> { in_config_message_raw[2] },
+		std::bitset<8> { in_config_message_raw[3] },
+		std::bitset<8> { in_config_message_raw[4] }
+	},
+	inc_freq { 
+		std::bitset<8> { in_config_message_raw[5] },
+		std::bitset<8> { in_config_message_raw[6] },
+		std::bitset<8> { in_config_message_raw[7] }
+	},
+	num_of_inc { 
+		std::bitset<8> { in_config_message_raw[8] },
+		std::bitset<8> { in_config_message_raw[9] }
+	},
+	settling_time_cycles { 
+		std::bitset<8> { in_config_message_raw[10] },
+		std::bitset<8> { in_config_message_raw[11] },
+	},
+	ad5933_config_message { get_ad5933_config_message() },
+	ad5933_config_message_raw { get_ad5933_config_message_raw() }
 {}
 
 inline std::array<std::bitset<8>, 12> AD5933_Config::get_ad5933_config_message() const {
@@ -532,3 +592,42 @@ AD5933_Config AD5933_Config::get_default() {
 	);
 	return default_config;
 }
+
+AD5933_Data::AD5933_Data(std::array<uint8_t, 7> &in_data_message_raw) :
+	status { std::bitset<8> { in_data_message_raw[0] } },
+	temp_data { 
+		std::bitset<8> { in_data_message_raw[1]},
+		std::bitset<8> { in_data_message_raw[2]},
+	},
+	real_data { 
+		std::bitset<8> { in_data_message_raw[3]},
+		std::bitset<8> { in_data_message_raw[4]},
+	},
+	imag_data { 
+		std::bitset<8> { in_data_message_raw[5]},
+		std::bitset<8> { in_data_message_raw[6]},
+	}
+{}
+
+Status::STATUS_OrMask AD5933_Data::get_status() {
+	const std::bitset<8> status_state { status.HB & Status::STATUS_AndMask };
+	return Status::STATUS_OrMask(static_cast<uint8_t>(status_state.to_ulong()));
+}
+
+float AD5933_Data::get_temperature() {
+	uint16_t temp_data_num = static_cast<uint16_t>(temp_data.get_HB_LB_combined_bitset().to_ulong());
+	if(temp_data_num < 8192) {
+		return (static_cast<float>(temp_data_num) / 32.0f);
+	} else {
+		return (static_cast<float>((temp_data_num - 16384)) / 32.0f);
+	}
+}
+
+std::string AD5933_Data::get_real_data() {
+	return "UNIMPLEMENTED";
+}
+
+std::string AD5933_Data::get_imag_data() {
+	return "UNIMPLEMENTED";
+}
+
