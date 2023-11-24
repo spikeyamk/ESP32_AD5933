@@ -27,12 +27,14 @@ namespace States {
 	extern const sState subscribed;
 	extern const iState unsubscribe;
 	extern const iState configure_frequency_sweep;
-	extern const eState debug;
 
 	// States related to debug
+	extern const iState debug_start;
+	extern const eState debug;
 	extern const iState program_all_registers;
 	extern const iState dump_all_registers;
 	extern const iState control_HB_command;
+	extern const sState debug_end;
 
 	// States related to configuring and initializing the frequency sweep loop
 	extern const eState frequency_sweep_configured;

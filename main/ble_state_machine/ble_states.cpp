@@ -9,7 +9,10 @@
 #include "host/ble_hs.h"
 #include "nimble/nimble_port.h"
 #include "nimble/nimble_port_freertos.h"
+#include "include/ble_state_machine.hpp"
 
+
+static States::bState* debug_prev_state = nullptr;
 class StateFunctions {
 public:
 	static void off() {
@@ -55,6 +58,11 @@ public:
 		NimBLE::heartbeat_thread.value().join();
 	}
 
+	static void debug_start() {
+		std::cout << "debug_start" << std::endl;
+		debug_prev_state = state_machine.prev_state;
+	}
+
 	static void debug() {
 		std::cout << "debug" << std::endl;
 	}
@@ -62,16 +70,39 @@ public:
 	static void program_all_registers() {
 		std::cout << "program_all_registers" << " UNIMPLEMENTED" << std::endl;
 		if(NimBLE::received_packet.has_value()) {
-			const auto temporary_ret = MagicPackets::find_footer_start_index(NimBLE::received_packet.value());
-			if(temporary_ret.has_value()) {
-				const auto received_raw_register_data = MagicPackets::get_raw_packet_data(NimBLE::received_packet.value(), temporary_ret.value());
-				AD5933_Tests::ad5933.load()->block_write_to_register(AD5933::RegisterAddrs::CONTROL_HB, received_raw_register_data);
+			const auto footer_start_index_opt = MagicPackets::find_footer_start_index(NimBLE::received_packet.value());
+			if(footer_start_index_opt.has_value()) {
+				const auto received_raw_register_data = MagicPackets::get_raw_packet_data(NimBLE::received_packet.value(), footer_start_index_opt.value());
+				if(received_raw_register_data.size() == 12) {
+					std::array<uint8_t, 12> register_data_array;
+					std::copy(received_raw_register_data.begin(), received_raw_register_data.end(), register_data_array.begin());
+					if(AD5933_Tests::ad5933.load()->program_all_registers(register_data_array) == true) {
+						const auto program_all_registers_send_buf = MagicPackets::Debug::Command::program_all_registers;
+						struct os_mbuf *txom = ble_hs_mbuf_from_flat(program_all_registers_send_buf.data(), program_all_registers_send_buf.size());
+						ble_gatts_notify_custom(NimBLE::conn_handle, NimBLE::body_composition_measurement_characteristic_handle, txom);
+					}
+				}
 			}
 		}
 	}
 
 	static void control_HB_command() {
 		std::cout << "control_HB_command" << " UNIMPLEMENTED" << std::endl;
+		if(NimBLE::received_packet.has_value()) {
+			const auto footer_start_index_opt = MagicPackets::find_footer_start_index(NimBLE::received_packet.value());
+			if(footer_start_index_opt.has_value()) {
+				const auto received_raw_register_data = MagicPackets::get_raw_packet_data(NimBLE::received_packet.value(), footer_start_index_opt.value());
+				if(received_raw_register_data.size() == 1) {
+					std::array<uint8_t, 1> register_data_array;
+					std::copy(received_raw_register_data.begin(), received_raw_register_data.end(), register_data_array.begin());
+					if(AD5933_Tests::ad5933.load()->set_control_command(AD5933::ControlHB::Commands(static_cast<uint8_t>(register_data_array[0]))) == true) {
+						const auto answer_buf = MagicPackets::Debug::Command::control_HB_command;
+						struct os_mbuf *txom = ble_hs_mbuf_from_flat(answer_buf.data(), answer_buf.size());
+						ble_gatts_notify_custom(NimBLE::conn_handle, NimBLE::body_composition_measurement_characteristic_handle, txom);
+					}
+				}
+			}
+		}
 	}
 
 	static void dump_all_registers() {
@@ -85,6 +116,11 @@ public:
         	struct os_mbuf *txom = ble_hs_mbuf_from_flat(dump_register_send_buf.data(), dump_register_send_buf.size());
             ble_gatts_notify_custom(NimBLE::conn_handle, NimBLE::body_composition_measurement_characteristic_handle, txom);
 		}
+	}
+
+	static void debug_end() {
+		std::cout << "debug_end" << std::endl;
+		state_machine.change_to_state(debug_prev_state != nullptr ? debug_prev_state : &States::disconnect);
 	}
 
 	static void configure_frequency_sweep() {
@@ -200,7 +236,7 @@ namespace States {
 		&sF::connected,
 		jPairoArray {
 			jPairo {
-				jPair { &MagicPackets::Debug::Command::start, &debug }
+				jPair { &MagicPackets::Debug::Command::start, &debug_start }
 			},
 			jPairo {
 				jPair { &MagicPackets::FrequencySweep::Command::configure, &configure_frequency_sweep }
@@ -223,6 +259,11 @@ namespace States {
 		&connected
 	};
 
+	constinit const iState debug_start {
+		&sF::debug_start,
+		&debug
+	};
+
 	constinit const eState debug {
 		&sF::debug,
 		jPairoArray {
@@ -236,7 +277,7 @@ namespace States {
 				jPair { &MagicPackets::Debug::Command::control_HB_command, &control_HB_command }
 			},
 			jPairo {
-				jPair { &MagicPackets::Debug::Command::end, &connected }
+				jPair { &MagicPackets::Debug::Command::end, &debug_end }
 			}
 		},
 		&disconnect
@@ -255,6 +296,10 @@ namespace States {
 	constinit const iState control_HB_command {
 		&sF::control_HB_command,
 		&debug
+	};
+
+	constinit const sState debug_end {
+		&sF::debug_end
 	};
 
 	constinit const iState configure_frequency_sweep {

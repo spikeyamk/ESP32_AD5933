@@ -8,9 +8,9 @@
 
 class NoDataPacket {
 private:
-    std::array<uint8_t, 23> raw_bytes;
+    MagicPackets::MagicPacket_T raw_bytes;
 public:
-    explicit NoDataPacket(const std::array<uint8_t, 23> &in_raw_bytes);
+    explicit NoDataPacket(const MagicPackets::MagicPacket_T &in_raw_bytes);
     explicit NoDataPacket();
 };
 
@@ -18,23 +18,23 @@ template <size_t M, size_t N>
 class Packet : public NoDataPacket {
 private:
     std::array<std::bitset<M>, N> data;
-    const std::array<uint8_t, 23>* footer = nullptr;
+    const MagicPackets::MagicPacket_T* footer = nullptr;
     std::optional<size_t> footer_start_index = std::nullopt;
 public:
-    explicit Packet(const std::array<std::bitset<M>, N> &in_data, const std::array<uint8_t, 23> *in_footer) :
+    explicit Packet(const std::array<std::bitset<M>, N> &in_data, const MagicPackets::MagicPacket_T *in_footer) :
         NoDataPacket{ assemble_raw_bytes_from_data_n_footer(in_data, in_footer) },
         data {in_data},
         footer {in_footer}
     {}
 private:
-    std::array<uint8_t, 23> assemble_raw_bytes_from_data_n_footer(
+    MagicPackets::MagicPacket_T assemble_raw_bytes_from_data_n_footer(
         const std::array<std::bitset<M>, N> &in_data,
-        const std::array<uint8_t, 23> *in_footer
+        const MagicPackets::MagicPacket_T *in_footer
     ) {
         footer_start_index = MagicPackets::find_footer_start_index(*in_footer);
         assert(N == footer_start_index);
         if(footer_start_index.has_value()) {
-            std::array<uint8_t, 23> result = *in_footer;
+            MagicPackets::MagicPacket_T result = *in_footer;
             for(size_t i = 0; i < N; i++) {
                 result[i] = static_cast<uint8_t>(in_data[i].to_ulong());
             }
@@ -44,11 +44,11 @@ private:
         }
     }
 public:
-    std::array<uint8_t, 23> get_raw_bytes() {
+    MagicPackets::MagicPacket_T get_raw_bytes() {
         return raw_bytes;
     }
 
-    const std::array<uint8_t, 23>* get_footer_pointer() {
+    const MagicPackets::MagicPacket_T* get_footer_pointer() {
         return footer;
     }
 };

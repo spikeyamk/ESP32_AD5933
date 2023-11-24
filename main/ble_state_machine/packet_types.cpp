@@ -5,7 +5,7 @@
 #include "include/packet_types.hpp"
 #include "include/magic_packets.hpp"
 
-NoDataPacket::NoDataPacket(const std::array<uint8_t, 23> &in_raw_bytes) :
+NoDataPacket::NoDataPacket(const MagicPackets::MagicPacket_T &in_raw_bytes) :
     raw_bytes {in_raw_bytes}
 {}
 

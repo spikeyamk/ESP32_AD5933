@@ -8,6 +8,7 @@ namespace StateMachine {
         const T_bState* on_state;
     public:
         T_bState* active_state;
+        T_bState* prev_state = const_cast<T_bState*>(off_state);
     public:
         constexpr StateMachine (
             T_bState* in_off_state,
@@ -68,9 +69,11 @@ namespace StateMachine {
 
         constexpr bool change_to_state(const T_bState* next_state) {
             if(is_on() == true) {
+                prev_state = active_state;
                 active_state = const_cast<T_bState*>(static_cast<const T_bState*>(next_state));
                 active_state->exec_func_ptr();
                 while(is_active_state_intermediate_state() == true) {
+                    prev_state = active_state;
                     active_state = const_cast<T_bState*>(static_cast<const T_bState*>(active_state->next_state.value()));
                     active_state->exec_func_ptr();
                 }

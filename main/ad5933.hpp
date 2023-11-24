@@ -337,6 +337,10 @@ public:
 		std::printf("\n");
 	}
 
+	bool program_all_registers(const std::array<uint8_t, 12> &register_data_array) {
+		return block_write_to_register(AD5933::RegisterAddrs::CONTROL_HB, register_data_array);
+	}
+
 	std::optional<std::array<uint8_t, 19>> dump_all_registers_as_array() {
 		std::printf("\nAD5933: Dumping all registers\n");
 		const auto rw_ret = block_read_register(

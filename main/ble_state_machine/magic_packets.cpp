@@ -10,12 +10,12 @@
 namespace MagicPackets {
 	namespace Debug {
 		namespace Command {
-			constinit const std::array<uint8_t, 23> start {
+			constinit const MagicPacket_T start {
 				0x7d, 0x68, 0x97, 0xda, 0xf4, 0x5c, 0x2b, 0xd5, 
 				0x49, 0x26, 0x55, 0x83, 0xa2, 0x38, 0xfa, 0x54, 
-				0xb9, 0x5c, 0x14, 0x14, 0x02, 0xf3, 0x8c, 
+				0xb9, 0x5c, 0x14, 0x14,
 			};
-			constinit const std::array<uint8_t, 23> dump_all_registers {
+			constinit const MagicPacket_T dump_all_registers {
 				// 12 8-bit Read/Write Registers placeholder
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				0x00, 0x00, 0x00, 0x00,
@@ -26,30 +26,31 @@ namespace MagicPackets {
 				// 6 8-bit Read-only Registers placheholder
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 
-				0xFF, 0xFF, 0xFF, 0xFF,
+				0xFF,
 			};
-			constinit const std::array<uint8_t, 23> program_all_registers {
+			constinit const MagicPacket_T program_all_registers {
 				// 12 8-bit Read/Write Registers placeholder
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				0x00, 0x00, 0x00, 0x00, 
 
-				0xFF, 0xFF, 0xFF, 0xFF,
+				0xFF,
 
-				0x00, 0x12, 0x3b, 0x21, 0xea, 0x2c, 0x7d,
+				0xf2, 0xb7, 0xd0, 0x23,
+				0xee, 0xae, 0x97, 
 			};
-			constinit const std::array<uint8_t, 23> control_HB_command {
+			constinit const MagicPacket_T control_HB_command {
 				0b0000'0000, // 4-bit placeholder
 
-				0xFF, 0xFF, 0xFF, 0xFF,
+				0xFF,
 
-				0x8d, 0x32, 0x64, 0xec, 0x59, 0x54, 0x83, 0x09, 
-				0x2f, 0xcc, 0xe9, 0x54, 0xe2, 0xcd, 0xaf, 0x27, 
-				0xb2, 0x70,
+				0xe8, 0x1a, 0x82, 0x05, 0xb5, 0xcf, 0x8a, 0x0b, 
+				0x0e, 0xbf, 0x45, 0x3c, 0x40, 0xa7, 0x20, 0x83, 
+				0x65, 0x36, 
 			};
-			constinit const std::array<uint8_t, 23> end {
+			constinit const MagicPacket_T end {
 				0x31, 0x5a, 0xe0, 0x1f, 0x76, 0xc4, 0x6b, 0x1c, 
 				0xab, 0x57, 0xa7, 0x93, 0x44, 0xb3, 0x4d, 0x39, 
-				0x52, 0xf2, 0xdb, 0x11, 0x62, 0xc3, 0x2a, 
+				0x52, 0xf2, 0xdb, 0x11,
 			};
 			/*
 			constinit const std::array<std::array<uint8_t, 23>, 5> chunks { 
@@ -63,72 +64,72 @@ namespace MagicPackets {
 
 	namespace FrequencySweep {
 		namespace Command {
-			constinit const std::array<uint8_t, 23> configure {
+			constinit const MagicPacket_T configure {
 				// 12 8-bit Read/Write Registers placeholder
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				0x00, 0x00, 0x00, 0x00, 
 
-				0xFF, 0xFF, 0xFF, 0xFF,
+				0xFF,
 
-				0xa5, 0x03, 0x56, 0xbe, 0x8c, 0x9f, 0x97,
+				0xa8, 0xca, 0x9e, 0x91, 0x8e, 0xd3, 0x88, 
 			};
-			constinit const std::array<uint8_t, 23> initialize_with_start_freq {
+			constinit const MagicPacket_T initialize_with_start_freq {
 				0x9f, 0x0b, 0x0a, 0x00, 0x55, 0xe6, 0x2b, 0xe7, 
 				0x6f, 0x13, 0x94, 0x39, 0x85, 0x0e, 0xf4, 0x18, 
-				0x25, 0x23, 0x69, 0x36, 0x2b, 0xec, 0x39,
+				0x25, 0x23, 0x69, 0x36,
 			};
-			constinit const std::array<uint8_t, 23> start {
+			constinit const MagicPacket_T start {
 				0x91, 0x12, 0x0c, 0xbc, 0x10, 0x8c, 0x75, 0xcb, 
 				0x9f, 0x83, 0x91, 0x8c, 0x01, 0x7f, 0x43, 0x24, 
-				0x31, 0x0a, 0x6a, 0x02, 0x2a, 0x9f, 0xda, 
+				0x31, 0x0a, 0x6a, 0x02,
 			};
-			constinit const std::array<uint8_t, 23> check_for_data_valid {
+			constinit const MagicPacket_T check_for_data_valid {
 				0b0000'0000, // bool placeholder
 
-				0xFF, 0xFF, 0xFF, 0xFF,
+				0xFF,
 
-				0x4c, 0x96, 0x57, 0x70, 0x22, 0xae, 0xb9, 0xd8, 
-				0x79, 0xd8, 0x34, 0xdc, 0x5a, 0xf7, 0x07, 0xe6, 
-				0x5f, 0x4e,
+				0xc5, 0x00, 0x41, 0x6d, 0xf4, 0x3f, 0xc0, 0xcc, 
+				0x4a, 0x9d, 0xe1, 0xdc, 0xf7, 0x16, 0x47, 0xfb,
+				0x4a, 0xa6,
 			};
-			constinit const std::array<uint8_t, 23> read_data_valid_value {
+			constinit const MagicPacket_T read_data_valid_value {
 				0x00, 0x00, // REAL_DATA (RAW)
 				0x00, 0x00, // IMAG_DATA (RAW)
 				0x00, 0x00, 0x00, 0x00, // REAL_DATA (float)
 				0x00, 0x00, 0x00, 0x00, // IMAG_DATA (float)
 
-				0xFF, 0xFF, 0xFF, 0xFF,
+				0xFF,
 
-				0xc5, 0x27, 0x4a, 0xa4, 0xcf, 0x88, 0x3c,
+				0xb7, 0x02, 0x82, 0xf2, 0x19, 0xde, 0x45,
 			};
-			constinit const std::array<uint8_t, 23> repeat_freq {
+			constinit const MagicPacket_T repeat_freq {
 				0x3f, 0xb7, 0x4d, 0xe0, 0xd8, 0x05, 0x71, 0x02, 
 				0x87, 0xc9, 0xbb, 0xbb, 0x75, 0x35, 0xa5, 0x4c, 
-				0x60, 0x04, 0x00, 0x9f, 0x5f, 0x54, 0xe1, 
+				0x60, 0x04, 0x00, 0x9f,
 			};
-			constinit const std::array<uint8_t, 23> check_for_sweep_complete {
+			constinit const MagicPacket_T check_for_sweep_complete {
 				0b0000'0000, // bool placeholder
 
-				0xFF, 0xFF, 0xFF, 0xFF,
+				0xFF,
 
-				0x33, 0x4a, 0x06, 0x0b, 0x9b, 0x4c, 0x2e, 0x84, 
-				0x59, 0x92, 0x6d, 0xa1, 0xdb, 0x02, 0xaa, 0x63, 
-				0x14, 0x52,
+				0x5a, 0xec, 0xce, 0xf4, 0x1c, 0x80, 0xa3, 0xd2, 
+				0x31, 0x39, 0xd5, 0xdf, 0x3f, 0xb1, 0x46, 0x8f, 
+				0x7c, 0x2b, 	
 			};
-			constinit const std::array<uint8_t, 23> increment_frequency {
+			constinit const MagicPacket_T increment_frequency {
 				0x4a, 0x7c, 0x2e, 0x99, 0xe7, 0x20, 0x07, 0xa5, 
 				0x14, 0xe6, 0xdc, 0x49, 0x24, 0x94, 0x28, 0xfd, 
-				0x48, 0x5c, 0xcf, 0x72, 0x42, 0xa1, 0x73, 
+				0x48, 0x5c, 0xcf, 0x72,
 			};
-			constinit const std::array<uint8_t, 23> repeat_frequency_sweep {
+			constinit const MagicPacket_T repeat_frequency_sweep {
 				0xf3, 0x52, 0xb0, 0x32, 0x4a, 0x5c, 0x60, 0xb1, 
 				0xf5, 0x52, 0x35, 0xbb, 0x95, 0x67, 0x1e, 0xb5, 
-				0x3e, 0x67, 0xd4, 0xae, 0xa1, 0x9a, 0x27, 
+				0x3e, 0x67, 0xd4, 0xae,
 			};
-			constinit const std::array<uint8_t, 23> stop_frequency_sweep {
+			constinit const MagicPacket_T stop_frequency_sweep {
 				0xa8, 0xed, 0x4b, 0x09, 0xe2, 0xc7, 0x7f, 0x13, 
 				0xac, 0xb9, 0xae, 0xbc, 0x5c, 0x76, 0x94, 0x05, 
-				0x45, 0x02, 0x59, 0x06, 0x3b, 0x35, 0x6d, 
+				0x45, 0x02, 0x59, 0x06,
 			};
 			/*
 			constinit const std::array<std::array<uint8_t, 23>, 10> chunks {
@@ -168,7 +169,7 @@ namespace MagicPackets {
 	using namespace Debug::Command;
 	using namespace FrequencySweep::Command;
 
-	const std::array<const std::array<uint8_t, 23>*, 15> all_packets { 
+	const std::array<const MagicPacket_T*, 15> all_packets { 
 		&Debug::Command::start,
 		&Debug::Command::dump_all_registers, &Debug::Command::program_all_registers, &Debug::Command::control_HB_command,
 		&Debug::Command::end,
@@ -218,31 +219,32 @@ namespace MagicPackets {
 }
 
 namespace MagicPackets {
-	static constexpr std::array<uint8_t, 4> magic_sequence { 0xFF, 0xFF, 0xFF, 0xFF };
-	std::optional<size_t> find_footer_start_index(const std::array<uint8_t, 23>& raw_packet) {
-		auto result = std::find_end(raw_packet.begin(), raw_packet.end(), magic_sequence.begin(), magic_sequence.end());
+	static constexpr uint8_t magic_footer_starter = 0xFF;
+	std::optional<size_t> find_footer_start_index(const MagicPackets::MagicPacket_T& raw_packet) {
+		std::optional<size_t> index_opt { std::nullopt };
 
-		if (result != raw_packet.end()) {
-			// Calculate the index of the beginning of the sequence from the left
-			return std::distance(raw_packet.begin(), result);
-		} else {
-			return std::nullopt;
+		const auto it = std::find(std::rbegin(raw_packet), std::rend(raw_packet), magic_footer_starter);
+
+		if(it != std::rend(raw_packet)) {
+			index_opt = std::distance(it, std::rend(raw_packet)) - 1;
 		}
+
+		return index_opt;
 	}
 
-	std::array<uint8_t, 23> get_raw_packet_footer(const std::array<uint8_t, 23> &in_raw_packet, const size_t footer_start_index) {
-		std::array<uint8_t, 23> raw_packet = in_raw_packet;
+	MagicPackets::MagicPacket_T get_raw_packet_footer(const MagicPackets::MagicPacket_T &in_raw_packet, const size_t footer_start_index) {
+		MagicPackets::MagicPacket_T raw_packet = in_raw_packet;
 		for(size_t i = 0; i < footer_start_index; i++) {
 			raw_packet[i] = 0;
 		}
 		return raw_packet;
 	}
 
-	std::vector<uint8_t> get_raw_packet_data(const std::array<uint8_t, 23> &in_raw_packet, const size_t footer_start_index) {
+	std::vector<uint8_t> get_raw_packet_data(const MagicPackets::MagicPacket_T &in_raw_packet, const size_t footer_start_index) {
 		return std::vector(in_raw_packet.begin(), in_raw_packet.begin() + (footer_start_index - 1));
 	}
 
-	std::optional<std::vector<std::bitset<8>>> get_packet_data(const std::array<uint8_t, 23> &in_raw_packet) {
+	std::optional<std::vector<std::bitset<8>>> get_packet_data(const MagicPackets::MagicPacket_T &in_raw_packet) {
 		const std::optional<size_t> footer_start_index = find_footer_start_index(in_raw_packet);
 		if(footer_start_index.has_value() == false) {
 			return std::nullopt;
@@ -257,10 +259,10 @@ namespace MagicPackets {
 }
 
 namespace MagicPackets {
-	std::optional<const std::array<uint8_t, 23>*> get_magic_packet_pointer(const std::array<uint8_t, 23> &raw_packet) {
+	std::optional<const MagicPacket_T*> get_magic_packet_pointer(const MagicPacket_T &raw_packet) {
 		const std::optional<size_t> footer_start_index = find_footer_start_index(raw_packet);
 		if(footer_start_index.has_value()) {
-			const std::array<uint8_t, 23> packet_with_only_footer { get_raw_packet_footer(raw_packet, footer_start_index.value()) };
+			const MagicPacket_T packet_with_only_footer { get_raw_packet_footer(raw_packet, footer_start_index.value()) };
 			for(size_t i = 0; i < MagicPackets::all_packets.size(); i++) {
 				if(packet_with_only_footer == *(MagicPackets::all_packets[i])) {
 					return MagicPackets::all_packets[i];

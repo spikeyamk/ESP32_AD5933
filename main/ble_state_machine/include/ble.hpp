@@ -7,6 +7,7 @@
 #include <thread>
 
 #include "ad5933.hpp"
+#include "magic_packets.hpp"
 
 namespace NimBLE {
     extern uint16_t conn_handle;
@@ -14,7 +15,7 @@ namespace NimBLE {
     extern std::atomic<bool> heartbeat_running;
     extern std::optional<std::thread> heartbeat_thread;
     extern char characteristic_received_value[500];
-    extern std::optional<std::array<uint8_t, 23>> received_packet;
+    extern std::optional<MagicPackets::MagicPacket_T> received_packet;
     void run();
     void advertise();
     void stopBLE();
