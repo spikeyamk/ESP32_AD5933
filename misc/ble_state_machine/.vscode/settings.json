@@ -1,0 +1,16 @@
+{
+    "files.associations": {
+        "array": "cpp",
+        "xutility": "cpp",
+        "iostream": "cpp",
+        "ostream": "cpp",
+        "algorithm": "cpp",
+        "charconv": "cpp",
+        "iomanip": "cpp",
+        "thread": "cpp",
+        "xhash": "cpp",
+        "xlocmon": "cpp",
+        "xlocnum": "cpp",
+        "xstring": "cpp"
+    }
+}

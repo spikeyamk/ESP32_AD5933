@@ -1,0 +1,74 @@
+- aky rozsah??? ( 1kR - 100kR )?
+- aky rozsah frekvencie??? (10 kHz - 30 kHz)?
+
+- FUNCTIONAL BLOCK DIAGRAM AD5933 datasheet str.1 
+- UG364 schema, funkcnost jednotlivych blokov str.36
+- UG364 schema, funkcnost jednotlivych blokov str.36 rebiasing
+
+- GAIN_FACTOR/SYSTEM_PHASE calculation postup pre single point
+- GAIN_FACTOR/SYSTEM_PHASE calculation postup pre double point
+- GAIN_FACTOR/SYSTEM_PHASE calculation postup pre multi point
+
+- SETTLING_TIME_CYCLES vysoka Q obvodov
+- SETTLING_TIME_CYCLES neznama funkcnost kedze to suvisi s DDS UG364 str.6
+
+- moje GUI
+- uspesne otestovane nastavenie vsetkych registrov
+- uspesne otestovane posielanie controlHB commandov
+- uspesne otestovany manualny meraci algoritmus
+- uspesne meranie teploty, impedancie
+- implementacia - automatizovana kalibracia/meranie - problemy:
+    zahadna race condition/segfault/unhandled exception/use after free/double free?/bad allocation pri num_of_inc > 3 
+    predpokladam problem s AD5933_Data default/move/copy constructor alebo problem s pouzitim std::atomic a std::memory_order
+    budem asi potrebovat backtrace rozchodit
+- hlavne nedostatky
+    zavislost na C++20 a std::atomic<bool> najlepsi by bol downgrade na C++17
+    vela static premennych
+    vela global premennych
+    problemy so synchronizaciou
+    rozbity progress bar
+    docasne vypnuty DarkModeSwitcher ktory interaguje s Win32 API kvoli out-of-date Windows 10 C/C++ SDK 
+        nullptr dereferncia pri lambda capture
+    neimplementovany window resize handler
+    problemy hlavne SDL2 a CMake build system
+    pouziva SDL2 planovany upgrade na SDL3
+    zatial chybaju zobrazenia pomocou ImGuiPlot
+    moznost vymenit ImGui a SimpleBLE za Qt 6 framework 
+        SimpleBLE max 20 byte MTU
+
+
+- prilis pomaly I2C driver (vela std::this_thread::sleep_for(std::chrono::milliseconds(100)))
+    nevyuziva Low Power Core
+- FreeRTOS IDLE TaskWDT
+- xTaskCreate priority settings
+- configTICKRATE_HZ 100 Hz a 1000 Hz
+- planovane prepisanie I2C driveru preportovanie class do ESP32
+    class AD5933_Config 
+    class AD5933_Data, class AD5933_MeasurementData, AD5933_TemperatureData, class AD5933_ImpedanceData, class 
+    std::vector<class AD5933_CalibrationData> lookup_table
+
+- moje merania
+- EVAL SOFTWARE jednotlive pouzite nastavenia a zapojene suciastky
+- REAL_DATA a IMAG_DATA int16_t ktory neni tak uplne int16_t??? a ktory neni v Ohmoch presne max a min hodnoty vobec netusim
+- REAL_DATA a IMAG_DATA -> admitancia? ani nie tak admitancia skor nejaka forma kodu ale abs(kod) nepriamo umerne zavisi od odporu
+- REAL_DATA a IMAG_DATA spodne a dolne ohranicenie
+- IMAG_DATA default offset s kapacitnym charakterom
+
+- mozna kalibracia
+- potreba kalibracnej look-up table, co najviac vypoctov v pocitaci??
+- jeden kalibracny/jeden gain rezistor (alebo nejaky iny obvod)
+- 4 pary rezistorov moznost volby rozsahu, potreba spinacov ADG811?? alebo nejaky iny spinac??
+- 3 pary rezistorov a jeden par programovatelnych rezistorov AD5270 brute force automatizovane meranie kalibracie
+- moznost pre jednotlive hodnoty REAL_DATA a IMAG_DATA ktore su prilis daleko od kalibracnej hodnoty nejaku dodatocne navyse kalibracnu konstantu
+- priklady a vysledky merania od Analogu z dokumentu CN-0217.pdf
+- potreba detekcie nespravne nastaveneho rozsahu podla REAL_DATA a IMAG_DATA, zda sa ze hodnoty su deterministicke a koncia niekde na 14'000 az 16'000
+- v pripade nespravneho rozsahu pokus o zmenu rozsahu
+- v pripade nespravneho rozsahu pomocou trojice parov 0.01% rezistorov pokus s programovatelnym rezistorom??? asi by som ho na konecnu dosku ani nedaval
+
+- PCB na kalibraciu ziadne kabliky a breadboardy pajkovat a vymeniat suciastky
+
+- elektrody?
+
+- 5cm x 5cm PCB presnost a featury vs. kompaktnost
+- INTERNAL OSCILLATOR AD5933 datasheet str. 11
+- PCB design obmedzenia datasheet str. 34

@@ -12,6 +12,9 @@
 #include <memory>
 #include <cassert>
 #include <cmath>
+#include <atomic>
+#include <type_traits>
+#include <stdexcept>
 
 #include "util.hpp"
 #include "trielo/trielo.hpp"
@@ -189,6 +192,30 @@ public:
 			IMAG_DATA_HB       = 0x96,   // Imaginary data
 			IMAG_DATA_LB       = 0x97    // Imaginary data
 		};
+
+		enum class RW_RO {
+			CONTROL_HB		   = 0x80,
+			CONTROL_LB		   = 0x81,
+			FREQ_START_HB      = 0x82,   // Start frequency
+			FREQ_START_MB      = 0x83,   // Start frequency
+			FREQ_START_LB      = 0x84,   // Start frequency
+			FREQ_INC_HB        = 0x85,   // Frequency increment
+			FREQ_INC_MB        = 0x86,   // Frequency increment
+			FREQ_INC_LB        = 0x87,   // Frequency increment
+			INC_NUM_HB         = 0x88,   // Number of increments
+			INC_NUM_LB         = 0x89,   // Number of increments
+			SETTLING_CYCLES_HB = 0x8A,   // Number of settling time cycles
+			SETTLING_CYCLES_LB = 0x8B,   // Number of settling time cycles
+
+			STATUS			   = 0x8F,
+
+			TEMP_DATA_HB	   = 0x92,   // Temperature data
+			TEMP_DATA_LB	   = 0x93,
+			REAL_DATA_HB       = 0x94,   // Real data
+			REAL_DATA_LB       = 0x95,   // Real data
+			IMAG_DATA_HB       = 0x96,   // Imaginary data
+			IMAG_DATA_LB       = 0x97    // Imaginary data
+		};
 	};
 
 	class ControlHB {
@@ -255,7 +282,6 @@ public:
 		};
 	};
 
-
 	class SettlingCyclesHB {
 	public:
 		enum class Multiplier {
@@ -292,150 +318,128 @@ public:
 		I2CDevice(device_handle, LOWEST_REGISTER_ADDRESS, HIGHEST_REGISTER_ADDRESS)
 	{}
 
-	bool write_to_register_address_pointer(const RegisterAddr register_address) const {
-		if(RegisterAddrs::is_valid_register_addr(register_address) == false) {
-			return false;
-		}
-		uint8_t write_buffer[2] { ADDRESS_POINTER, register_address.unwrap() };
-		const int xfer_timeout_ms = -1;
-		ESP_ERROR_CHECK(
-			i2c_master_transmit(
-				device_handle,
-				write_buffer,
-				sizeof(write_buffer),
-				xfer_timeout_ms
-			)
-		);
-		return true;
-	}
+	bool write_to_register_address_pointer(const RegisterAddrs::RW_RO register_address) const {
+		uint8_t write_buffer[2] { ADDRESS_POINTER, static_cast<uint8_t>(register_address) };
+		const int xfer_timeout_ms = 100;
 
-	void dump_all_registers() const override {
-		std::printf("\nAD5933: Dumping all registers\n");
-		const auto rw_ret = block_read_register(
-			AD5933::RegisterAddrs::CONTROL_HB,
-			AD5933::RegisterAddrs::SETTLING_CYCLES_LB.unwrap() - AD5933::RegisterAddrs::CONTROL_HB.unwrap() + 1
-		);
-		if(rw_ret.has_value()) {
-			for(uint8_t i = 0; i < rw_ret.value().size(); i++) {
-				std::printf("AD5933: Register[0x%02X]: 0x%02X\n", AD5933::RegisterAddrs::CONTROL_HB.unwrap() + i, rw_ret.value()[i]);
-			}
-		}
-		const auto status_ret = read_register(AD5933::RegisterAddrs::STATUS);
-		if(status_ret.has_value()) {
-			std::printf("AD5933: Register[0x%02X]: 0x%02X\n", AD5933::RegisterAddrs::STATUS.unwrap(), status_ret.value());
-		}
-		const auto ro_ret = block_read_register(
-			AD5933::RegisterAddrs::TEMP_DATA_HB,
-			AD5933::RegisterAddrs::IMAG_DATA_LB.unwrap() - AD5933::RegisterAddrs::TEMP_DATA_HB.unwrap() + 1
-		);
-		if(ro_ret.has_value()) {
-			for(uint8_t i = 0; i < ro_ret.value().size(); i++) {
-				std::printf("AD5933: Register[0x%02X]: 0x%02X\n", AD5933::RegisterAddrs::TEMP_DATA_HB.unwrap() + i, ro_ret.value()[i]);
-			}
-		}
-		std::printf("\n");
-	}
-
-	template<typename T_Collection>
-	bool block_write_to_register(const RegisterAddr_RW &register_address, const T_Collection &message) const {
-		write_to_register_address_pointer(register_address);
-		std::vector<uint8_t> write_buffer { 
-			static_cast<uint8_t>(AD5933::CommandCodes::BLOCK_WRITE),
-			static_cast<uint8_t>(message.size())
-		};
-		write_buffer.insert(write_buffer.end(), message.begin(), message.end());
-		const int xfer_timeout_ms = -1;
-		ESP_ERROR_CHECK(
-			i2c_master_transmit(
-				device_handle,
-				write_buffer.data(),
-				write_buffer.size(),
-				xfer_timeout_ms 
-			)
-		);
-
-		const std::optional<std::vector<uint8_t>> values_to_check_against = block_read_register(register_address, message.size());
-		if(values_to_check_against.has_value() == false) {
-			std::printf("AD5933: Failed to read the block at the register address: %u\n", register_address.unwrap());
-			return false;
-		}
-
-    	if (std::equal(message.begin(), message.end(), values_to_check_against.value().begin(), values_to_check_against.value().end())) {
+		if(i2c_master_transmit(
+			device_handle,
+			write_buffer,
+			sizeof(write_buffer),
+			xfer_timeout_ms
+		) == ESP_OK) {
 			return true;
 		} else {
-			std::printf(
-				"AD5933: Failed to verify the written block at address: 0x%02X with message:\n",
-				register_address.unwrap()
-			);
-			for(size_t i = 0; i < message.size(); i++) {
-				std::printf("\tAD5933: message[%u]: 0x%02X\n", i, message[i]);
-			}
-
-			for(size_t i = 0; i < values_to_check_against.value().size(); i++) {
-				std::printf("\tAD5933: values_to_check_against[%u]: 0x%02X\n", i, values_to_check_against.value()[i]);
-			}
-			std::printf("\n");
 			return false;
 		}
 	}
 
-	std::optional<uint8_t> read_register(const RegisterAddr register_address) const override {
-		write_to_register_address_pointer(register_address);
-		uint8_t read_buffer;	
-		const int xfer_timeout_ms = -1;
-		ESP_ERROR_CHECK(
-			i2c_master_receive(
-				device_handle,
-				&read_buffer,
-				sizeof(read_buffer),
-				xfer_timeout_ms
-			)
-		);
-		return std::optional<uint8_t> { read_buffer };
-	}
-
-	std::optional<std::vector<uint8_t>> block_read_register(
-		const RegisterAddr register_starting_address,
-		const uint8_t n_bytes
-	) const override {
-		if(register_address_range_exists(register_starting_address, n_bytes) == false) {
+	std::optional<uint8_t> read_register(const RegisterAddrs::RW_RO register_address) const {
+		if(write_to_register_address_pointer(register_address) == false) {
 			return std::nullopt;
 		}
 
-		const int xfer_timeout_ms = -1;
-		std::vector<uint8_t> output_vector;
-
-		const uint8_t block_size = 10;
-		for(uint8_t i = 0; i < n_bytes; i += block_size ) {
-			write_to_register_address_pointer(RegisterAddr{ static_cast<uint8_t>(register_starting_address.unwrap() + i) });
-			uint8_t write_buffer[2] = { AD5933::CommandCodes::BLOCK_READ, n_bytes };
-			uint8_t read_buffer[block_size] = {
-				0x00, 0x00, 0x00, 0x00, 0x00,
-				0x00, 0x00, 0x00, 0x00, 0x00
-			};
-
-			uint8_t remaining = n_bytes - i;
-			ESP_ERROR_CHECK(
-				i2c_master_transmit_receive(
-					device_handle,
-					write_buffer,
-					sizeof(write_buffer),
-					read_buffer,
-					std::min(static_cast<uint8_t>(block_size), remaining), // Ensure not to read more than remaining data.
-					xfer_timeout_ms
-				)
-			);
-
-			for(uint8_t j = 0; j < std::min(static_cast<uint8_t>(block_size), remaining); ++j) {
-				output_vector.push_back(read_buffer[j]);
-			}
+		uint8_t read_buffer;	
+		const int xfer_timeout_ms = 100;
+		if(i2c_master_receive(
+			device_handle,
+			&read_buffer,
+			sizeof(read_buffer),
+			xfer_timeout_ms
+		) != ESP_OK) {
+			return std::nullopt;
 		}
 
-		return std::optional<std::vector<uint8_t>>(output_vector);
+		return read_buffer;
 	}
 
+	template<size_t n_bytes>
+	std::optional<std::array<uint8_t, n_bytes>> block_read_register(
+		const RegisterAddrs::RW_RO register_starting_address
+	) const {
+		if(write_to_register_address_pointer(RegisterAddrs::RW_RO(static_cast<uint8_t>(register_starting_address))) == false) {
+			std::cout << "fucking hell\n";
+			return std::nullopt;
+		}
+
+		const uint8_t write_buffer[2] = { AD5933::CommandCodes::BLOCK_READ, n_bytes };
+		std::array<uint8_t, n_bytes> read_buffer;
+		const int xfer_timeout_ms = 100;
+		if(i2c_master_transmit_receive(
+			device_handle,
+			write_buffer,
+			sizeof(write_buffer),
+			read_buffer.data(),
+			read_buffer.size(),
+			xfer_timeout_ms
+		) != ESP_OK) {
+			std::cout << "mother fucking hell\n";
+			return std::nullopt;
+		}
+
+		return read_buffer;
+	}
+
+	template<size_t n_bytes>
+	bool block_write_to_register(const RegisterAddrs::RW &register_address, const std::array<uint8_t, n_bytes> &message) const {
+		if(write_to_register_address_pointer(RegisterAddrs::RW_RO(static_cast<uint8_t>(register_address))) == false) {
+			return false;
+		}
+
+		std::array<uint8_t, n_bytes + 2> write_buffer { 
+			static_cast<uint8_t>(AD5933::CommandCodes::BLOCK_WRITE),
+			static_cast<uint8_t>(message.size())
+		};
+		std::copy(message.begin(), message.end(), write_buffer.begin() + 2);
+		const int xfer_timeout_ms = 100;
+
+		if(i2c_master_transmit(
+			device_handle,
+			write_buffer.data(),
+			write_buffer.size(),
+			xfer_timeout_ms
+		) == ESP_OK) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	bool program_all_registers(const std::array<uint8_t, 12> &register_data_array) {
+		return block_write_to_register<12>(AD5933::RegisterAddrs::RW::CONTROL_HB, register_data_array);
+	}
+
+	std::optional<std::array<uint8_t, 19>> dump_all_registers_as_array() {
+		constexpr auto rw_n_bytes = static_cast<size_t>(static_cast<uint8_t>(AD5933::RegisterAddrs::RW_RO::SETTLING_CYCLES_LB) - static_cast<uint8_t>(AD5933::RegisterAddrs::RW_RO::CONTROL_HB) + 1);
+		const auto rw_ret = block_read_register<rw_n_bytes>(AD5933::RegisterAddrs::RW_RO::CONTROL_HB);
+		if(rw_ret.has_value() == false) {
+			std::cout << "here\n";
+			return std::nullopt;
+		}
+
+		const auto status_ret = read_register(AD5933::RegisterAddrs::RW_RO::STATUS);
+		if(status_ret.has_value() == false) {
+			std::cout << "or here\n";
+			return std::nullopt;
+		}
+
+		constexpr auto ro_n_bytes = static_cast<size_t>(static_cast<uint8_t>(AD5933::RegisterAddrs::RW_RO::IMAG_DATA_LB) - static_cast<uint8_t>(AD5933::RegisterAddrs::RW_RO::TEMP_DATA_HB) + 1);
+		const auto ro_ret = block_read_register<ro_n_bytes>(AD5933::RegisterAddrs::RW_RO::TEMP_DATA_HB);
+		if(ro_ret.has_value() == false) {
+			std::cout << "or there\n";
+			return std::nullopt;
+		}
+
+		std::array<uint8_t, 19> ret_array;
+		std::copy(rw_ret.value().begin(), rw_ret.value().end(), ret_array.begin());
+		ret_array[12] = status_ret.value();
+		std::copy(ro_ret.value().begin(), ro_ret.value().end(), ret_array.begin() + 13);
+		return ret_array;
+	}
+
+/*
 	std::optional<ControlHB::Commands> read_control_mode() {
-		const std::optional<uint8_t> control_hb_state = read_register(RegisterAddrs::CONTROL_HB);
+		const std::optional<uint8_t> control_hb_state = read_register(RegisterAddrs::RW_RO::CONTROL_HB);
 		if(control_hb_state.has_value() == false) {
 			std::printf("AD5933: Failed to read the control mode:\nFailed to read the CONTROL_HB register\n");
 			return std::nullopt;
@@ -451,7 +455,7 @@ public:
 	}
 
 	bool reset() {
-		const std::optional<uint8_t> control_lb_state_before_reset { read_register(RegisterAddrs::CONTROL_LB).value() };
+		const std::optional<uint8_t> control_lb_state_before_reset { read_register(RegisterAddrs::RW_RO::CONTROL_LB) };
 		if(control_lb_state_before_reset.has_value() == false) {
 			std::printf("AD5933: Reset: Failed to read the CONTROL_LB register\n");
 			return false;
@@ -590,50 +594,27 @@ public:
 
 		return true;
 	}
+*/
 
 	bool set_control_command(const ControlHB::Commands command) {
-		const std::optional<uint8_t> control_hb_state_before_command { read_register(RegisterAddrs::CONTROL_LB).value() };
+		const std::optional<uint8_t> control_hb_state_before_command { read_register(RegisterAddrs::RW_RO::CONTROL_HB).value() };
 		if(control_hb_state_before_command.has_value() == false) {
 			std::printf("AD5933: Reset: Failed to read the CONTROL_HB register\n");
 			return false;
 		}
 
-		uint8_t command_message = (control_hb_state_before_command.value() & 0b0000'1111);
-		switch(static_cast<uint8_t>(command)) {
-			default:
-				command_message |= static_cast<uint8_t>(ControlHB::Commands::NOP_0);
-				break;
-			case static_cast<uint8_t>(ControlHB::Commands::INITIALIZE_WITH_START_FREQUENCY):
-				command_message |= static_cast<uint8_t>(ControlHB::Commands::INITIALIZE_WITH_START_FREQUENCY);
-				break;
-			case static_cast<uint8_t>(ControlHB::Commands::START_FREQUENCY_SWEEP):
-				command_message |= static_cast<uint8_t>(ControlHB::Commands::START_FREQUENCY_SWEEP);
-				break;
-			case static_cast<uint8_t>(ControlHB::Commands::INCREMENT_FREQUENCY):
-				command_message |= static_cast<uint8_t>(ControlHB::Commands::INCREMENT_FREQUENCY);
-				break;
-			case static_cast<uint8_t>(ControlHB::Commands::REPEAT_FREQUENCY):
-				command_message |= static_cast<uint8_t>(ControlHB::Commands::REPEAT_FREQUENCY);
-				break;
-			case static_cast<uint8_t>(ControlHB::Commands::MEASURE_TEMPERATURE):
-				command_message |= static_cast<uint8_t>(ControlHB::Commands::MEASURE_TEMPERATURE);
-				break;
-			case static_cast<uint8_t>(ControlHB::Commands::POWER_DOWN_MODE):
-				command_message |= static_cast<uint8_t>(ControlHB::Commands::POWER_DOWN_MODE);
-				break;
-			case static_cast<uint8_t>(ControlHB::Commands::STANDBY_MODE):
-				command_message |= static_cast<uint8_t>(ControlHB::Commands::STANDBY_MODE);
-				break;
-		}
+		uint8_t command_message = ((control_hb_state_before_command.value() & 0b0000'1111) | static_cast<uint8_t>(command));
 
-		if(write_to_register(RegisterAddrs::CONTROL_HB, command_message) == false) {
+		if(write_to_register(RegisterAddr_RW { static_cast<uint8_t>(RegisterAddrs::RW::CONTROL_HB) }, command_message) == false) {
 			std::printf("AD5933: Failed to set the Output Excitation Voltage by writing to the CONTROL_HB register\n");
 			return false;
 		} else {
 			return true;
 		}
+		return true;
 	}
 
+/*
 	std::optional<std::array<uint8_t, 3>> convert_frequency_to_binary_coded_frequency_message(const uint32_t frequency) {
 		const uint32_t binary_coded_frequency = (uint32_t)((double)frequency * 4 /
 			static_cast<double>(active_sysclk_freq) * pow_2_27);
@@ -678,7 +659,7 @@ public:
 		return std::optional<uint32_t> { frequency };
 	}
 
-	bool set_freq(const RegisterAddr_RW freq_register, const uint32_t freq) {
+	bool set_freq(const RegisterAddrs::RW freq_register, const uint32_t freq) {
 		assert(
 			(freq_register == RegisterAddrs::FREQ_START_HB) ||
 			(freq_register == RegisterAddrs::FREQ_INC_HB)
@@ -832,6 +813,7 @@ public:
 	}
 
 public:
+*/
 	std::optional<float> measure_temperature() {
 		if(set_control_command(ControlHB::Commands::MEASURE_TEMPERATURE) == false) {
 			std::printf("AD5933: Measure Temperature failed: Failed to write the MEASURE_TEMPERATURE command to CONTROL_HB register\n");
@@ -842,7 +824,7 @@ public:
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 
-		const std::optional<std::vector<uint8_t>> temp_data = block_read_register(RegisterAddrs::TEMP_DATA_HB, 2);
+		const auto temp_data { block_read_register<2>(RegisterAddrs::RW_RO::TEMP_DATA_HB) };
 		if(temp_data.has_value() == false) {
 			std::printf("AD5933: Measure Temperature failed to read the TEMP_DATA_HB and TEMP_DATA_LB registers\n");
 			return std::nullopt;
@@ -863,7 +845,7 @@ public:
 	}
 
 	bool has_status_condition(const Status status_condition) {
-		const std::optional<uint8_t> status_state = read_register(RegisterAddrs::STATUS);
+		const std::optional<uint8_t> status_state = read_register(RegisterAddrs::RW_RO::STATUS);
 		if(status_state.has_value() == false) {
 			return false;
 		}
@@ -876,8 +858,9 @@ public:
 		}
 	}
 
+/*
 	std::optional<SettlingCyclesHB::Multiplier> read_settling_time_cycles_multiplier() {
-		const std::optional<uint8_t> settling_cycles_HB_state = read_register(RegisterAddrs::SETTLING_CYCLES_HB);
+		const std::optional<uint8_t> settling_cycles_HB_state = read_register(RegisterAddrs::RW_RO::SETTLING_CYCLES_HB);
 		if(settling_cycles_HB_state.has_value() == false) {
 			std::printf("AD5933: Failed to read the settling cycles multiplier: Failed to read the SETTLING_CYCLES_HB register\n");
 			return std::nullopt;
@@ -897,7 +880,7 @@ public:
 	std::optional<uint16_t> read_settling_time_cycles() {
 		const size_t HB_index = 0;
 		const size_t LB_index = 1;
-		const std::optional<std::vector<uint8_t>> settling_cycles_HB_LB_state = block_read_register(RegisterAddrs::SETTLING_CYCLES_HB, 2);
+		const std::optional<std::vector<uint8_t>> settling_cycles_HB_LB_state = block_read_register(RegisterAddrs::RW_RO::SETTLING_CYCLES_HB, 2);
 		if(settling_cycles_HB_LB_state.has_value() == false) {
 			std::printf("AD5933: Failed to read the settling cycles multiplier:\n\tAD5933: Failed to read the SETTLING_CYCLES_HB and SETTLING_CYCLES_LB registers\n");
 			return std::nullopt;
@@ -992,9 +975,10 @@ public:
 
 		return frequency;
 	}
+*/
 
 	std::optional<std::array<int16_t, 2>> read_impedance_data() {
-		const auto real_HB_LB_imag_HB_LB_state = block_read_register(AD5933::RegisterAddrs::REAL_DATA_HB, 4);
+		const auto real_HB_LB_imag_HB_LB_state = block_read_register<4>(AD5933::RegisterAddrs::RW_RO::REAL_DATA_HB);
 		if(real_HB_LB_imag_HB_LB_state.has_value() == false) {
 			std::printf("AD5933: Failed to read the impedance data\n");
 			return std::nullopt;
@@ -1011,28 +995,69 @@ public:
 		return std::optional<std::array<int16_t, 2>> { std::array<int16_t, 2> { real_value, imag_value } };
 	}
 
-	inline double calculate_magnitude(const std::array<int16_t, 2> &impedance_data) {
-		return sqrt(  static_cast<double>( ((impedance_data[0] * impedance_data[0]) + (impedance_data[1] * impedance_data[1])) )  );
+	template<typename T_Floating>
+	inline T_Floating calculate_raw_magnitude(const std::array<int16_t, 2> &impedance_data) const {
+		static_assert(
+			std::is_same<T_Floating, float>::value || std::is_same<T_Floating, double>::value,
+			"Provided argument must be floating number type"
+		);
+
+		const int32_t real = static_cast<int32_t>(impedance_data[0]);
+		const int32_t imag = static_cast<int32_t>(impedance_data[1]);
+		return sqrt(static_cast<T_Floating>((real * real) + (imag * imag)));
 	}
 
-	inline double calculate_gain_factor(const double calibration_impedance, const double magnitude) {
-		const double admittance = 1.0f / calibration_impedance;
-		return admittance / magnitude;
+	template<typename T_Floating>
+	inline T_Floating calculate_gain_factor(const T_Floating calibration_impedance, const T_Floating raw_magnitude) const {
+		static_assert(
+			std::is_same<T_Floating, float>::value || std::is_same<T_Floating, double>::value,
+			"Provided argument must be floating number type"
+		);
+
+		if constexpr(std::is_same<T_Floating, float>::value) {
+			return 1.00f / (raw_magnitude * calibration_impedance);
+		} else if constexpr(std::is_same<T_Floating, double>::value) {
+			return 1.00 / (raw_magnitude * calibration_impedance);
+		}
 	}
 
-	inline double calculate_impedance(const double magnitude, const double gain_factor) {
-		const double gain_factor_multiplied_by_magnitude = gain_factor * magnitude;
-		const double result = 1.00f / gain_factor_multiplied_by_magnitude;
-		return result;
+	template<typename T_Floating>
+	inline T_Floating calculate_impedance(const T_Floating raw_magnitude, const T_Floating gain_factor) const {
+		static_assert(
+			std::is_same<T_Floating, float>::value || std::is_same<T_Floating, double>::value,
+			"Provided argument must be floating number type"
+		);
+
+		if constexpr(std::is_same<T_Floating, float>::value) {
+			return 1.00f / (gain_factor * raw_magnitude);
+		} else if constexpr(std::is_same<T_Floating, double>::value) {
+			return 1.00 / (gain_factor * raw_magnitude);
+		}
 	}
 
-	inline double calculate_phase(const std::array<int16_t, 2> &impedance_data) {
-		const double imag_divided_by_real = static_cast<double>(impedance_data[1]) / static_cast<double>(impedance_data[0]);
-		return atanf(imag_divided_by_real);
+	template<typename T_Floating>
+	inline T_Floating calculate_raw_phase(const std::array<int16_t, 2> &impedance_data) const {
+		static_assert(
+			std::is_same<T_Floating, float>::value || std::is_same<T_Floating, double>::value,
+			"Provided template argument must be floating number type"
+		);
+
+		return std::atan2(static_cast<T_Floating>(impedance_data[1]), static_cast<T_Floating>(impedance_data[0]));
+	}
+
+	template<typename T_Floating>
+	inline T_Floating calculate_corrected_phase(const T_Floating raw_phase, const T_Floating system_phase) const {
+		static_assert(
+			std::is_same<T_Floating, float>::value || std::is_same<T_Floating, double>::value,
+			"Provided template argument must be floating number type"
+		);
+		
+		return raw_phase - system_phase;
 	}
 };
 
 namespace AD5933_Tests {
+	extern std::atomic<std::shared_ptr<AD5933>> ad5933;
 	bool run_test_read_write_registers(AD5933 &ad5933);
 	extern std::atomic<std::shared_ptr<AD5933>> ad5933;
 	void init_ad5933(I2CBus &i2c_bus);

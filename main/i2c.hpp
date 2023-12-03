@@ -21,7 +21,7 @@ private:
 		.i2c_port = I2C_NUM_0,
 		.sda_io_num = static_cast<gpio_num_t>(6),
 		.scl_io_num = static_cast<gpio_num_t>(7),
-		.clk_source = I2C_CLK_SRC_RC_FAST,
+		.clk_source = I2C_CLK_SRC_DEFAULT,
 		.glitch_ignore_cnt = 7,
 		.intr_priority = 0,
 		.trans_queue_depth = 0,
@@ -96,7 +96,7 @@ public:
 		i2c_device_config_t device_config = {
 			.dev_addr_length = I2C_ADDR_BIT_LEN_7,
 			.device_address = device_address,
-			.scl_speed_hz = I2C_CLK_SRC_DEFAULT
+			.scl_speed_hz = 100'000u
 		};
 		i2c_master_dev_handle_t device_handle;
 		ESP_ERROR_CHECK(
@@ -115,7 +115,7 @@ public:
 			i2c_device_config_t device_config = {
 				.dev_addr_length = I2C_ADDR_BIT_LEN_7,
 				.device_address = device_address,
-				.scl_speed_hz = I2C_CLK_SRC_DEFAULT
+				.scl_speed_hz = 100'000u
 			};
 			i2c_master_dev_handle_t device_handle;
 			ESP_ERROR_CHECK(

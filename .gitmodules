@@ -1,6 +1,21 @@
 [submodule "main/trielo"]
 	path = main/trielo
 	url = https://github.com/spikeyamk/trielo
+[submodule "misc/imgui_sdl2/lib/trielo"]
+	path = misc/imgui_sdl2/lib/trielo
+	url = https://www.github.com/spikeyamk/trielo
+[submodule "misc/imgui_sdl2/lib/imgui"]
+	path = misc/imgui_sdl2/lib/imgui
+	url = https://github.com/ocornut/imgui
+[submodule "misc/imgui_sdl2/lib/implot"]
+	path = misc/imgui_sdl2/lib/implot
+	url = https://github.com/epezent/implot
+[submodule "misc/imgui_sdl2/lib/SDL2"]
+	path = misc/imgui_sdl2/lib/SDL2
+	url = https://github.com/libsdl-org/SDL
+[submodule "misc/imgui_sdl2/lib/SimpleBLE"]
+	path = misc/imgui_sdl2/lib/SimpleBLE
+	url = https://github.com/OpenBluetoothToolbox/SimpleBLE
 [submodule "misc/magic_packets/urazr"]
 	path = misc/magic_packets/urazr
 	url = https://www.github.com/spikeyamk/urazr
