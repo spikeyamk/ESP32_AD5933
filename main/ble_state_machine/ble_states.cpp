@@ -155,7 +155,7 @@ public:
 		state_machine.change_to_state(debug_prev_state != nullptr ? debug_prev_state : &States::disconnect);
 	}
 
-	static void start_frequency_sweep_simple() {
+	static void start_frequency_sweep_simple_cb(void *arg) {
 		std::cout << "start_frequency_sweep_simple" << " UNIMPLEMENTED" << std::endl;
 		if(AD5933_Tests::ad5933.load()->set_control_command(AD5933::ControlHB::Commands::STANDBY_MODE) == false) {
 			std::cout << "ERROR: BLE_STATE_MACHINE: start_frequency_sweep_simple: failed to AD5933_Tests::ad5933.load()->set_control_command(AD5933::ControlHB::Commands::STANDBY_MODE) == false\n";
@@ -171,7 +171,6 @@ public:
 			return;
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		if(AD5933_Tests::ad5933.load()->has_status_condition(AD5933::Status::SWEEP_DONE) == false) {
 			const auto real_HB_LB_imag_HB_LB_state { AD5933_Tests::ad5933.load()->block_read_register<4>(AD5933::RegisterAddrs::RW_RO::REAL_DATA_HB) };
 
@@ -189,10 +188,9 @@ public:
 		do {
 			while(AD5933_Tests::ad5933.load()->has_status_condition(AD5933::Status::IMPEDANCE_VALID) == false) {
 				std::cout << "BLE_STATE_MACHINE: start_frequency_sweep_simple: failed to AD5933_Tests::ad5933.load()->has_status_condition(AD5933::Status::IMPEDANCE_VALID): false\n";
-				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				std::this_thread::yield();
 			}
 			const auto real_HB_LB_imag_HB_LB_state { AD5933_Tests::ad5933.load()->block_read_register<4>(AD5933::RegisterAddrs::RW_RO::REAL_DATA_HB) };
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
 			if(real_HB_LB_imag_HB_LB_state.has_value() == false) {
 				std::cout << "ERROR: BLE_STATE_MACHINE: start_frequency_sweep_simple: failed to AD5933_Tests::ad5933.load()->block_read_register(AD5933::RegisterAddrs::REAL_DATA_HB, 4); false\n";
@@ -203,14 +201,25 @@ public:
 			std::copy(real_HB_LB_imag_HB_LB_state.value().begin(), real_HB_LB_imag_HB_LB_state.value().end(), send_buf.begin());
 			struct os_mbuf *txom = ble_hs_mbuf_from_flat(send_buf.data(), send_buf.size());
 			ble_gatts_notify_custom(NimBLE::conn_handle, NimBLE::body_composition_measurement_characteristic_handle, txom);
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
 			if(AD5933_Tests::ad5933.load()->set_control_command(AD5933::ControlHB::Commands::INCREMENT_FREQUENCY) == false) {
 				std::cout << "ERROR: BLE_STATE_MACHINE: start_frequency_sweep_simple: failed to AD5933_Tests::ad5933.load()->set_control_command(AD5933::ControlHB::Commands::INCREMENT_FREQUENCY) == false" << std::endl;
 				return;
 			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			std::this_thread::yield();
 		} while(AD5933_Tests::ad5933.load()->has_status_condition(AD5933::Status::SWEEP_DONE) == false);
+		vTaskDelete(nullptr);
+	}
+
+	static void start_frequency_sweep_simple() {
+		xTaskCreate(
+			start_frequency_sweep_simple_cb,
+			"freq_sweep",
+			2048,
+			nullptr,
+			0,
+			nullptr
+		);
 	}
 
 	static void configure_frequency_sweep() {
