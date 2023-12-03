@@ -4,7 +4,8 @@
 #include <bitset>
 #include <cassert>
 #include <cmath>
-#include <unordered_map>
+#include <map>
+#include <limits>
 
 #include "ad5933_config.hpp"
 #include "types.hpp"
@@ -12,8 +13,7 @@
 const std::map<SettlingTimeCyclesMultiplierOrMask, const char*> SettlingTimeCyclesMultiplierOrMaskStringMap {
 	{ SettlingTimeCyclesMultiplierOrMask::ONE_TIME, "ONE_TIME" },
 	{ SettlingTimeCyclesMultiplierOrMask::TWO_TIMES, "TWO_TIMES" },
-	{ SettlingTimeCyclesMultiplierOrMask::RESERVED, "RESERVED" },
-	{ SettlingTimeCyclesMultiplierOrMask::FOUR_TIMES, "FOUR_TIMES" }
+	{ SettlingTimeCyclesMultiplierOrMask::FOUR_TIMES, "FOUR_TIMES" },
 };
 
 const std::map<ControlHB::CommandOrMask, const char*> ControlHB_CommandOrMaskStringMap {
@@ -32,14 +32,14 @@ const std::map<ControlHB::CommandOrMask, const char*> ControlHB_CommandOrMaskStr
 
 const std::map<ControlHB::OutputVoltageRangeOrMask, const char*> ControlHB_OutputVoltageRangeOrMaskStringMap {
 	{ ControlHB::OutputVoltageRangeOrMask::TWO_VOLT_PPK, "TWO_VOLT_PPK" },
-	{ ControlHB::OutputVoltageRangeOrMask::ONE_VOLT_PPK, "ONE_VOLT_PPK" },
+	{ ControlHB::OutputVoltageRangeOrMask::TWO_HUNDRED_MILI_VOLT_PPK, "TWO_HUNDRED_MILI_VOLT_PPK" },
 	{ ControlHB::OutputVoltageRangeOrMask::FOUR_HUNDRED_MILI_VOLT_PPK, "FOUR_HUNDRED_MILI_VOLT_PPK" },
-	{ ControlHB::OutputVoltageRangeOrMask::TWO_HUNDRED_MILI_VOLT_PPK, "TWO_HUNDRED_MILI_VOLT_PPK" }
+	{ ControlHB::OutputVoltageRangeOrMask::ONE_VOLT_PPK, "ONE_VOLT_PPK" },
 };
 
-const std::unordered_map<ControlHB::PGA_GainOrMask, const char*> ControlHB_PGA_GainOrMaskStringMap {
+const std::map<ControlHB::PGA_GainOrMask, const char*> ControlHB_PGA_GainOrMaskStringMap {
+	{ ControlHB::PGA_GainOrMask::FIVE_TIMES, "FIVE_TIMES" },
 	{ ControlHB::PGA_GainOrMask::ONE_TIME, "ONE_TIME" },
-	{ ControlHB::PGA_GainOrMask::FIVE_TIMES, "FIVE_TIMES" }
 };
 
 const std::map<ControlLB::SYSCLK_SRC_OrMask, const char*> ControlLB_SYSCLK_SRC_OrMaskStringMap {
@@ -47,11 +47,15 @@ const std::map<ControlLB::SYSCLK_SRC_OrMask, const char*> ControlLB_SYSCLK_SRC_O
 	{ ControlLB::SYSCLK_SRC_OrMask::EXTERNAL, "EXTERNAL" }
 };
 
-const std::unordered_map<Status::STATUS_OrMask, const char*> STATUS_OrMaskStringMap {
-	{ Status::STATUS_OrMask::NO_STATUS, "NO_STATUS" },
-	{ Status::STATUS_OrMask::VALID_TEMP, "VALID_TEMP" },
-	{ Status::STATUS_OrMask::VALID_DATA, "VALID_DATA" },
-	{ Status::STATUS_OrMask::FREQ_SWEEP_COMPLETE, "FREQ_SWEEP_COMPLETE" },
+const std::map<Status::STATUS_OrMask, const char*> STATUS_OrMaskStringMap {
+    { Status::STATUS_OrMask::NO_STATUS, "NO_STATUS" },
+    { Status::STATUS_OrMask::VALID_TEMP, "VALID_TEMP" },
+    { Status::STATUS_OrMask::VALID_DATA, "VALID_DATA" },
+    { Status::STATUS_OrMask::VALID_DATA_AND_VALID_TEMP, "VALID_DATA_AND_VALID_TEMP" },
+    { Status::STATUS_OrMask::FREQ_SWEEP_COMPLETE, "FREQ_SWEEP_COMPLETE" },
+    { Status::STATUS_OrMask::FREQ_SWEEP_COMPLETE_AND_VALID_TEMP, "FREQ_SWEEP_COMPLETE_AND_VALID_TEMP" },
+    { Status::STATUS_OrMask::FREQ_SWEEP_COMPLETE_AND_VALID_DATA, "FREQ_SWEEP_COMPLETE_AND_VALID_DATA" },
+    { Status::STATUS_OrMask::FREQ_SWEEP_COMPLETE_AND_VALID_DATA_AND_VALID_TEMP, "FREQ_SWEEP_COMPLETE_AND_VALID_DATA_AND_VALID_TEMP" },
 };
 
 std::ostream& operator<<(std::ostream& os, SYSCLK_FREQ value) {
@@ -143,12 +147,24 @@ std::ostream& operator<<(std::ostream& os, Status::STATUS_OrMask value) {
         case Status::STATUS_OrMask::VALID_DATA:
             os << "VALID_DATA";
             break;
+        case Status::STATUS_OrMask::VALID_DATA_AND_VALID_TEMP:
+            os << "VALID_DATA_AND_VALID_TEMP";
+            break;
         case Status::STATUS_OrMask::FREQ_SWEEP_COMPLETE:
             os << "FREQ_SWEEP_COMPLETE";
             break;
-		default:
-			os << "UNKNOWN";
-			break;
+        case Status::STATUS_OrMask::FREQ_SWEEP_COMPLETE_AND_VALID_TEMP:
+            os << "FREQ_SWEEP_COMPLETE_AND_VALID_TEMP";
+            break;
+        case Status::STATUS_OrMask::FREQ_SWEEP_COMPLETE_AND_VALID_DATA:
+            os << "FREQ_SWEEP_COMPLETE_AND_VALID_DATA";
+            break;
+        case Status::STATUS_OrMask::FREQ_SWEEP_COMPLETE_AND_VALID_DATA_AND_VALID_TEMP:
+            os << "FREQ_SWEEP_COMPLETE_AND_VALID_DATA_AND_VALID_TEMP";
+            break;
+        default:
+            os << "UNKNOWN";
+            break;
     }
     return os;
 }
@@ -192,7 +208,8 @@ AD5933_Config::AD5933_Config(
     const uint32_t in_inc_freq,
     const uint9_t in_num_of_inc,
     const uint9_t settling_time_cycles_number,
-    const SettlingTimeCyclesMultiplierOrMask settling_time_cycles_multiplier
+    const SettlingTimeCyclesMultiplierOrMask settling_time_cycles_multiplier,
+	const int32_t calibration_impedance
 ) :
     control_HB { get_control_HB(command, range, pga_gain) },
     control_LB { get_control_LB(sysclk_src) },
@@ -205,6 +222,7 @@ AD5933_Config::AD5933_Config(
     inc_freq { get_freq_register(in_inc_freq) },
     num_of_inc { get_num_of_inc(in_num_of_inc) },
     settling_time_cycles { get_settling_time_cycles(settling_time_cycles_number, settling_time_cycles_multiplier) },
+	calibration_impedance { calibration_impedance },
     ad5933_config_message { get_ad5933_config_message() },
     ad5933_config_message_raw { get_ad5933_config_message_raw() }
 {}
@@ -235,6 +253,7 @@ AD5933_Config::AD5933_Config(const std::array<uint8_t, 12> &in_config_message_ra
 		std::bitset<8> { in_config_message_raw[10] },
 		std::bitset<8> { in_config_message_raw[11] },
 	},
+	calibration_impedance { 0 },
 	ad5933_config_message { get_ad5933_config_message() },
 	ad5933_config_message_raw { get_ad5933_config_message_raw() }
 {}
@@ -575,10 +594,11 @@ AD5933_Config AD5933_Config::get_default() {
 	const ControlHB::PGA_GainOrMask pga_gain = ControlHB::PGA_GainOrMask::ONE_TIME;
 	const ControlLB::SYSCLK_SRC_OrMask sysclk_src = ControlLB::SYSCLK_SRC_OrMask::INTERNAL;
 	const uint32_t start_freq = 30'000;
-	const uint32_t inc_freq = 2;
-	const uint9_t num_of_inc = 100;
+	const uint32_t inc_freq = 10;
+	const uint9_t num_of_inc = 2;
 	const uint9_t settling_cycles_number = 15;
 	const SettlingTimeCyclesMultiplierOrMask settling_cycles_multiplier = SettlingTimeCyclesMultiplierOrMask::ONE_TIME;
+	const uint32_t calibration_impedance = 220'000;
 	AD5933_Config default_config (
 		command,
 		range,
@@ -588,12 +608,13 @@ AD5933_Config AD5933_Config::get_default() {
 		inc_freq,
 		num_of_inc,
 		settling_cycles_number,
-		settling_cycles_multiplier
+		settling_cycles_multiplier,
+		calibration_impedance
 	);
 	return default_config;
 }
 
-AD5933_Data::AD5933_Data(std::array<uint8_t, 7> &in_data_message_raw) :
+AD5933_Data::AD5933_Data(const std::array<uint8_t, 7> &in_data_message_raw) :
 	status { std::bitset<8> { in_data_message_raw[0] } },
 	temp_data { 
 		std::bitset<8> { in_data_message_raw[1]},
@@ -623,11 +644,86 @@ float AD5933_Data::get_temperature() {
 	}
 }
 
-std::string AD5933_Data::get_real_data() {
-	return "UNIMPLEMENTED";
+int16_t AD5933_Data::get_real_part() {
+	return static_cast<int16_t>(real_data.get_HB_LB_combined_bitset().to_ulong());
+} 
+
+int16_t AD5933_Data::get_imag_part() {
+	return static_cast<int16_t>(imag_data.get_HB_LB_combined_bitset().to_ulong());
 }
 
-std::string AD5933_Data::get_imag_data() {
-	return "UNIMPLEMENTED";
+float AD5933_Data::get_raw_magnitude() {
+	float real_part = static_cast<float>(get_real_part());
+	float imag_part = static_cast<float>(get_imag_part());
+	return std::sqrtf( (real_part * real_part) + (imag_part * imag_part) );
 }
 
+float AD5933_Data::get_raw_phase() {
+	// UNIMPLEMENTED
+	float real_part = static_cast<float>(get_real_part());
+	float imag_part = static_cast<float>(get_imag_part());
+	return std::atan2f(imag_part, real_part);
+}
+
+AD5933_CalibrationData::AD5933_CalibrationData(
+	const uint8_t real_data_HB,
+	const uint8_t real_data_LB,
+	const uint8_t imag_data_HB,
+	const uint8_t imag_data_LB
+) :
+	AD5933_Data {
+		std::array<uint8_t, 7> {
+			0x00u, 0x00u, 0x00u,
+			real_data_HB,
+			real_data_LB,
+			imag_data_HB,
+			imag_data_LB
+		}
+	}
+{}
+
+
+float AD5933_CalibrationData::get_gain_factor(const int32_t calibration_impedance) {
+	return (1.00f / static_cast<float>(calibration_impedance)) / get_raw_magnitude();
+}
+
+float AD5933_CalibrationData::get_system_phase() {
+	return get_raw_phase();
+}
+
+AD5933_MeasurementData::AD5933_MeasurementData(
+	const uint8_t real_data_HB,
+	const uint8_t real_data_LB,
+	const uint8_t imag_data_HB,
+	const uint8_t imag_data_LB
+) :
+	AD5933_Data {
+		std::array<uint8_t, 7> {
+			0x00u, 0x00u, 0x00u,
+			real_data_HB,
+			real_data_LB,
+			imag_data_HB,
+			imag_data_LB
+		}
+	}
+{}
+
+float AD5933_MeasurementData::get_corrected_magnitude(const float gain_factor) {
+	return (1.00f / (gain_factor * get_raw_magnitude()));
+}
+
+float AD5933_MeasurementData::get_corrected_phase(const float system_phase) {
+	return get_raw_phase() - system_phase;
+}
+
+float AD5933_MeasurementData::get_corrected_resistance(const float gain_factor, const float system_phase) {
+	const float magnitude = get_corrected_magnitude(gain_factor);
+	const float phase = get_corrected_phase(system_phase);
+	return (magnitude * std::cosf(phase));
+}
+
+float AD5933_MeasurementData::get_corrected_reactance(const float gain_factor, const float system_phase) {
+	const float magnitude = get_corrected_magnitude(gain_factor);
+	const float phase = get_corrected_phase(system_phase);
+	return (magnitude * std::sinf(phase));
+}

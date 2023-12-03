@@ -8,6 +8,8 @@
 #include <thread>
 #include <algorithm>
 #include <iomanip>
+#include <cmath>
+#include <vector>
 
 #include "trielo.hpp"
 #include "fmt/core.h"
@@ -30,6 +32,91 @@
 #if !SDL_VERSION_ATLEAST(2,0,17)
 #error This backend requires SDL 2.0.17+ because of SDL_RenderGeometry() function
 #endif
+
+namespace ImGui {
+    /* https://github.com/ocornut/imgui/issues/1901#issue-335266223 */
+    bool BufferingBar(const char* label, float value,  const ImVec2& size_arg, const ImU32& bg_col, const ImU32& fg_col) {
+        ImGuiWindow* window = GetCurrentWindow();
+        if (window->SkipItems)
+            return false;
+        
+        ImGuiContext& g = *GImGui;
+        const ImGuiStyle& style = g.Style;
+        const ImGuiID id = window->GetID(label);
+
+        ImVec2 pos = window->DC.CursorPos;
+        ImVec2 size = size_arg;
+        size.x -= style.FramePadding.x * 2;
+        
+        const ImRect bb(pos, ImVec2(pos.x + size.x, pos.y + size.y));
+        ItemSize(bb, style.FramePadding.y);
+        if (!ItemAdd(bb, id))
+            return false;
+        
+        // Render
+        const float circleStart = size.x * 0.7f;
+        const float circleEnd = size.x;
+        const float circleWidth = circleEnd - circleStart;
+        
+        window->DrawList->AddRectFilled(bb.Min, ImVec2(pos.x + circleStart, bb.Max.y), bg_col);
+        window->DrawList->AddRectFilled(bb.Min, ImVec2(pos.x + circleStart*value, bb.Max.y), fg_col);
+        
+        const float t = static_cast<float>(g.Time);
+        const float r = size.y / 2.0f;
+        const float speed = 1.5f;
+        
+        const float a = speed * 0.0f;
+        const float b = speed * 0.333f;
+        const float c = speed * 0.666f;
+        
+        const float o1 = (circleWidth+r) * (t+a - speed * (int)((t+a) / speed)) / speed;
+        const float o2 = (circleWidth+r) * (t+b - speed * (int)((t+b) / speed)) / speed;
+        const float o3 = (circleWidth+r) * (t+c - speed * (int)((t+c) / speed)) / speed;
+        
+        window->DrawList->AddCircleFilled(ImVec2(pos.x + circleEnd - o1, bb.Min.y + r), r, bg_col);
+        window->DrawList->AddCircleFilled(ImVec2(pos.x + circleEnd - o2, bb.Min.y + r), r, bg_col);
+        window->DrawList->AddCircleFilled(ImVec2(pos.x + circleEnd - o3, bb.Min.y + r), r, bg_col);
+        return true;
+    }
+
+    bool Spinner(const char* label, float radius, float thickness, const ImU32& color) {
+        ImGuiWindow* window = GetCurrentWindow();
+        if (window->SkipItems)
+            return false;
+        
+        ImGuiContext& g = *GImGui;
+        const ImGuiStyle& style = g.Style;
+        const ImGuiID id = window->GetID(label);
+        
+        ImVec2 pos = window->DC.CursorPos;
+        ImVec2 size((radius )*2, (radius + style.FramePadding.y)*2);
+        
+        const ImRect bb(pos, ImVec2(pos.x + size.x, pos.y + size.y));
+        ItemSize(bb, style.FramePadding.y);
+        if (!ItemAdd(bb, id))
+            return false;
+        
+        // Render
+        window->DrawList->PathClear();
+        
+        int num_segments = 30;
+        float start = abs(ImSin(static_cast<float>(g.Time) * 1.8f) * (num_segments - 5));
+        
+        const float a_min = IM_PI * 2.0f * ((float) start) / (float) num_segments;
+        const float a_max = IM_PI * 2.0f * ((float) num_segments - 3) / (float) num_segments;
+
+        const ImVec2 centre = ImVec2(pos.x+radius, pos.y+radius+style.FramePadding.y);
+        
+        for (int i = 0; i < num_segments; i++) {
+            const float a = a_min + ((float)i / (float)num_segments) * (a_max - a_min);
+            window->DrawList->PathLineTo(ImVec2(centre.x + ImCos(a + static_cast<float>(g.Time) * 8) * radius,
+                                                centre.y + ImSin(a + static_cast<float>(g.Time) * 8) * radius));
+        }
+
+        window->DrawList->PathStroke(color, false, thickness);
+        return true;
+    }
+}
 
 namespace ImGuiSDL {
     // ImGuiSDL utility boilerplate functions
@@ -110,7 +197,7 @@ namespace ImGuiSDL {
         SDL_Quit();
     }
 
-    inline void render(SDL_Renderer* renderer, ImVec4& clear_color) {
+    inline void render(SDL_Renderer* renderer, const ImVec4& clear_color) {
         ImGuiIO& io = ImGui::GetIO();
         ImGui::Render();
         if(SDL_RenderSetScale(renderer, io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y) != 0) {
@@ -129,17 +216,17 @@ namespace ImGuiSDL {
         SDL_RenderPresent(renderer);
     }
 
-    inline void process_events(SDL_Window* window, bool *done) {
+    inline void process_events(SDL_Window* window, bool &done) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             ImGui_ImplSDL2_ProcessEvent(&event);
             if(event.type == SDL_QUIT) {
-                *done = true;
+                done = true;
             }
             if(event.type == SDL_WINDOWEVENT &&
             event.window.event == SDL_WINDOWEVENT_CLOSE &&
             event.window.windowID == SDL_GetWindowID(window)) {
-                *done = true;
+                done = true;
             }
         }
     }
@@ -175,16 +262,11 @@ namespace ImGuiSDL {
         ImGui::End();
     }
 
-    inline void imgui_create_connecting_window() {
-        ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
-        ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
-        connecting_window();
-    }
 }
 
 namespace ImGuiSDL {
     // Demos - unused for now
-    inline void periodic_temperature_measurement_demo_window() {
+    inline void periodic_temperature_measurement_demo_window(std::optional<ESP32_AD5933> &esp32_ad5933) {
         static constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize;
         ImGui::Begin("Periodic Temperature Measurement Demo", NULL, flags);                          // Create a window called "Hello, world!" and append into it.
         static bool toggle_capture;
@@ -206,30 +288,129 @@ namespace ImGuiSDL {
 }
 
 namespace ImGuiSDL {
+    // Related to measurement_window  
+    static auto freq_start_array_init_lambda = [](AD5933_Config &config) -> std::array<char, 7> {
+        std::array<char, 7> ret_val { 0x00 };
+        const auto ret_str = std::to_string(static_cast<uint32_t>(config.get_start_freq()));
+        std::copy(ret_str.begin(), ret_str.end(), ret_val.begin());
+        return ret_val;
+    };
+
+    static auto freq_inc_array_init_lambda = [](AD5933_Config &config) -> std::array<char, 7> {
+        std::array<char, 7> ret_val { 0x00 };
+        const auto ret_str = std::to_string(static_cast<uint32_t>(config.get_inc_freq()));
+        std::copy(ret_str.begin(), ret_str.end(), ret_val.begin());
+        return ret_val;
+    };
+
+    static auto num_of_inc_array_init_lambda = [](AD5933_Config &config) -> std::array<char, 4> {
+        std::array<char, 4> ret_val { 0x00 };
+        const auto ret_str = std::to_string(config.get_num_of_inc().value);
+        std::copy(ret_str.begin(), ret_str.end(), ret_val.begin());
+        return ret_val;
+    };
+
+    static auto settling_time_cycles_num_array_init_lambda = [](AD5933_Config &config) -> std::array<char, 4> {
+        std::array<char, 4> ret_val { 0x00 };
+        const auto ret_str = std::to_string(config.get_settling_time_cycles_number().value);
+        std::copy(ret_str.begin(), ret_str.end(), ret_val.begin());
+        return ret_val;
+    };
+
+    static auto sysclk_freq_array_init_lambda = [](AD5933_Config &config) -> std::array<char, 9> {
+        std::array<char, 9> ret_val { 0x00 };
+        const auto ret_str = std::to_string(config.active_sysclk_freq);
+        std::copy(ret_str.begin(), ret_str.end(), ret_val.begin());
+        return ret_val;
+    };
+
+    //std::vector<AD5933_CalibrationData> calibration_data;
+    //std::vector<AD5933_MeasurementData> measurement_data;
+
+    class MeasurementWindowCaptures {
+    public:
+        AD5933_Config config { AD5933_Config::get_default() };
+
+        std::array<char, 7> freq_start { freq_start_array_init_lambda(config) };
+        std::array<char, 7> freq_inc { freq_inc_array_init_lambda(config) };
+        std::array<char, 4> num_of_inc { num_of_inc_array_init_lambda(config)  };
+        std::array<char, 4> settling_time_cycles_num { settling_time_cycles_num_array_init_lambda(config) };
+        int settling_time_cycles_multiplier_combo = 0;
+        int voltage_range_combo = 0;
+        int pga_gain_combo = 1;
+        int sysclk_src_combo = 1;
+
+        std::array<char, 9> sysclk_freq { sysclk_freq_array_init_lambda(config) };
+
+        MeasurementWindowCaptures() = default;
+
+        void update_config() {
+            auto stoul_lambda = [](const std::string &num_str) -> std::optional<unsigned long> {
+                try {
+                    size_t pos;
+                    if(num_str.empty()) {
+                        return std::nullopt;
+                    }
+                    unsigned long number = std::stoul(num_str, &pos);
+
+                    if(pos < std::strlen(num_str.c_str())) {
+                        std::cout << "Conversion failed. Not the entire string was converted." << std::endl;
+                        return std::nullopt; // Return empty optional if conversion is incomplete
+                    } else {
+                        return number;
+                    }
+                } catch (const std::out_of_range& e) {
+                    std::cout << "Exception caught: " << e.what() << std::endl;
+                    // Handle the out_of_range exception here
+                } catch (const std::invalid_argument& e) {
+                    std::cout << "Invalid argument exception caught: " << e.what() << std::endl;
+                    // Handle the invalid_argument exception here
+                }
+                    return std::nullopt; // Return empty optional in case of exceptions
+            };
+            config = AD5933_Config {
+                config.get_command(),
+                std::next(ControlHB_OutputVoltageRangeOrMaskStringMap.begin(), voltage_range_combo)->first,
+                std::next(ControlHB_PGA_GainOrMaskStringMap.begin(), pga_gain_combo)->first,
+                std::next(ControlLB_SYSCLK_SRC_OrMaskStringMap.begin(), sysclk_src_combo)->first,
+                stoul_lambda(std::string(freq_start.begin(), freq_start.end())).value_or(static_cast<uint32_t>(config.get_start_freq())),
+                stoul_lambda(std::string(freq_inc.begin(), freq_inc.end())).value_or(static_cast<uint32_t>(config.get_inc_freq())),
+                uint9_t { static_cast<uint16_t>(stoul_lambda(std::string(num_of_inc.begin(), num_of_inc.end())).value_or(config.get_num_of_inc().value)) },
+                uint9_t { static_cast<uint16_t>(stoul_lambda(std::string(settling_time_cycles_num.begin(), settling_time_cycles_num.end())).value_or(config.get_settling_time_cycles_number().value)) },
+                std::next(SettlingTimeCyclesMultiplierOrMaskStringMap.begin(), settling_time_cycles_multiplier_combo)->first,
+                config.calibration_impedance
+            };
+            sysclk_freq = sysclk_freq_array_init_lambda(config);
+        }
+    };
+    std::atomic<std::shared_ptr<MeasurementWindowCaptures>> measure_captures { std::make_shared<MeasurementWindowCaptures>() };
+}
+
+namespace ImGuiSDL {
     // Related to dbg_registers_window   
     template<size_t N>
     class DebugReadWriteRegistersCaptures {
     public:
-        std::array<char, N> ctrl_HB;
-        std::array<char, N> ctrl_LB;
-        std::array<char, N> freq_start_HB;
-        std::array<char, N> freq_start_MB;
-        std::array<char, N> freq_start_LB;
-        std::array<char, N> freq_inc_HB;
-        std::array<char, N> freq_inc_MB;
-        std::array<char, N> freq_inc_LB;
-        std::array<char, N> num_of_inc_HB;
-        std::array<char, N> num_of_inc_LB;
-        std::array<char, N> num_of_settling_time_cycles_HB;
-        std::array<char, N> num_of_settling_time_cycles_LB;
-        std::array<char, N> status_capture;
-        std::array<char, N> temp_data_HB;
-        std::array<char, N> temp_data_LB;
-        std::array<char, N> real_data_HB;
-        std::array<char, N> real_data_LB;
-        std::array<char, N> imag_data_HB;
-        std::array<char, N> imag_data_LB;
-        std::array<std::array<char, N>*, 19> all {
+        std::array<char, N> ctrl_HB { 0x00 };
+        std::array<char, N> ctrl_LB { 0x00 };
+        std::array<char, N> freq_start_HB { 0x00 };
+        std::array<char, N> freq_start_MB { 0x00 };
+        std::array<char, N> freq_start_LB { 0x00 };
+        std::array<char, N> freq_inc_HB { 0x00 };
+        std::array<char, N> freq_inc_MB { 0x00 };
+        std::array<char, N> freq_inc_LB { 0x00 };
+        std::array<char, N> num_of_inc_HB { 0x00 };
+        std::array<char, N> num_of_inc_LB { 0x00 };
+        std::array<char, N> num_of_settling_time_cycles_HB { 0x00 };
+        std::array<char, N> num_of_settling_time_cycles_LB { 0x00 };
+        std::array<char, N> status_capture { 0x00 };
+        std::array<char, N> temp_data_HB { 0x00 };
+        std::array<char, N> temp_data_LB { 0x00 };
+        std::array<char, N> real_data_HB { 0x00 };
+        std::array<char, N> real_data_LB { 0x00 };
+        std::array<char, N> imag_data_HB { 0x00 };
+        std::array<char, N> imag_data_LB { 0x00 };
+        std::array<std::array<char, N>*, 19> all { 
             &ctrl_HB,
             &ctrl_LB,
             &freq_start_HB,
@@ -248,12 +429,44 @@ namespace ImGuiSDL {
             &real_data_HB,
             &real_data_LB,
             &imag_data_HB,
-            &imag_data_LB,
+            &imag_data_LB
         };
-        AD5933_Config config;
-        AD5933_Data data;
+
+        AD5933_Config config {};
+        AD5933_Data data {};
 
         DebugReadWriteRegistersCaptures() = default;
+
+        DebugReadWriteRegistersCaptures(const DebugReadWriteRegistersCaptures &other) {
+            auto empty_default = DebugReadWriteRegistersCaptures();
+            all = std::array<std::array<char, N>*, 19>{
+                &ctrl_HB,
+                &ctrl_LB,
+                &freq_start_HB,
+                &freq_start_MB,
+                &freq_start_LB,
+                &freq_inc_HB,
+                &freq_inc_MB,
+                &freq_inc_LB,
+                &num_of_inc_HB,
+                &num_of_inc_LB,
+                &num_of_settling_time_cycles_HB,
+                &num_of_settling_time_cycles_LB,
+                &status_capture,
+                &temp_data_HB,
+                &temp_data_LB,
+                &real_data_HB,
+                &real_data_LB,
+                &imag_data_HB,
+                &imag_data_LB
+            };
+            assert(all[0] == &ctrl_HB);
+            for(size_t i = 0; i < all.size(); i++) {
+                *(all[i]) = *(other.all[i]);
+            }
+            config = other.config;
+            data = other.data;
+        }
 
         void update_config() {
             auto stoul_lambda = [](const std::array<char, 5>& hex_array) -> std::optional<uint8_t> {
@@ -266,36 +479,40 @@ namespace ImGuiSDL {
                 }
             };
             const std::array<uint8_t, 12> tmp_raw_array {
-                stoul_lambda(ctrl_HB).value_or(0xFF),
-                stoul_lambda(ctrl_LB).value_or(0xFF),
-                stoul_lambda(freq_start_HB).value_or(0xFF),
-                stoul_lambda(freq_start_MB).value_or(0xFF),
-                stoul_lambda(freq_start_LB).value_or(0xFF),
-                stoul_lambda(freq_inc_HB).value_or(0xFF),
-                stoul_lambda(freq_inc_MB).value_or(0xFF),
-                stoul_lambda(freq_inc_LB).value_or(0xFF),
-                stoul_lambda(num_of_inc_HB).value_or(0xFF),
-                stoul_lambda(num_of_inc_LB).value_or(0xFF),
-                stoul_lambda(num_of_settling_time_cycles_HB).value_or(0xFF),
-                stoul_lambda(num_of_settling_time_cycles_LB).value_or(0xFF),
+                stoul_lambda(ctrl_HB).value_or(static_cast<uint8_t>(config.control_HB.HB.to_ulong())),
+                stoul_lambda(ctrl_LB).value_or(static_cast<uint8_t>(config.control_LB.HB.to_ulong())),
+                stoul_lambda(freq_start_HB).value_or(static_cast<uint8_t>(config.start_freq.HB.to_ulong())),
+                stoul_lambda(freq_start_MB).value_or(static_cast<uint8_t>(config.start_freq.MB.to_ulong())),
+                stoul_lambda(freq_start_LB).value_or(static_cast<uint8_t>(config.start_freq.MB.to_ulong())),
+                stoul_lambda(freq_inc_HB).value_or(static_cast<uint8_t>(config.inc_freq.HB.to_ulong())),
+                stoul_lambda(freq_inc_MB).value_or(static_cast<uint8_t>(config.inc_freq.MB.to_ulong())),
+                stoul_lambda(freq_inc_LB).value_or(static_cast<uint8_t>(config.inc_freq.LB.to_ulong())),
+                stoul_lambda(num_of_inc_HB).value_or(static_cast<uint8_t>(config.num_of_inc.HB.to_ulong())),
+                stoul_lambda(num_of_inc_LB).value_or(static_cast<uint8_t>(config.num_of_inc.LB.to_ulong())),
+                stoul_lambda(num_of_settling_time_cycles_HB).value_or(static_cast<uint8_t>(config.settling_time_cycles.HB.to_ulong())),
+                stoul_lambda(num_of_settling_time_cycles_LB).value_or(static_cast<uint8_t>(config.settling_time_cycles.LB.to_ulong())),
             };
             config = AD5933_Config { tmp_raw_array };
         }
     };
 
     class HexDebugReadWriteRegistersCaptures : public DebugReadWriteRegistersCaptures<5> {
-
+    public:
+        HexDebugReadWriteRegistersCaptures() :
+            DebugReadWriteRegistersCaptures {}
+        {}
     };
 
     class BinDebugReadWriteRegistersCaptures : public DebugReadWriteRegistersCaptures<12> {
 
     };
 
-    std::atomic<std::shared_ptr<HexDebugReadWriteRegistersCaptures >> hex_dbg_rw_captures { std::make_shared<HexDebugReadWriteRegistersCaptures >() };
+    std::atomic<std::shared_ptr<HexDebugReadWriteRegistersCaptures >> hex_dbg_rw_captures { std::make_shared<HexDebugReadWriteRegistersCaptures>() };
     std::atomic<int> debug_window_enable { 0 };
 
     void update_hex_dbg_rw_captures(const std::string &data) {
-        auto tmp_hex_dbg_rw_captures = *(hex_dbg_rw_captures.load());
+        //auto tmp_hex_dbg_rw_captures = *(hex_dbg_rw_captures.load());
+        HexDebugReadWriteRegistersCaptures tmp_hex_dbg_rw_captures {};
 
         std::array<std::string, 19> oss_array {};
         for(size_t i = 0; i < data.size(); i++) {
@@ -305,10 +522,11 @@ namespace ImGuiSDL {
         }
 
         size_t i = 0;
+        assert(tmp_hex_dbg_rw_captures.all[0] == &tmp_hex_dbg_rw_captures.ctrl_HB);
         for(const auto &oss_content: oss_array) {
             std::array<char, 5> temp_array{}; // Initialize an array of chars with size 5
             std::copy(oss_content.begin(), oss_content.begin() + std::min(oss_content.size(), temp_array.size()), temp_array.begin());
-            *(tmp_hex_dbg_rw_captures.all[i]) = temp_array;
+            std::copy(temp_array.begin(), temp_array.end(), tmp_hex_dbg_rw_captures.all[i]->begin());
             i++;
         }
 
@@ -333,25 +551,26 @@ namespace ImGuiSDL {
             }
         );
         tmp_hex_dbg_rw_captures.data = AD5933_Data { data_data_array };
+        const auto try_ret = std::make_shared<HexDebugReadWriteRegistersCaptures>(tmp_hex_dbg_rw_captures);
         hex_dbg_rw_captures.store(std::make_shared<HexDebugReadWriteRegistersCaptures>(tmp_hex_dbg_rw_captures));
     }
 
-    void send_debug_start_req_thread_cb() {
+    void send_debug_start_req_thread_cb(std::optional<ESP32_AD5933> &esp32_ad5933) {
         esp32_ad5933.value().send(std::string(MagicPackets::Debug::Command::start.begin(), MagicPackets::Debug::Command::start.end()));
     }
 
-    void send_debug_end_req_thread_cb() {
+    void send_debug_end_req_thread_cb(std::optional<ESP32_AD5933> &esp32_ad5933) {
         esp32_ad5933.value().send(std::string(MagicPackets::Debug::Command::end.begin(), MagicPackets::Debug::Command::end.end()));
     }
    
-    void send_dump_all_registers_req_thread_cb() {
+    void send_dump_all_registers_req_thread_cb(std::optional<ESP32_AD5933> &esp32_ad5933) {
         esp32_ad5933.value().send(std::string(MagicPackets::Debug::Command::dump_all_registers.begin(), MagicPackets::Debug::Command::dump_all_registers.end()));
         const auto rx_register_info = esp32_ad5933.value().rx_payload.read();
         esp32_ad5933.value().rx_payload.clean();
-    
+
         esp32_ad5933.value().print_mtu();
         for(size_t i = 0; i < rx_register_info.size(); i++) {
-            std::printf("Register[%zu]: 0x%02X\n", i, static_cast<uint8_t>(rx_register_info[i]));
+            std::printf("Register[%02zu]: 0x%02X\n", i, static_cast<uint8_t>(rx_register_info[i]));
         }
         update_hex_dbg_rw_captures(std::string(rx_register_info.begin(), rx_register_info.begin() + 19));
     }
@@ -369,82 +588,59 @@ namespace ImGuiSDL {
         std::cout << "ImGuiSDL: ending dbg_registers_thread_cb\n";
     }
 
-    void program_all_registers_thread_cb() {
-        const auto tmp_hex_dbg_rw_captures = *(hex_dbg_rw_captures.load());
+    void program_all_registers_thread_cb(std::array<uint8_t, 12> raw_message, std::optional<ESP32_AD5933> &esp32_ad5933) {
         auto buf_to_send = MagicPackets::Debug::Command::program_all_registers;
-        const auto raw_message = tmp_hex_dbg_rw_captures.config.get_ad5933_config_message_raw();
         std::copy(raw_message.begin(), raw_message.end(), buf_to_send.begin());
+        const auto tmp_dbg_var = std::string(buf_to_send.begin(), buf_to_send.end());
+        esp32_ad5933.value().send(tmp_dbg_var);
+    }
 
-        esp32_ad5933.value().send(std::string(buf_to_send.begin(), buf_to_send.end()));
+    void dbg_program_all_registers_thread_cb(std::array<uint8_t, 12> raw_message, std::optional<ESP32_AD5933> &esp32_ad5933) {
+        program_all_registers_thread_cb(raw_message, esp32_ad5933);
 
-        const auto rx_message = esp32_ad5933.value().rx_payload.read();
-        esp32_ad5933.value().rx_payload.clean();
-
-        std::array<uint8_t, 20> rx_message_array;
-        std::copy(rx_message.begin(), rx_message.end(), rx_message_array.begin());
-        if(rx_message_array == MagicPackets::Debug::Command::program_all_registers) {
-            std::cout << "Success: program_all_registers_thread_cb\n";
-        } else {
-            std::cout << "ERROR: program_all_registers_thread_cb\n";
-        }
-        std::thread send_dump_all_registers_thread(send_dump_all_registers_req_thread_cb);
+        std::thread send_dump_all_registers_thread(send_dump_all_registers_req_thread_cb, std::ref(esp32_ad5933));
         send_dump_all_registers_thread.join();
     }
 
-    void control_command_thread_cb(const ControlHB::CommandOrMask command) {
-        const auto tmp_hex_dbg_rw_captures = *(hex_dbg_rw_captures.load());
+    void control_command_thread_cb(const ControlHB::CommandOrMask command, std::optional<ESP32_AD5933> &esp32_ad5933) {
         auto buf_to_send = MagicPackets::Debug::Command::control_HB_command;
         buf_to_send[0] = static_cast<uint8_t>(command);
-
         esp32_ad5933.value().send(std::string(buf_to_send.begin(), buf_to_send.end()));
-
-        const auto rx_message = esp32_ad5933.value().rx_payload.read();
-        esp32_ad5933.value().rx_payload.clean();
-
-        std::array<uint8_t, 20> rx_message_array;
-        std::copy(rx_message.begin(), rx_message.end(), rx_message_array.begin());
-        if(rx_message_array == MagicPackets::Debug::Command::control_HB_command) {
-            std::cout << "Success: control_command_thread_cb\n";
-        } else {
-            std::cout << "ERROR: control_command_thread_cb\n";
-        }
-        std::thread send_dump_all_registers_thread(send_dump_all_registers_req_thread_cb);
-        send_dump_all_registers_thread.join();
+        send_dump_all_registers_req_thread_cb(esp32_ad5933);
     }
 
     static const auto default_config = AD5933_Config::get_default();
-    void debug_registers_window() {
+    void debug_registers_window(std::optional<ESP32_AD5933> &esp32_ad5933) {
         static constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize;
         ImGui::Begin("Register Debug", NULL, flags);                          // Create a window called "Hello, world!" and append into it.
-        static bool hex_toggle_capture = true;
 
         auto tmp_hex_dbg_rw_captures = *(hex_dbg_rw_captures.load());
 
-        if(ImGui::Button("HEX/BIN Toggle")) {
-            hex_toggle_capture = !hex_toggle_capture;
-        }; ImGui::SameLine();
-
         static bool debug_started = false;
-        if(ImGui::Button("Debug Start") && debug_started == false) {
+        if(debug_started == false && ImGui::Button("Debug Start")) {
             debug_started = true;
-            std::thread debug_start_thread(send_debug_start_req_thread_cb);
+            std::thread debug_start_thread(send_debug_start_req_thread_cb, std::ref(esp32_ad5933));
             debug_start_thread.detach();
         }
 
         if(debug_started == true) {
             ImGui::SameLine();
             if(ImGui::Button("Dump All Registers")) {
-                std::thread dump_all_registers_thread (send_dump_all_registers_req_thread_cb);
+                std::thread dump_all_registers_thread(send_dump_all_registers_req_thread_cb, std::ref(esp32_ad5933));
                 dump_all_registers_thread.detach();
             }; ImGui::SameLine();
 
             if(ImGui::Button("Program Read/Write Registers")) {
-                std::thread program_all_registers_thread(program_all_registers_thread_cb);
-                program_all_registers_thread.detach();
+                std::thread dbg_program_all_registers_thread(
+                    dbg_program_all_registers_thread_cb,
+                    tmp_hex_dbg_rw_captures.config.get_ad5933_config_message_raw(),
+                    std::ref(esp32_ad5933)
+                );
+                dbg_program_all_registers_thread.detach();
             }; ImGui::SameLine();
 
             if(ImGui::Button("Debug End")) {
-                std::thread debug_end_thread(send_debug_end_req_thread_cb);
+                std::thread debug_end_thread(send_debug_end_req_thread_cb, std::ref(esp32_ad5933));
                 debug_end_thread.detach();
                 debug_started = false;
             }
@@ -476,14 +672,48 @@ namespace ImGuiSDL {
         ImGui::Text("Status: %s", STATUS_OrMaskStringMap.at(tmp_hex_dbg_rw_captures.data.get_status()));
         ImGui::Separator();
 
-        ImGui::Text("Temperature Data: %f", tmp_hex_dbg_rw_captures.data.get_temperature());
-        ImGui::Text("Real Data: %s", tmp_hex_dbg_rw_captures.data.get_real_data().c_str());
-        ImGui::Text("Imaginary Data: %s", tmp_hex_dbg_rw_captures.data.get_imag_data().c_str());
+        ImGui::Text("Temperature: %f °C", tmp_hex_dbg_rw_captures.data.get_temperature());
+
+        ImGui::InputText("Real Part",
+            std::to_string(tmp_hex_dbg_rw_captures.data.get_real_part()).data(),
+            std::to_string(tmp_hex_dbg_rw_captures.data.get_real_part()).size(),
+            ImGuiInputTextFlags_ReadOnly
+        );
+
+        ImGui::InputText("Imaginary Part",
+            std::to_string(tmp_hex_dbg_rw_captures.data.get_imag_part()).data(),
+            std::to_string(tmp_hex_dbg_rw_captures.data.get_imag_part()).size(),
+            ImGuiInputTextFlags_ReadOnly
+        );
+
+        ImGui::InputText("Raw Magnitude",
+            std::to_string(tmp_hex_dbg_rw_captures.data.get_raw_magnitude()).data(),
+            std::to_string(tmp_hex_dbg_rw_captures.data.get_raw_magnitude()).size(),
+            ImGuiInputTextFlags_ReadOnly
+        );
+
+        static const auto float_to_str_lambda = [](float number) -> std::string {
+            std::ostringstream stream;
+
+            // Calculate the magnitude of the number
+            float magnitude = std::abs(number);
+            int precision = (magnitude == 0.0f) ? 0 : -static_cast<int>(std::floor(std::log10(magnitude))) + 7;
+
+            stream << std::setprecision(precision) << number;
+
+            return stream.str();
+        };
+
+        ImGui::InputText("Raw Phase [rad]",
+            float_to_str_lambda(tmp_hex_dbg_rw_captures.data.get_raw_phase()).data(),
+            float_to_str_lambda(tmp_hex_dbg_rw_captures.data.get_raw_phase()).size(),
+            ImGuiInputTextFlags_ReadOnly
+        );
+
         ImGui::Separator();
 
         ImGui::Text("Read/Write Registers");
-
-        if(hex_toggle_capture) {
+        {
             ImGui::Separator();
             ImGui::InputText("CTRL_HB (0x80)", tmp_hex_dbg_rw_captures.ctrl_HB.data(), tmp_hex_dbg_rw_captures.ctrl_HB.size());
             ImGui::InputText("CTRL_LB (0x81)", tmp_hex_dbg_rw_captures.ctrl_LB.data(), tmp_hex_dbg_rw_captures.ctrl_LB.size());
@@ -507,30 +737,30 @@ namespace ImGuiSDL {
             {
             ImGui::Text("Send Control Register Command Controls");
             if(ImGui::Button("Power-down mode")) {
-                std::thread control_command_thread(control_command_thread_cb, ControlHB::CommandOrMask::POWER_DOWN_MODE);
+                std::thread(control_command_thread_cb, ControlHB::CommandOrMask::POWER_DOWN_MODE, std::ref(esp32_ad5933)).detach();
             } ImGui::SameLine();
                 if(ImGui::Button("Standby mode")) {
-                    std::thread control_command_thread(control_command_thread_cb, ControlHB::CommandOrMask::STANDBY_MODE);
+                    std::thread(control_command_thread_cb, ControlHB::CommandOrMask::STANDBY_MODE, std::ref(esp32_ad5933)).detach();
                 } ImGui::SameLine();
                 if(ImGui::Button("No operation (NOP_0)")) {
-                    std::thread control_command_thread(control_command_thread_cb, ControlHB::CommandOrMask::NOP_0);
+                    std::thread(control_command_thread_cb, ControlHB::CommandOrMask::NOP_0, std::ref(esp32_ad5933)).detach();
                 }
 
             if(ImGui::Button("Measure temperature")) {
-                std::thread control_command_thread(control_command_thread_cb, ControlHB::CommandOrMask::MEASURE_TEMPERATURE);
+                std::thread(control_command_thread_cb, ControlHB::CommandOrMask::MEASURE_TEMPERATURE, std::ref(esp32_ad5933)).detach();
             }
 
             if(ImGui::Button("Initialize with start frequency")) {
-                std::thread control_command_thread(control_command_thread_cb, ControlHB::CommandOrMask::INITIALIZE_WITH_START_FREQUENCY);
+                std::thread(control_command_thread_cb, ControlHB::CommandOrMask::INITIALIZE_WITH_START_FREQUENCY, std::ref(esp32_ad5933)).detach();
             } ImGui::SameLine();
                 if(ImGui::Button("Start frequency sweep")) {
-                    std::thread control_command_thread(control_command_thread_cb, ControlHB::CommandOrMask::START_FREQUENCY_SWEEP);
+                    std::thread(control_command_thread_cb, ControlHB::CommandOrMask::START_FREQUENCY_SWEEP, std::ref(esp32_ad5933)).detach();
                 } ImGui::SameLine();
                 if(ImGui::Button("Increment frequency")) {
-                    std::thread control_command_thread(control_command_thread_cb, ControlHB::CommandOrMask::INCREMENT_FREQUENCY);
+                    std::thread(control_command_thread_cb, ControlHB::CommandOrMask::INCREMENT_FREQUENCY, std::ref(esp32_ad5933)).detach();
                 } ImGui::SameLine();
                 if(ImGui::Button("Repeat frequency")) {
-                    std::thread control_command_thread(control_command_thread_cb, ControlHB::CommandOrMask::REPEAT_FREQUENCY);
+                    std::thread(control_command_thread_cb, ControlHB::CommandOrMask::REPEAT_FREQUENCY, std::ref(esp32_ad5933)).detach();
                 }
             }
 
@@ -551,8 +781,6 @@ namespace ImGuiSDL {
             ImGui::InputText("IMAG_DATA_HB (0x96)", tmp_hex_dbg_rw_captures.imag_data_HB.data(), tmp_hex_dbg_rw_captures.imag_data_HB.size(), ImGuiInputTextFlags_ReadOnly);
             ImGui::InputText("IMAG_DATA_LB (0x97)", tmp_hex_dbg_rw_captures.imag_data_LB.data(), tmp_hex_dbg_rw_captures.imag_data_LB.size(), ImGuiInputTextFlags_ReadOnly);
             ImGui::Separator();
-        } else {
-            ImGui::Text("UNIMPLEMENTED");
         }
 
         tmp_hex_dbg_rw_captures.update_config();
@@ -562,69 +790,91 @@ namespace ImGuiSDL {
 }
 
 namespace ImGuiSDL {
-    // Related to measurement_window  
-    class MeasurementWindowCaptures {
-    public:
-        AD5933_Config config;
+    void calibrate_cb(std::optional<ESP32_AD5933> &esp32_ad5933) {
+        esp32_ad5933.value().send(std::string(
+            MagicPackets::FrequencySweep::Command::start.begin(),
+            MagicPackets::FrequencySweep::Command::start.end()
+        ));
 
-        std::array<char, 7> freq_start { 0x00 };
-        std::array<char, 7> freq_inc { 0x00 };
-        std::array<char, 4> num_of_inc { 0x00 };
-        std::array<char, 4> settling_time_cycles_num { 0x00 };
-        int settling_time_cycles_multiplier_combo = 0;
-        int voltage_range_combo = 0;
-        int pga_gain_combo = 0;
-        int sysclk_src_combo = 0;
+        /*
+        const uint16_t wished_size = measure_captures.load()->config.get_num_of_inc().value + 1;
+        const float progress_bar_step = 1.0f / static_cast<float>(wished_size);
+        std::vector<AD5933_CalibrationData> calibration_data;
+        calibration_data.clear();
+        */
 
-        std::array<char, 9> sysclk_freq { 0x00 };
-
-        MeasurementWindowCaptures() :
-            config { AD5933_Config() }
-        {} 
-
-        void update_config() {
-            auto stoul_lambda = [](const std::string &num_str) -> std::optional<unsigned long> {
-                try {
-                    size_t pos;
-                    if(num_str.empty()) {
-                        return std::nullopt;
-                    }
-                    unsigned long number = std::stoul(num_str, &pos);
-
-                    if(pos < std::strlen(num_str.c_str())) {
-                        std::cout << "Conversion failed. Not the entire string was converted." << std::endl;
-                        return std::nullopt; // Return empty optional if conversion is incomplete
-                    } else {
-                        return number;
-                    }
-                } catch (const std::out_of_range& e) {
-                    std::cout << "Exception caught: " << e.what() << std::endl;
-                    // Handle the out_of_range exception here
-                } catch (const std::invalid_argument& e) {
-                    std::cout << "Invalid argument exception caught: " << e.what() << std::endl;
-                    // Handle the invalid_argument exception here
-                }
-                    return std::nullopt; // Return empty optional in case of exceptions
-            };
-            config = AD5933_Config {
-                config.get_command(),
-                std::next(ControlHB_OutputVoltageRangeOrMaskStringMap.begin(), settling_time_cycles_multiplier_combo)->first,
-                std::next(ControlHB_PGA_GainOrMaskStringMap.begin(), pga_gain_combo)->first,
-                std::next(ControlLB_SYSCLK_SRC_OrMaskStringMap.begin(), sysclk_src_combo)->first,
-                stoul_lambda(std::string(freq_start.begin(), freq_start.end())).value_or(0xFF'FF'FF),
-                stoul_lambda(std::string(freq_inc.begin(), freq_inc.end())).value_or(0xFF'FF'FF),
-                uint9_t { static_cast<uint16_t>(stoul_lambda(std::string(num_of_inc.begin(), num_of_inc.end())).value_or(0b1'1111'1111)) },
-                uint9_t { static_cast<uint16_t>(stoul_lambda(std::string(settling_time_cycles_num.begin(), settling_time_cycles_num.end())).value_or(0b1'1111'1111)) },
-                std::next(SettlingTimeCyclesMultiplierOrMaskStringMap.begin(), settling_time_cycles_multiplier_combo)->first
-            };
+/*
+calibration_data_reserve_jump:
+        try {
+            calibration_data.reserve(wished_size);
+        } catch(...) {
+            std::cerr << "ImGuiSDL: ERROR calibrate_cb: failed to calibration_data.reserve(" << wished_size << ")\n"; 
+            goto calibration_data_reserve_jump;
         }
-    };
+        do {
+            const auto rx_payload = esp32_ad5933.value().rx_payload.read();
+            esp32_ad5933.value().rx_payload.clean();
+            AD5933_CalibrationData tmp_calibration_data {
+                static_cast<uint8_t>(rx_payload[0]),
+                static_cast<uint8_t>(rx_payload[1]),
+                static_cast<uint8_t>(rx_payload[2]),
+                static_cast<uint8_t>(rx_payload[3]),
+            };
 
-    std::atomic<std::shared_ptr<MeasurementWindowCaptures>> measure_captures { std::make_shared<MeasurementWindowCaptures>() };
-    inline void measurement_window(ImVec2 &measurement_window_size) {
+            try {
+                calibration_data.push_back(tmp_calibration_data);
+            } catch(const std::runtime_error &e) {
+                std::cerr << "Mame ju picu\n";
+                std::cerr << "Nazov totej pixi: " << e.what() << std::endl;
+            }
+        } while(calibration_data.size() != wished_size);
+*/
+        //calibrating = false;
+        //calibrated = true;
+    }
+
+    void start_sweep_cb(bool &sweeping, bool &sweeped, std::optional<ESP32_AD5933> &esp32_ad5933) {
+        esp32_ad5933.value().send(std::string(
+            MagicPackets::FrequencySweep::Command::start.begin(),
+            MagicPackets::FrequencySweep::Command::start.end()
+        ));
+
+        const uint16_t wished_size = measure_captures.load()->config.get_num_of_inc().value + 1;
+        const float progress_bar_step = 1.0f / static_cast<float>(wished_size);
+        std::vector<AD5933_MeasurementData> measurement_data;
+        measurement_data.clear();
+
+measurement_data_reserve_jump:
+        try {
+            measurement_data.reserve(wished_size);
+        } catch(...) {
+            std::cerr << "ImGuiSDL: ERROR calibrate_cb: failed to measurement_data.reserve(" << wished_size << ")\n";
+            goto measurement_data_reserve_jump;
+        }
+
+        do {
+            const auto rx_payload = esp32_ad5933.value().rx_payload.read();
+            esp32_ad5933.value().rx_payload.clean();
+            AD5933_MeasurementData tmp_measurement_data {
+                static_cast<uint8_t>(rx_payload[0]),
+                static_cast<uint8_t>(rx_payload[1]),
+                static_cast<uint8_t>(rx_payload[2]),
+                static_cast<uint8_t>(rx_payload[3]),
+            };
+
+            measurement_data.push_back(tmp_measurement_data);
+        } while(measurement_data.size() != wished_size);
+
+        sweeping = false;
+        sweeped = true;
+    }
+}
+
+namespace ImGuiSDL {
+    inline void measurement_window(ImVec2 &measurement_window_size, std::optional<ESP32_AD5933> &esp32_ad5933) {
         static constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize;
         ImGui::Begin("Measurement", NULL, flags);                          // Create a window called "Hello, world!" and append into it.
-        if(ImGui::Button("Toggle Register Debug") == true) {
+        if(ImGui::Button("Toggle Register Debug Window") == true) {
             if(debug_window_enable.load() == false) {
                 measurement_window_size.x /= 2;
                 debug_window_enable.store(1);
@@ -639,31 +889,165 @@ namespace ImGuiSDL {
 
         auto tmp_measure_captures = *(measure_captures.load());
 
+        static bool calibrating = false;
+        static bool calibrated = false;
+        static bool sweeping = false;
+        static bool sweeped = false;
+
+        const ImGuiInputTextFlags input_flags = (calibrating == true || sweeping == true) ? ImGuiInputTextFlags_ReadOnly : ImGuiInputTextFlags_None;
         ImGui::Separator(); 
         ImGui::Text("Sweep Parameters");
-        ImGui::Separator();
-        ImGui::InputText("Start Frequency", tmp_measure_captures.freq_start.data(), tmp_measure_captures.freq_start.size());
-        ImGui::InputText("Increment Frequency", tmp_measure_captures.freq_inc.data(), tmp_measure_captures.freq_inc.size());
-        ImGui::InputText("Number of Increments", tmp_measure_captures.num_of_inc.data(), tmp_measure_captures.num_of_inc.size());
-        ImGui::InputText("Number of Settling Time Cycles", tmp_measure_captures.settling_time_cycles_num.data(), tmp_measure_captures.settling_time_cycles_num.size());
 
+        ImGui::Separator();
+
+        ImGui::InputText("Start Frequency", tmp_measure_captures.freq_start.data(), tmp_measure_captures.freq_start.size(), input_flags);
+        ImGui::InputText("Increment Frequency", tmp_measure_captures.freq_inc.data(), tmp_measure_captures.freq_inc.size(), input_flags);
+
+        ImGui::InputText("Number of Increments", tmp_measure_captures.num_of_inc.data(), tmp_measure_captures.num_of_inc.size(), input_flags);
+
+        ImGui::Separator();
+
+        ImGui::InputInt("Calibration impedance", &tmp_measure_captures.config.calibration_impedance, 0, 0, input_flags);
+
+        ImGui::Separator(); 
+
+        ImGui::Combo("Output Excitation Voltage Range", &tmp_measure_captures.voltage_range_combo, "2 Vppk""\0""200 mVppk""\0""400 mVppk""\0""1 Vppk");
+
+        ImGui::Separator();
+
+        ImGui::Combo("PGA Gain", &tmp_measure_captures.pga_gain_combo, "x5\0x1");
+
+        ImGui::Separator();
+
+        ImGui::InputText("Number of Settling Time Cycles", tmp_measure_captures.settling_time_cycles_num.data(), tmp_measure_captures.settling_time_cycles_num.size(), input_flags);
         ImGui::Combo("Settling Time Cycles Multiplier", &tmp_measure_captures.settling_time_cycles_multiplier_combo, "x1\0x2\0x4");
 
-        ImGui::Combo("Output Excitation Voltage Range", &tmp_measure_captures.voltage_range_combo, "2 Vppk""\0""1 Vppk""\0""400 mVppk""\0""200 mVppk");
-        ImGui::Combo("PGA Gain", &tmp_measure_captures.pga_gain_combo, "x1\0x5");
+        ImGui::Separator();
+
         ImGui::Combo("System Clock Source", &tmp_measure_captures.sysclk_src_combo, "Internal\0External");
-
-        ImGui::InputText("System Clock Frequency", tmp_measure_captures.sysclk_freq.data(), tmp_measure_captures.sysclk_freq.size());
-
-        ImGui::Separator(); 
-
-        ImGui::Button("Program Device Registers");
-        ImGui::Button("Start Sweep");
+        ImGui::InputText("System Clock Frequency", tmp_measure_captures.sysclk_freq.data(), tmp_measure_captures.sysclk_freq.size(), ImGuiInputTextFlags_ReadOnly);
 
         ImGui::Separator(); 
 
-        ImGui::Text("REAL_DATA: 0xFFFF'FFFF");
-        ImGui::Text("IMAG_DATA: 0xFFFF'FFFF");
+        if(ImGui::Button("Program Device Registers")) {
+            std::thread(
+                [tmp_measure_captures, &esp32_ad5933]() {
+                    send_debug_start_req_thread_cb(esp32_ad5933);
+                    program_all_registers_thread_cb(tmp_measure_captures.config.get_ad5933_config_message_raw(), esp32_ad5933);
+                    send_debug_end_req_thread_cb(esp32_ad5933);
+                }
+            ).detach();
+        }
+
+        static std::atomic<float> calibrating_progress_bar_fraction { 0.0f };
+        if(calibrating == false && sweeping == false) {
+            if(ImGui::Button("Calibrate")) {
+                calibrating = true;
+                calibrated = false;
+                calibrating_progress_bar_fraction.store(0.0f);
+                std::thread(calibrate_cb,
+                    //std::ref(calibrating),
+                    //std::ref(calibrated),
+                    //std::ref(calibrating_progress_bar_fraction),
+                    std::ref(esp32_ad5933)
+                ).detach();
+            }
+        } else if(sweeping == false) {
+            //ImGui::ProgressBar(calibrating_progress_bar_fraction.load());
+            //ImGui::Spinner("Calibrating", 10.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+        }
+
+        static std::atomic<float> sweeping_progress_bar_fraction { 0.0f };
+        if(calibrated == true) {
+            if(sweeping == false) {
+                if(ImGui::Button("Start Sweep")) {
+                    sweeping = true;
+                    sweeped = false;
+                    sweeping_progress_bar_fraction.store(0.0f);
+                    std::thread(start_sweep_cb,
+                        std::ref(sweeping),
+                        std::ref(sweeped),
+                        //std::ref(sweeping_progress_bar_fraction),
+                        std::ref(esp32_ad5933)
+                    ).detach();
+                }
+            } else if(calibrating == false) {
+                //ImGui::Spinner("Measuring", 10.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                //ImGui::ProgressBar(sweeping_progress_bar_fraction.load());
+            }
+        }
+
+        if(sweeped == true) {
+            /*
+            for(size_t i = 0; i < measurement_data.size(); i++) {
+                ImGui::Text("Frequency: %f [Hz]", (tmp_measure_captures.config.get_start_freq() + (static_cast<double>(i) * tmp_measure_captures.config.get_inc_freq())));
+                ImGui::Text("Magnitude: %f [Ohm]", 
+                    measurement_data[i].get_corrected_magnitude(
+                        calibration_data[i].get_gain_factor(
+                            tmp_measure_captures.config.calibration_impedance
+                        )
+                    )
+                );
+                ImGui::Text("Phase: %f [rad]",
+                    measurement_data[i].get_corrected_phase(
+                        calibration_data[i].get_system_phase()
+                    )
+                );
+                ImGui::Text("Resistance: %f [Ohm]",
+                    measurement_data[i].get_corrected_resistance(
+                        calibration_data[i].get_gain_factor(
+                            tmp_measure_captures.config.calibration_impedance
+                        ),
+                        calibration_data[i].get_system_phase()
+                    )
+                );
+                ImGui::Text("Reactance: %f [Ohm]",
+                    measurement_data[i].get_corrected_reactance(
+                        calibration_data[i].get_gain_factor(
+                            tmp_measure_captures.config.calibration_impedance
+                        ),
+                        calibration_data[i].get_system_phase()
+                    )
+                );
+                */
+               /*
+                std::printf("measurement_data[%zu]:\n", i);
+                std::printf("\tFrequency: %f [Hz]\n", (tmp_measure_captures.config.get_start_freq() + (static_cast<double>(i) * tmp_measure_captures.config.get_inc_freq())));
+                std::printf("\tMagnitude: %f [Ohm]\n", 
+                    measurement_data[i].get_corrected_magnitude(
+                        calibration_data[i].get_gain_factor(
+                            tmp_measure_captures.config.calibration_impedance
+                        )
+                    )
+                );
+                std::printf("\tPhase: %f [rad]\n",
+                    measurement_data[i].get_corrected_phase(
+                        calibration_data[i].get_system_phase()
+                    )
+                );
+                std::printf("\tResistance: %f [Ohm]\n",
+                    measurement_data[i].get_corrected_resistance(
+                        calibration_data[i].get_gain_factor(
+                            tmp_measure_captures.config.calibration_impedance
+                        ),
+                        calibration_data[i].get_system_phase()
+                    )
+                );
+                std::printf("\tReactance: %f [Ohm]\n",
+                    measurement_data[i].get_corrected_reactance(
+                        calibration_data[i].get_gain_factor(
+                            tmp_measure_captures.config.calibration_impedance
+                        ),
+                        calibration_data[i].get_system_phase()
+                    )
+                );
+                std::printf("\n\n\n");
+            }
+            */
+            sweeped = false;
+        }
+
+        ImGui::Separator(); 
 
         ImGui::End();
         tmp_measure_captures.update_config();
@@ -672,19 +1056,27 @@ namespace ImGuiSDL {
 }
 
 namespace ImGuiSDL {
-    inline void imgui_create_window() {
+    inline void create_connecting_window() {
+        ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
+        ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
+        connecting_window();
+    }
+
+    inline void create_main_window(std::optional<ESP32_AD5933> &esp32_ad5933) {
         static ImVec2 measurement_window_size = ImGui::GetIO().DisplaySize;
         ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
         ImGui::SetNextWindowSize(measurement_window_size);
-        measurement_window(std::ref(measurement_window_size));
+        measurement_window(measurement_window_size, esp32_ad5933);
         if(debug_window_enable.load()) {
             ImGui::SetNextWindowPos(ImVec2(measurement_window_size.x, 0.0f));
             ImGui::SetNextWindowSize(measurement_window_size);
-            debug_registers_window();
+            debug_registers_window(esp32_ad5933);
         }
     }
+}
 
-    void loop() {
+namespace ImGuiSDL {
+    void loop(std::optional<ESP32_AD5933> &esp32_ad5933) {
         SDL_Window* window;
         SDL_Renderer* renderer;
         {
@@ -694,20 +1086,22 @@ namespace ImGuiSDL {
         }
 
         bool done = false;
-        ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-        while(esp32_ad5933.has_value() == false || esp32_ad5933.value().is_connected() == false) {
-            process_events(window, &done);
+        const ImVec4 clear_color { 0.45f, 0.55f, 0.60f, 1.00f };
+        while(
+            (esp32_ad5933.has_value() == false || esp32_ad5933.value().is_connected() == false)
+            && done == false
+        ) {
+            process_events(window, done);
             start_new_frame();
-            imgui_create_connecting_window();
+            create_connecting_window();
             render(renderer, clear_color);
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
- 
-        done = false;
+
         while(done == false) {
-            process_events(window, &done);
+            process_events(window, done);
             start_new_frame();
-            imgui_create_window();
+            create_main_window(esp32_ad5933);
             render(renderer, clear_color);
         }
 

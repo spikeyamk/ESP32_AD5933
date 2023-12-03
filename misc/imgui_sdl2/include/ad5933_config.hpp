@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <iostream>
 #include <map>
-#include <unordered_map>
 #include <string>
 
 #include "types.hpp"
@@ -43,9 +42,9 @@ public:
 
 	enum class OutputVoltageRangeOrMask {
 		TWO_VOLT_PPK      		   = 0b0000'0000,
-		ONE_VOLT_PPK      		   = 0b0000'0010,
+		TWO_HUNDRED_MILI_VOLT_PPK  = 0b0000'0010,
 		FOUR_HUNDRED_MILI_VOLT_PPK = 0b0000'0100,
-		TWO_HUNDRED_MILI_VOLT_PPK  = 0b0000'0110
+		ONE_VOLT_PPK      		   = 0b0000'0110,
 	}; friend std::ostream& operator<<(std::ostream& os, ControlHB::OutputVoltageRangeOrMask value);
 	static constexpr std::bitset<8> OutputVoltageRangeAndMask { 0b0000'0110 };
 
@@ -58,7 +57,7 @@ public:
 
 extern const std::map<ControlHB::CommandOrMask, const char*> ControlHB_CommandOrMaskStringMap;
 extern const std::map<ControlHB::OutputVoltageRangeOrMask, const char*> ControlHB_OutputVoltageRangeOrMaskStringMap;
-extern const std::unordered_map<ControlHB::PGA_GainOrMask, const char*> ControlHB_PGA_GainOrMaskStringMap;
+extern const std::map<ControlHB::PGA_GainOrMask, const char*> ControlHB_PGA_GainOrMaskStringMap;
 
 class ControlLB {
 public:
@@ -80,24 +79,30 @@ public:
 		NO_STATUS = 0b0000'0000,
 		VALID_TEMP = 0b0000'0001,
 		VALID_DATA = 0b0000'0010,
+		VALID_DATA_AND_VALID_TEMP = 0b0000'0011,
 		FREQ_SWEEP_COMPLETE = 0b0000'0100,
+		FREQ_SWEEP_COMPLETE_AND_VALID_TEMP = 0b0000'0101,
+		FREQ_SWEEP_COMPLETE_AND_VALID_DATA = 0b0000'0110,
+		FREQ_SWEEP_COMPLETE_AND_VALID_DATA_AND_VALID_TEMP = 0b0000'0111,
 	}; friend std::ostream& operator<<(std::ostream& os, Status::STATUS_OrMask value);
 
 	static constexpr std::bitset<8> STATUS_AndMask { 0b0000'0111 };
 };
-extern const std::unordered_map<Status::STATUS_OrMask, const char*> STATUS_OrMaskStringMap;
+extern const std::map<Status::STATUS_OrMask, const char*> STATUS_OrMaskStringMap;
 
 class AD5933_Config {
-private:
+public:
     Register8_t control_HB;
     Register8_t control_LB;
-    uint32_t active_sysclk_freq;
+    uint32_t active_sysclk_freq = 0;
     Register24_t start_freq;
     Register24_t inc_freq;
     Register16_t num_of_inc;
     Register16_t settling_time_cycles;
-    std::array<std::bitset<8>, 12> ad5933_config_message;
-    std::array<uint8_t, 12> ad5933_config_message_raw;
+	int32_t calibration_impedance = 0;
+private:
+    std::array<std::bitset<8>, 12> ad5933_config_message { { 0x00 } };
+    std::array<uint8_t, 12> ad5933_config_message_raw { 0x00 };
     static const uint32_t pow_2_27 = 134'217'728ul;
 
 public:
@@ -112,7 +117,8 @@ public:
         const uint32_t in_inc_freq,
         const uint9_t in_num_of_inc,
         const uint9_t settling_time_cycles_number,
-        const SettlingTimeCyclesMultiplierOrMask settling_time_cycles_multiplier
+        const SettlingTimeCyclesMultiplierOrMask settling_time_cycles_multiplier,
+		const int32_t calibration_impedance
     );
 
 	AD5933_Config(const std::array<uint8_t, 12> &in_config_message_raw);
@@ -206,9 +212,41 @@ private:
 	Register16_t imag_data;
 public:
 	AD5933_Data() = default;
-	AD5933_Data(std::array<uint8_t, 7> &in_data_message_raw);
+	AD5933_Data(const std::array<uint8_t, 7> &in_data_message_raw);
 	Status::STATUS_OrMask get_status();
 	float get_temperature();
-	std::string get_real_data();
-	std::string get_imag_data();
+	int16_t get_real_part();
+	int16_t get_imag_part();
+	float get_raw_magnitude();
+	float get_raw_phase();
+};
+
+class AD5933_CalibrationData : public AD5933_Data {
+public:
+	AD5933_CalibrationData(
+		const uint8_t real_data_HB,
+		const uint8_t real_data_LB,
+		const uint8_t imag_data_HB,
+		const uint8_t imag_data_LB
+	);
+	AD5933_CalibrationData() = default;
+
+	float get_gain_factor(const int32_t calibration_impedance);
+	float get_system_phase();
+};
+
+class AD5933_MeasurementData : public AD5933_Data {
+public:
+	AD5933_MeasurementData(
+		const uint8_t real_data_HB,
+		const uint8_t real_data_LB,
+		const uint8_t imag_data_HB,
+		const uint8_t imag_data_LB
+	);
+	AD5933_MeasurementData() = default;
+
+	float get_corrected_magnitude(const float gain_factor);
+	float get_corrected_phase(const float system_phase);
+	float get_corrected_resistance(const float gain_factor, const float system_phase);
+	float get_corrected_reactance(const float gain_factor, const float system_phase);
 };

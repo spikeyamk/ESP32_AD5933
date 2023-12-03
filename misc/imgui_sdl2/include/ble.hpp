@@ -53,5 +53,3 @@ public:
     void print_mtu();
     ~ESP32_AD5933();
 };
-
-extern std::optional<ESP32_AD5933> esp32_ad5933;

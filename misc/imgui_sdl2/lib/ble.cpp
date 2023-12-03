@@ -82,7 +82,7 @@ Payload& Payload::operator=(const Payload &&other) {
 }
 
 void Payload::clean() {
-    content = std::string {};
+    content.clear();
     read_ready.store(false);
 }
 
@@ -273,20 +273,20 @@ void ESP32_AD5933::subscribe_to_body_composition_measurement_notify() {
         peripheral.notify(
             body_composistion_service.value().uuid(),
             body_composition_measurement_chacteristic.value().uuid(),
-            [&](SimpleBLE::ByteArray captured_payload) {
+            [](SimpleBLE::ByteArray captured_payload) {
                 // Only for debugging
-                /*
                 std::cout << "Printing from subscribe_to_body_composition_measurement_notify lambda\n";
-                for(size_t i = 0; i < payload.size(); i++) {
-                    std::printf("Byte[%zu]: 0x%02X\n", static_cast<uint8_t>(payload[i]));
+                for(size_t i = 0; i < captured_payload.size(); i++) {
+                    std::printf("Byte[%zu]: 0x%02X\n", i, static_cast<uint8_t>(captured_payload[i]));
                 }
-                */
+                /*
                 while(rx_payload.read_ready.load() == true) {
                     std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 }
                 rx_payload.content = captured_payload;
                 rx_payload.read_ready.store(true);
                 rx_payload.read_ready.notify_all();
+                */
             }
         );
     }
@@ -344,8 +344,11 @@ std::optional<SimpleBLE::Peripheral> find_esp32_ad5933() {
             }
         }
     });
-    
-    adapter.scan_for(10'000);
+
+    adapter.scan_start();
+    while(adapter.scan_is_active()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
 
     if(esp32_ad5933_peripheral.has_value() == false) {
         fmt::print(fmt::fg(fmt::color::red), "ERROR: BLE: Default adapter: Failed to find ESP32 AD5933\n");
@@ -362,8 +365,6 @@ bool ESP32_AD5933::is_connected() {
 void ESP32_AD5933::print_mtu() {
     std::cout << "ESP32_AD5933: MTU: " << peripheral.mtu() << std::endl;
 }
-
-std::optional<ESP32_AD5933> esp32_ad5933 = std::nullopt;
 
 namespace BLE_Payloads {
     //std::atomic<std::shared_ptr<std::string>> rx_payload;
