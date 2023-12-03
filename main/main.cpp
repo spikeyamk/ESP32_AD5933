@@ -16,6 +16,7 @@
 #include "ble_state_machine/include/ble.hpp"
 #include "ble_state_machine/include/ble_state_machine.hpp"
 #include "ble_state_machine/include/ble_states.hpp"
+#include "sd_card.hpp"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/FreeRTOSConfig.h"
@@ -24,7 +25,6 @@
 extern "C" void app_main() {
 	Util::Blinky& blinky_instance = Util::Blinky::get_instance();
 	blinky_instance.start(std::chrono::seconds(1));
-
 	I2CBus i2c_bus {};
 	i2c_bus.scan();
 	AD5933_Tests::init_ad5933(i2c_bus);

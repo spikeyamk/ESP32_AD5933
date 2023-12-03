@@ -7,4 +7,5 @@ idf_component_register(SRCS
 					   "ble_state_machine/ble_states.cpp"
 					   "ble_state_machine/magic_packets.cpp"
 					   "ble_state_machine/packet_types.cpp"
+					   "sd_card.cpp"
                        INCLUDE_DIRS ".")
