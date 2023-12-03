@@ -988,35 +988,6 @@ namespace ImGuiSDL {
 }
 
 namespace ImGuiSDL {
-    void create_plot_measurement_window() {
-        ImPlot::CreateContext();
-        ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(600, 750), ImGuiCond_FirstUseEver);
-        ImGui::Begin("ImPlot Demo");
-
-        if(ImGui::BeginTabBar("ImPlotDemoTabs")) {
-            if (ImGui::BeginTabItem("RAW_DATA")) {
-                ImGui::Text("Tu budu data");
-                ImGui::EndTabItem();
-            }
-            if (ImGui::BeginTabItem("CALCULATED_DATA")) {
-                ImGui::Text("Tu budu vypocitane data");
-                ImGui::EndTabItem();
-            }
-            if (ImGui::BeginTabItem("CORRECTED_DATA")) {
-                ImGui::Text("Tu budu korigovane data");
-                ImGui::EndTabItem();
-            }
-            if (ImGui::BeginTabItem("IMPEDANCE_DATA")) {
-                ImGui::Text("Tu budu impedancne data");
-                ImGui::EndTabItem();
-            }
-        }
-        ImGui::EndTabBar();
-
-        ImGui::End();
-    }
-
     void calibration_raw_data_plots() {
         const auto start_freq = measure_captures.load()->config.get_start_freq();
         const auto inc_freq = measure_captures.load()->config.get_inc_freq();
@@ -1092,17 +1063,14 @@ namespace ImGuiSDL {
 
         if(ImGui::BeginTabBar("Calibration_PlotsBar")) {
             if (ImGui::BeginTabItem("RAW_DATA")) {
-                ImGui::Text("Tu budu data");
                 calibration_raw_data_plots();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("CALCULATED_DATA")) {
-                ImGui::Text("Tu budu vypocitane data");
                 calibration_calculated_data_plots();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("CALIBRATION_DATA")) {
-                ImGui::Text("Tu budu kalibracne data");
                 calibration_data_plots();
                 ImGui::EndTabItem();
             }
@@ -1149,7 +1117,7 @@ namespace ImGuiSDL {
             ImPlot::PlotLine("RAW_MAGNITUDE [1/Ohm]", frequency_vector.data(), raw_magnitude_vector.data(), frequency_vector.size());
             ImPlot::EndPlot();
         }
-         if(ImPlot::BeginPlot("Calibration Calculated Phase")) {
+         if(ImPlot::BeginPlot("Measurement Calculated Phase")) {
             ImPlot::SetupAxes("f [Hz]", "RAW_PHASE");
             std::vector<double> raw_phase_vector(measurement_data.size());
             std::transform(measurement_data.begin(), measurement_data.end(), raw_phase_vector.begin(), [](AD5933_MeasurementData &e) { return static_cast<double>(e.get_raw_phase()); });
@@ -1231,22 +1199,18 @@ namespace ImGuiSDL {
 
         if(ImGui::BeginTabBar("FREQ_SWEEP_BAR")) {
             if (ImGui::BeginTabItem("RAW_DATA")) {
-                ImGui::Text("Tu budu data");
                 freq_sweep_raw_data_plots();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("CALCULATED_DATA")) {
-                ImGui::Text("Tu budu vypocitane data");
                 freq_sweep_calculated_data_plots();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("CORRECTED_DATA")) {
-                ImGui::Text("Tu budu kalibracne data");
                 freq_sweep_corrected_data_plots();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("IMPEDANCE_DATA")) {
-                ImGui::Text("Tu budu impedancne data");
                 freq_sweep_impedance_data_plots();
                 ImGui::EndTabItem();
             }
