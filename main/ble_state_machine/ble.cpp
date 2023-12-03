@@ -15,6 +15,7 @@
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
 #include "modlog/modlog.h"
+#include "esp_bt.h"
 
 #include "include/ble.hpp"
 #include "trielo/trielo.hpp"
@@ -46,7 +47,7 @@ namespace NimBLE {
     //static uint16_t body_composition_measurement_characteristic_handle;
     std::atomic<bool> heartbeat_running = false;
     std::optional<std::thread> heartbeat_thread = std::nullopt;
-    std::optional<std::array<uint8_t, 23>> received_packet = std::nullopt;
+    std::optional<MagicPackets::MagicPacket_T> received_packet = std::nullopt;
 
     char characteristic_received_value[500] { 0x00 };
 
@@ -74,6 +75,7 @@ namespace NimBLE {
             }
             */
         }
+        esp_bt_controller_disable();
     }
 
     void heartbeat_cb() {
@@ -223,14 +225,21 @@ namespace NimBLE {
     ) {
         int rc;
         struct os_mbuf *txom;
-        std::optional<const std::array<uint8_t, 23> *> received_packet_pointer;
+        std::optional<const MagicPackets::MagicPacket_T *> received_packet_pointer;
         switch(ctxt->op) {
         case BLE_GATT_ACCESS_OP_WRITE_CHR: //!! In case user accessed this characterstic to write, bellow lines will executed.
             rc = gatt_svr_chr_write(ctxt->om, 1, 700, &characteristic_received_value, NULL); //!! Function "gatt_svr_chr_write" will fire.
-            printf("Received=%s\n", characteristic_received_value);  // Print the received value
+            std::printf("Received=%s\n", characteristic_received_value);  // Print the received value
+            for(size_t i = 0; i < MagicPackets::Debug::Command::start.size(); i++) {
+                if(i % 8 == 0) {;
+                    std::printf("\n");
+                }
+                std::printf("0x%02X, ", characteristic_received_value[i]);
+            }
             //! Use received value in you code. For example
-            if(std::strlen(characteristic_received_value) == MagicPackets::Debug::Command::start.size()){
-                received_packet = std::array<uint8_t, MagicPackets::Debug::Command::start.size()> { 0x00 };
+            //if(std::strlen(characteristic_received_value) == MagicPackets::Debug::Command::start.size()){ commented because strlen not working
+            if(true){
+                received_packet =  MagicPackets::MagicPacket_T { 0x00 };
             } else {
                 received_packet = std::nullopt;
             }
@@ -241,10 +250,11 @@ namespace NimBLE {
                 state_machine.process_event_data(received_packet_pointer.value());
             } else {
                 state_machine.change_to_state(static_cast<const States::bState*>(&States::disconnect));
+                // Received buffer gets immediately sent out disabled for debugging
+                //txom = ble_hs_mbuf_from_flat(characteristic_received_value, strlen(characteristic_received_value));
+                //ble_gatts_notify_custom(conn_handle, body_composition_measurement_characteristic_handle, txom);
             }
 
-            txom = ble_hs_mbuf_from_flat(characteristic_received_value, strlen(characteristic_received_value));
-            ble_gatts_notify_custom(conn_handle, body_composition_measurement_characteristic_handle, txom);
             return rc;
         }
         return BLE_ATT_ERR_UNLIKELY;

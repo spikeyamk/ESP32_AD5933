@@ -5,6 +5,9 @@
 #include <mutex>
 #include <atomic>
 #include <chrono>
+#include <string>
+#include <array>
+#include <utility>
 
 #include "led_strip.h"
 
@@ -17,7 +20,6 @@ namespace Util {
 	class Blinky {
 	private:
 		// static pointer which points to the instance of this class
-		static Blinky* instance_pointer; 
 		static std::mutex mutex;
 
 		std::atomic<bool> blink_task_enable = false;
@@ -44,22 +46,10 @@ namespace Util {
 		}
 		friend void blinky_cb(Blinky *self);
 	public:
-		static Blinky* get_instance() {
+		static Blinky& get_instance() {
     		std::lock_guard<std::mutex> lock(mutex);
-			if(instance_pointer == nullptr) {
-				instance_pointer = new Blinky(); 
-			}
-			return instance_pointer;
-		}
-
-		static bool destroy_instance() {
-			if(instance_pointer == nullptr) {
-				return false;
-			} else {
-				instance_pointer->stop();
-				delete instance_pointer;
-				return true;
-			}
+        	static Blinky instance; // Static instance created once
+			return instance;
 		}
 
 		bool start(const std::chrono::duration<int> &in_blink_time) {
@@ -127,4 +117,29 @@ namespace Util {
 	};
 }
 
+namespace Util {
+	namespace Benchmarks {
+		void calculate_primes_cb(void *arg);
+		void calculate_primes_endless_test();
+		void create_dump_all_registers_task(size_t iterations = 1'000u);
+	}
+	void print_running_tasks();
+	std::string uint8ToHexString(uint8_t value);
 
+	template <typename T, std::size_t N1, std::size_t N2>
+	constexpr std::array<T, N1 + N2> concat_diff_size_arrays(std::array<T, N1> lhs, std::array<T, N2> rhs) {
+		std::array<T, N1 + N2> result{};
+		std::size_t index = 0;
+
+		for (auto& el : lhs) {
+			result[index] = std::move(el);
+			++index;
+		}
+		for (auto& el : rhs) {
+			result[index] = std::move(el);
+			++index;
+		}
+
+		return result;
+	}
+}
