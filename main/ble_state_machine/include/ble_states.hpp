@@ -36,6 +36,8 @@ namespace States {
 	extern const iState control_HB_command;
 	extern const sState debug_end;
 
+	extern const iState start_frequency_sweep_simple;
+
 	// States related to configuring and initializing the frequency sweep loop
 	extern const eState frequency_sweep_configured;
 	extern const iState frequency_sweep_cleanup;

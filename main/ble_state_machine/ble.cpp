@@ -15,6 +15,7 @@
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
 #include "modlog/modlog.h"
+#include "esp_bt.h"
 
 #include "include/ble.hpp"
 #include "trielo/trielo.hpp"
@@ -74,6 +75,7 @@ namespace NimBLE {
             }
             */
         }
+        esp_bt_controller_disable();
     }
 
     void heartbeat_cb() {

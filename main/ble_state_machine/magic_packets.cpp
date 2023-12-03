@@ -241,7 +241,7 @@ namespace MagicPackets {
 	}
 
 	std::vector<uint8_t> get_raw_packet_data(const MagicPackets::MagicPacket_T &in_raw_packet, const size_t footer_start_index) {
-		return std::vector(in_raw_packet.begin(), in_raw_packet.begin() + (footer_start_index - 1));
+		return std::vector(in_raw_packet.begin(), in_raw_packet.begin() + (footer_start_index));
 	}
 
 	std::optional<std::vector<std::bitset<8>>> get_packet_data(const MagicPackets::MagicPacket_T &in_raw_packet) {
