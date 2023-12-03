@@ -10,6 +10,7 @@
 #include <iomanip>
 #include <cmath>
 #include <vector>
+#include <numeric>
 
 #include "trielo.hpp"
 #include "fmt/core.h"
@@ -261,7 +262,6 @@ namespace ImGuiSDL {
         }
         ImGui::End();
     }
-
 }
 
 namespace ImGuiSDL {
@@ -854,7 +854,7 @@ namespace ImGuiSDL {
 }
 
 namespace ImGuiSDL {
-    inline void measurement_window(ImVec2 &measurement_window_size, std::optional<ESP32_AD5933> &esp32_ad5933) {
+    inline void measurement_window(ImVec2 &measurement_window_size, std::optional<ESP32_AD5933> &esp32_ad5933, bool &plot_calibration_window_enable, bool &plot_freq_sweep_window_enable) {
         static constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize;
         ImGui::Begin("Measurement", NULL, flags);                          // Create a window called "Hello, world!" and append into it.
         if(ImGui::Button("Toggle Register Debug Window") == true) {
@@ -942,6 +942,9 @@ namespace ImGuiSDL {
 
         static std::atomic<float> sweeping_progress_bar_fraction { 0.0f };
         if(calibrated == true) {
+            ImGui::SameLine(); if(ImGui::Button("View Calibration Data")) {
+                plot_calibration_window_enable = true;
+            }
             if(sweeping == false) {
                 if(ImGui::Button("Start Sweep")) {
                     sweeping = true;
@@ -961,71 +964,9 @@ namespace ImGuiSDL {
         }
 
         if(sweeped == true) {
-            for(size_t i = 0; i < measurement_data.size(); i++) {
-                /*
-                ImGui::Text("Frequency: %f [Hz]", (tmp_measure_captures.config.get_start_freq() + (static_cast<double>(i) * tmp_measure_captures.config.get_inc_freq())));
-                ImGui::Text("Magnitude: %f [Ohm]", 
-                    measurement_data[i].get_corrected_magnitude(
-                        calibration_data[i].get_gain_factor(
-                            tmp_measure_captures.config.calibration_impedance
-                        )
-                    )
-                );
-                ImGui::Text("Phase: %f [rad]",
-                    measurement_data[i].get_corrected_phase(
-                        calibration_data[i].get_system_phase()
-                    )
-                );
-                ImGui::Text("Resistance: %f [Ohm]",
-                    measurement_data[i].get_corrected_resistance(
-                        calibration_data[i].get_gain_factor(
-                            tmp_measure_captures.config.calibration_impedance
-                        ),
-                        calibration_data[i].get_system_phase()
-                    )
-                );
-                ImGui::Text("Reactance: %f [Ohm]",
-                    measurement_data[i].get_corrected_reactance(
-                        calibration_data[i].get_gain_factor(
-                            tmp_measure_captures.config.calibration_impedance
-                        ),
-                        calibration_data[i].get_system_phase()
-                    )
-                );
-                */
-                std::printf("measurement_data[%zu]:\n", i);
-                std::printf("\tFrequency: %f [Hz]\n", (tmp_measure_captures.config.get_start_freq() + (static_cast<double>(i) * tmp_measure_captures.config.get_inc_freq())));
-                std::printf("\tMagnitude: %f [Ohm]\n", 
-                    measurement_data[i].get_corrected_magnitude(
-                        calibration_data[i].get_gain_factor(
-                            tmp_measure_captures.config.calibration_impedance
-                        )
-                    )
-                );
-                std::printf("\tPhase: %f [rad]\n",
-                    measurement_data[i].get_corrected_phase(
-                        calibration_data[i].get_system_phase()
-                    )
-                );
-                std::printf("\tResistance: %f [Ohm]\n",
-                    measurement_data[i].get_corrected_resistance(
-                        calibration_data[i].get_gain_factor(
-                            tmp_measure_captures.config.calibration_impedance
-                        ),
-                        calibration_data[i].get_system_phase()
-                    )
-                );
-                std::printf("\tReactance: %f [Ohm]\n",
-                    measurement_data[i].get_corrected_reactance(
-                        calibration_data[i].get_gain_factor(
-                            tmp_measure_captures.config.calibration_impedance
-                        ),
-                        calibration_data[i].get_system_phase()
-                    )
-                );
-                std::printf("\n");
+            ImGui::SameLine(); if(ImGui::Button("View Frequency Sweep Data")) {
+                plot_freq_sweep_window_enable = true;
             }
-            sweeped = false;
         }
 
         ImGui::Separator(); 
@@ -1033,6 +974,276 @@ namespace ImGuiSDL {
         ImGui::End();
         tmp_measure_captures.update_config();
         measure_captures.store(std::make_shared<MeasurementWindowCaptures>(tmp_measure_captures));
+    }
+}
+
+namespace ImGuiSDL {
+    void create_plot_measurement_window() {
+        ImPlot::CreateContext();
+        ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(600, 750), ImGuiCond_FirstUseEver);
+        ImGui::Begin("ImPlot Demo");
+
+        if(ImGui::BeginTabBar("ImPlotDemoTabs")) {
+            if (ImGui::BeginTabItem("RAW_DATA")) {
+                ImGui::Text("Tu budu data");
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("CALCULATED_DATA")) {
+                ImGui::Text("Tu budu vypocitane data");
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("CORRECTED_DATA")) {
+                ImGui::Text("Tu budu korigovane data");
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("IMPEDANCE_DATA")) {
+                ImGui::Text("Tu budu impedancne data");
+                ImGui::EndTabItem();
+            }
+        }
+        ImGui::EndTabBar();
+
+        ImGui::End();
+    }
+
+    void calibration_raw_data_plots() {
+        const auto start_freq = measure_captures.load()->config.get_start_freq();
+        const auto inc_freq = measure_captures.load()->config.get_inc_freq();
+        std::vector<double> frequency_vector(calibration_data.size());
+        std::generate(frequency_vector.begin(), frequency_vector.end(), [start_freq, inc_freq, n = 0.0] () mutable { return static_cast<double>(start_freq + ((n++) * inc_freq)); });
+
+        if(ImPlot::BeginPlot("Calibration Raw Real Data")) {
+            ImPlot::SetupAxes("f [Hz]", "REAL_DATA");
+            std::vector<double> real_data_vector(calibration_data.size());
+            std::transform(calibration_data.begin(), calibration_data.end(), real_data_vector.begin(), [](AD5933_CalibrationData &e) { return static_cast<double>(e.get_real_part()); });
+            ImPlot::PlotLine("REAL_DATA [1/Ohm]", frequency_vector.data(), real_data_vector.data(), frequency_vector.size());
+            ImPlot::EndPlot();
+        }
+         if(ImPlot::BeginPlot("Calibration Raw Imag Data")) {
+            ImPlot::SetupAxes("f [Hz]", "IMAG_DATA");
+            std::vector<double> imag_data_vector(calibration_data.size());
+            std::transform(calibration_data.begin(), calibration_data.end(), imag_data_vector.begin(), [](AD5933_CalibrationData &e) { return static_cast<double>(e.get_imag_part()); });
+            ImPlot::PlotLine("IMAG_DATA [1/Ohm]", frequency_vector.data(), imag_data_vector.data(), frequency_vector.size());
+            ImPlot::EndPlot();
+        }
+    }
+
+    void calibration_calculated_data_plots() {
+        const auto start_freq = measure_captures.load()->config.get_start_freq();
+        const auto inc_freq = measure_captures.load()->config.get_inc_freq();
+        std::vector<double> frequency_vector(calibration_data.size());
+        std::generate(frequency_vector.begin(), frequency_vector.end(), [start_freq, inc_freq, n = 0.0] () mutable { return static_cast<double>(start_freq + ((n++) * inc_freq)); });
+
+        if(ImPlot::BeginPlot("Calibration Calculated Magnitude")) {
+            ImPlot::SetupAxes("f [Hz]", "RAW_MAGNITUDE");
+            std::vector<double> raw_magnitude_vector(calibration_data.size());
+            std::transform(calibration_data.begin(), calibration_data.end(), raw_magnitude_vector.begin(), [](AD5933_CalibrationData &e) { return static_cast<double>(e.get_raw_magnitude()); });
+            ImPlot::PlotLine("RAW_MAGNITUDE [1/Ohm]", frequency_vector.data(), raw_magnitude_vector.data(), frequency_vector.size());
+            ImPlot::EndPlot();
+        }
+         if(ImPlot::BeginPlot("Calibration Calculated Phase")) {
+            ImPlot::SetupAxes("f [Hz]", "RAW_PHASE");
+            std::vector<double> raw_phase_vector(calibration_data.size());
+            std::transform(calibration_data.begin(), calibration_data.end(), raw_phase_vector.begin(), [](AD5933_CalibrationData &e) { return static_cast<double>(e.get_raw_phase()); });
+            ImPlot::PlotLine("RAW_PHASE [rad]", frequency_vector.data(), raw_phase_vector.data(), frequency_vector.size());
+            ImPlot::EndPlot();
+        }
+    }
+
+    void calibration_data_plots() {
+        const auto start_freq = measure_captures.load()->config.get_start_freq();
+        const auto inc_freq = measure_captures.load()->config.get_inc_freq();
+        std::vector<double> frequency_vector(calibration_data.size());
+        std::generate(frequency_vector.begin(), frequency_vector.end(), [start_freq, inc_freq, n = 0.0] () mutable { return static_cast<double>(start_freq + ((n++) * inc_freq)); });
+
+        if(ImPlot::BeginPlot("Calibration Gain Factor")) {
+            ImPlot::SetupAxes("f [Hz]", "GAIN_FACTOR");
+            std::vector<double> gain_factor_vector(calibration_data.size());
+            const auto calibration_impedance = measure_captures.load()->config.calibration_impedance;
+            std::transform(calibration_data.begin(), calibration_data.end(), gain_factor_vector.begin(), [calibration_impedance](AD5933_CalibrationData &e) { return static_cast<double>(e.get_gain_factor(calibration_impedance)); });
+            ImPlot::PlotLine("GAIN_FACTOR", frequency_vector.data(), gain_factor_vector.data(), frequency_vector.size());
+            ImPlot::EndPlot();
+        }
+         if(ImPlot::BeginPlot("Calibration System Phase")) {
+            ImPlot::SetupAxes("f [Hz]", "SYSTEM_PHASE");
+            std::vector<double> raw_phase_vector(calibration_data.size());
+            std::transform(calibration_data.begin(), calibration_data.end(), raw_phase_vector.begin(), [](AD5933_CalibrationData &e) { return static_cast<double>(e.get_system_phase()); });
+            ImPlot::PlotLine("SYSTEM_PHASE [rad]", frequency_vector.data(), raw_phase_vector.data(), frequency_vector.size());
+            ImPlot::EndPlot();
+        }
+    }
+
+    void create_plot_calibration_window(bool &running) {
+        ImPlot::CreateContext();
+        ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(600, 750), ImGuiCond_FirstUseEver);
+        ImGui::Begin("Calibration Plots", &running);
+
+        if(ImGui::BeginTabBar("Calibration_PlotsBar")) {
+            if (ImGui::BeginTabItem("RAW_DATA")) {
+                ImGui::Text("Tu budu data");
+                calibration_raw_data_plots();
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("CALCULATED_DATA")) {
+                ImGui::Text("Tu budu vypocitane data");
+                calibration_calculated_data_plots();
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("CALIBRATION_DATA")) {
+                ImGui::Text("Tu budu kalibracne data");
+                calibration_data_plots();
+                ImGui::EndTabItem();
+            }
+        }
+        ImGui::EndTabBar();
+
+        ImGui::End();
+    }
+}
+
+namespace ImGuiSDL {
+    void freq_sweep_raw_data_plots() {
+        const auto start_freq = measure_captures.load()->config.get_start_freq();
+        const auto inc_freq = measure_captures.load()->config.get_inc_freq();
+        std::vector<double> frequency_vector(calibration_data.size());
+        std::generate(frequency_vector.begin(), frequency_vector.end(), [start_freq, inc_freq, n = 0.0] () mutable { return static_cast<double>(start_freq + ((n++) * inc_freq)); });
+
+        if(ImPlot::BeginPlot("Measurement Raw Real Data")) {
+            ImPlot::SetupAxes("f [Hz]", "REAL_DATA");
+            std::vector<double> real_data_vector(measurement_data.size());
+            std::transform(measurement_data.begin(), measurement_data.end(), real_data_vector.begin(), [](AD5933_MeasurementData &e) { return static_cast<double>(e.get_real_part()); });
+            ImPlot::PlotLine("REAL_DATA [1/Ohm]", frequency_vector.data(), real_data_vector.data(), frequency_vector.size());
+            ImPlot::EndPlot();
+        }
+         if(ImPlot::BeginPlot("Measurement Raw Imag Data")) {
+            ImPlot::SetupAxes("f [Hz]", "IMAG_DATA");
+            std::vector<double> imag_data_vector(measurement_data.size());
+            std::transform(measurement_data.begin(), measurement_data.end(), imag_data_vector.begin(), [](AD5933_MeasurementData &e) { return static_cast<double>(e.get_imag_part()); });
+            ImPlot::PlotLine("IMAG_DATA [1/Ohm]", frequency_vector.data(), imag_data_vector.data(), frequency_vector.size());
+            ImPlot::EndPlot();
+        }
+    }
+
+    void freq_sweep_calculated_data_plots() {
+        const auto start_freq = measure_captures.load()->config.get_start_freq();
+        const auto inc_freq = measure_captures.load()->config.get_inc_freq();
+        std::vector<double> frequency_vector(calibration_data.size());
+        std::generate(frequency_vector.begin(), frequency_vector.end(), [start_freq, inc_freq, n = 0.0] () mutable { return static_cast<double>(start_freq + ((n++) * inc_freq)); });
+
+        if(ImPlot::BeginPlot("Measurement Calculated Magnitude")) {
+            ImPlot::SetupAxes("f [Hz]", "RAW_MAGNITUDE");
+            std::vector<double> raw_magnitude_vector(measurement_data.size());
+            std::transform(measurement_data.begin(), measurement_data.end(), raw_magnitude_vector.begin(), [](AD5933_MeasurementData &e) { return static_cast<double>(e.get_raw_magnitude()); });
+            ImPlot::PlotLine("RAW_MAGNITUDE [1/Ohm]", frequency_vector.data(), raw_magnitude_vector.data(), frequency_vector.size());
+            ImPlot::EndPlot();
+        }
+         if(ImPlot::BeginPlot("Calibration Calculated Phase")) {
+            ImPlot::SetupAxes("f [Hz]", "RAW_PHASE");
+            std::vector<double> raw_phase_vector(measurement_data.size());
+            std::transform(measurement_data.begin(), measurement_data.end(), raw_phase_vector.begin(), [](AD5933_MeasurementData &e) { return static_cast<double>(e.get_raw_phase()); });
+            ImPlot::PlotLine("RAW_PHASE [rad]", frequency_vector.data(), raw_phase_vector.data(), frequency_vector.size());
+            ImPlot::EndPlot();
+        }
+    }
+
+    void freq_sweep_corrected_data_plots() {
+        const auto start_freq = measure_captures.load()->config.get_start_freq();
+        const auto inc_freq = measure_captures.load()->config.get_inc_freq();
+        std::vector<double> frequency_vector(calibration_data.size());
+        std::generate(frequency_vector.begin(), frequency_vector.end(), [start_freq, inc_freq, n = 0.0] () mutable { return static_cast<double>(start_freq + ((n++) * inc_freq)); });
+
+        if(ImPlot::BeginPlot("Measurement Corrected Data")) {
+            ImPlot::SetupAxes("f [Hz]", "CORRECTED_IMPEDANCE");
+            std::vector<double> corrected_impedance_vector(measurement_data.size());
+            const auto calibration_impedance = measure_captures.load()->config.calibration_impedance;
+            std::transform(measurement_data.begin(), measurement_data.end(), corrected_impedance_vector.begin(), [cur_index = 0, calibration_impedance](AD5933_MeasurementData &e) mutable {
+                return e.get_corrected_magnitude(calibration_data[cur_index++].get_gain_factor(calibration_impedance));
+            });
+            ImPlot::PlotLine("CORRECTED_IMPEDANCE [1/Ohm]", frequency_vector.data(), corrected_impedance_vector.data(), frequency_vector.size());
+            ImPlot::EndPlot();
+        }
+         if(ImPlot::BeginPlot("Measurement Calculated Phase")) {
+            ImPlot::SetupAxes("f [Hz]", "CORRECTED_PHASE");
+            std::vector<double> corrected_phase_vector(measurement_data.size());
+            std::transform(measurement_data.begin(), measurement_data.end(), corrected_phase_vector.begin(), [cur_index = 0](AD5933_MeasurementData &e) mutable {
+                return static_cast<double>(e.get_corrected_phase(calibration_data[cur_index++].get_system_phase()));
+            });
+            ImPlot::PlotLine("CORRECTED_PHASE [rad]", frequency_vector.data(), corrected_phase_vector.data(), frequency_vector.size());
+            ImPlot::EndPlot();
+        }
+    }
+
+    void freq_sweep_impedance_data_plots() {
+        const auto start_freq = measure_captures.load()->config.get_start_freq();
+        const auto inc_freq = measure_captures.load()->config.get_inc_freq();
+        std::vector<double> frequency_vector(calibration_data.size());
+        std::generate(frequency_vector.begin(), frequency_vector.end(), [start_freq, inc_freq, n = 0.0] () mutable { return static_cast<double>(start_freq + ((n++) * inc_freq)); });
+        const auto calibration_impedance = measure_captures.load()->config.calibration_impedance;
+
+        if(ImPlot::BeginPlot("Measurement Resistance Data")) {
+            ImPlot::SetupAxes("f [Hz]", "RESISTANCE");
+            std::vector<double> resistance_vector(measurement_data.size());
+            std::transform(measurement_data.begin(), measurement_data.end(), resistance_vector.begin(), [cur_index = 0, calibration_impedance](AD5933_MeasurementData &e) mutable {
+                const auto ret = e.get_corrected_resistance(
+                    calibration_data[cur_index].get_gain_factor(calibration_impedance),
+                    calibration_data[cur_index].get_system_phase()
+                );
+                cur_index++;
+                return ret;
+            });
+            ImPlot::PlotLine("RESISTANCE [Ohm]", frequency_vector.data(), resistance_vector.data(), frequency_vector.size());
+            ImPlot::EndPlot();
+        }
+        if(ImPlot::BeginPlot("Measurement Reactance Data")) {
+            ImPlot::SetupAxes("f [Hz]", "REACTANCE");
+            std::vector<double> reactance_vector(measurement_data.size());
+            std::transform(measurement_data.begin(), measurement_data.end(), reactance_vector.begin(), [cur_index = 0, calibration_impedance](AD5933_MeasurementData &e) mutable {
+                const auto ret = e.get_corrected_reactance(
+                    calibration_data[cur_index].get_gain_factor(calibration_impedance),
+                    calibration_data[cur_index].get_system_phase()
+                );
+                cur_index++;
+                return ret;
+            });
+            ImPlot::PlotLine("REACTANCE [Ohm]", frequency_vector.data(), reactance_vector.data(), frequency_vector.size());
+            ImPlot::EndPlot();
+        }
+
+    }
+
+    void create_freq_sweep_window_enable(bool &running) {
+        ImPlot::CreateContext();
+        ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(600, 750), ImGuiCond_FirstUseEver);
+        ImGui::Begin("Frequency Sweep Plots", &running);
+
+        if(ImGui::BeginTabBar("FREQ_SWEEP_BAR")) {
+            if (ImGui::BeginTabItem("RAW_DATA")) {
+                ImGui::Text("Tu budu data");
+                freq_sweep_raw_data_plots();
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("CALCULATED_DATA")) {
+                ImGui::Text("Tu budu vypocitane data");
+                freq_sweep_calculated_data_plots();
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("CORRECTED_DATA")) {
+                ImGui::Text("Tu budu kalibracne data");
+                freq_sweep_corrected_data_plots();
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("IMPEDANCE_DATA")) {
+                ImGui::Text("Tu budu impedancne data");
+                freq_sweep_impedance_data_plots();
+                ImGui::EndTabItem();
+            }
+        }
+        ImGui::EndTabBar();
+
+        ImGui::End();
     }
 }
 
@@ -1047,11 +1258,19 @@ namespace ImGuiSDL {
         static ImVec2 measurement_window_size = ImGui::GetIO().DisplaySize;
         ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
         ImGui::SetNextWindowSize(measurement_window_size);
-        measurement_window(measurement_window_size, esp32_ad5933);
+        static bool plot_calibration_window_enable = false;
+        static bool plot_freq_sweep_window_enable = false;
+        measurement_window(measurement_window_size, esp32_ad5933, plot_calibration_window_enable, plot_freq_sweep_window_enable);
         if(debug_window_enable.load()) {
             ImGui::SetNextWindowPos(ImVec2(measurement_window_size.x, 0.0f));
             ImGui::SetNextWindowSize(measurement_window_size);
             debug_registers_window(esp32_ad5933);
+        }
+        if(plot_calibration_window_enable) {
+            create_plot_calibration_window(plot_calibration_window_enable);
+        }
+        if(plot_freq_sweep_window_enable) {
+            create_freq_sweep_window_enable(plot_freq_sweep_window_enable);
         }
     }
 }
@@ -1068,6 +1287,7 @@ namespace ImGuiSDL {
 
         bool done = false;
         const ImVec4 clear_color { 0.45f, 0.55f, 0.60f, 1.00f };
+
         while(
             (esp32_ad5933.has_value() == false || esp32_ad5933.value().is_connected() == false)
             && done == false

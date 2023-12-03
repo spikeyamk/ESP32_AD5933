@@ -35,6 +35,7 @@ add_executable(main main.cpp
 	${IMGUI_DIR}/imgui_widgets.cpp
 	${IMPLOT_DIR}/implot.cpp
 	${IMPLOT_DIR}/implot_items.cpp
+	${IMPLOT_DIR}/implot_demo.cpp
 )
 
 target_include_directories(main PRIVATE
