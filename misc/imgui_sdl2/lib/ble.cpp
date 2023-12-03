@@ -273,20 +273,18 @@ void ESP32_AD5933::subscribe_to_body_composition_measurement_notify() {
         peripheral.notify(
             body_composistion_service.value().uuid(),
             body_composition_measurement_chacteristic.value().uuid(),
-            [](SimpleBLE::ByteArray captured_payload) {
+            [&](SimpleBLE::ByteArray captured_payload) {
                 // Only for debugging
-                std::cout << "Printing from subscribe_to_body_composition_measurement_notify lambda\n";
-                for(size_t i = 0; i < captured_payload.size(); i++) {
-                    std::printf("Byte[%zu]: 0x%02X\n", i, static_cast<uint8_t>(captured_payload[i]));
-                }
-                /*
+                //std::cout << "Printing from subscribe_to_body_composition_measurement_notify lambda\n";
+                //for(size_t i = 0; i < captured_payload.size(); i++) {
+                //  std::printf("Byte[%zu]: 0x%02X\n", i, static_cast<uint8_t>(captured_payload[i]));
+                //}
                 while(rx_payload.read_ready.load() == true) {
                     std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 }
                 rx_payload.content = captured_payload;
                 rx_payload.read_ready.store(true);
                 rx_payload.read_ready.notify_all();
-                */
             }
         );
     }

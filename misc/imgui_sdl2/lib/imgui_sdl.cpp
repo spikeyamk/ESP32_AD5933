@@ -790,27 +790,21 @@ namespace ImGuiSDL {
 }
 
 namespace ImGuiSDL {
-    void calibrate_cb(std::optional<ESP32_AD5933> &esp32_ad5933) {
+    std::vector<AD5933_MeasurementData> measurement_data;
+    std::vector<AD5933_CalibrationData> calibration_data;
+
+    void calibrate_cb(bool &calibrating, bool &calibrated, std::atomic<float> &progress_bar_fraction, std::optional<ESP32_AD5933> &esp32_ad5933) {
         esp32_ad5933.value().send(std::string(
             MagicPackets::FrequencySweep::Command::start.begin(),
             MagicPackets::FrequencySweep::Command::start.end()
         ));
 
-        /*
         const uint16_t wished_size = measure_captures.load()->config.get_num_of_inc().value + 1;
         const float progress_bar_step = 1.0f / static_cast<float>(wished_size);
-        std::vector<AD5933_CalibrationData> calibration_data;
-        calibration_data.clear();
-        */
 
-/*
-calibration_data_reserve_jump:
-        try {
-            calibration_data.reserve(wished_size);
-        } catch(...) {
-            std::cerr << "ImGuiSDL: ERROR calibrate_cb: failed to calibration_data.reserve(" << wished_size << ")\n"; 
-            goto calibration_data_reserve_jump;
-        }
+        calibration_data.clear();
+        calibration_data.reserve(wished_size);
+
         do {
             const auto rx_payload = esp32_ad5933.value().rx_payload.read();
             esp32_ad5933.value().rx_payload.clean();
@@ -821,19 +815,15 @@ calibration_data_reserve_jump:
                 static_cast<uint8_t>(rx_payload[3]),
             };
 
-            try {
-                calibration_data.push_back(tmp_calibration_data);
-            } catch(const std::runtime_error &e) {
-                std::cerr << "Mame ju picu\n";
-                std::cerr << "Nazov totej pixi: " << e.what() << std::endl;
-            }
+            calibration_data.push_back(tmp_calibration_data);
+            progress_bar_fraction.fetch_add(progress_bar_step);
         } while(calibration_data.size() != wished_size);
-*/
-        //calibrating = false;
-        //calibrated = true;
+
+        calibrating = false;
+        calibrated = true;
     }
 
-    void start_sweep_cb(bool &sweeping, bool &sweeped, std::optional<ESP32_AD5933> &esp32_ad5933) {
+    void start_sweep_cb(bool &sweeping, bool &sweeped, std::atomic<float> &progress_bar_fraction, std::optional<ESP32_AD5933> &esp32_ad5933) {
         esp32_ad5933.value().send(std::string(
             MagicPackets::FrequencySweep::Command::start.begin(),
             MagicPackets::FrequencySweep::Command::start.end()
@@ -841,16 +831,8 @@ calibration_data_reserve_jump:
 
         const uint16_t wished_size = measure_captures.load()->config.get_num_of_inc().value + 1;
         const float progress_bar_step = 1.0f / static_cast<float>(wished_size);
-        std::vector<AD5933_MeasurementData> measurement_data;
         measurement_data.clear();
-
-measurement_data_reserve_jump:
-        try {
-            measurement_data.reserve(wished_size);
-        } catch(...) {
-            std::cerr << "ImGuiSDL: ERROR calibrate_cb: failed to measurement_data.reserve(" << wished_size << ")\n";
-            goto measurement_data_reserve_jump;
-        }
+        measurement_data.reserve(wished_size);
 
         do {
             const auto rx_payload = esp32_ad5933.value().rx_payload.read();
@@ -863,6 +845,7 @@ measurement_data_reserve_jump:
             };
 
             measurement_data.push_back(tmp_measurement_data);
+            progress_bar_fraction.fetch_add(progress_bar_step);
         } while(measurement_data.size() != wished_size);
 
         sweeping = false;
@@ -946,15 +929,15 @@ namespace ImGuiSDL {
                 calibrated = false;
                 calibrating_progress_bar_fraction.store(0.0f);
                 std::thread(calibrate_cb,
-                    //std::ref(calibrating),
-                    //std::ref(calibrated),
-                    //std::ref(calibrating_progress_bar_fraction),
+                    std::ref(calibrating),
+                    std::ref(calibrated),
+                    std::ref(calibrating_progress_bar_fraction),
                     std::ref(esp32_ad5933)
                 ).detach();
             }
         } else if(sweeping == false) {
-            //ImGui::ProgressBar(calibrating_progress_bar_fraction.load());
-            //ImGui::Spinner("Calibrating", 10.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+            ImGui::Spinner("Calibrating", 10.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+            ImGui::ProgressBar(calibrating_progress_bar_fraction.load());
         }
 
         static std::atomic<float> sweeping_progress_bar_fraction { 0.0f };
@@ -967,19 +950,19 @@ namespace ImGuiSDL {
                     std::thread(start_sweep_cb,
                         std::ref(sweeping),
                         std::ref(sweeped),
-                        //std::ref(sweeping_progress_bar_fraction),
+                        std::ref(sweeping_progress_bar_fraction),
                         std::ref(esp32_ad5933)
                     ).detach();
                 }
             } else if(calibrating == false) {
-                //ImGui::Spinner("Measuring", 10.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
-                //ImGui::ProgressBar(sweeping_progress_bar_fraction.load());
+                ImGui::Spinner("Measuring", 10.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                ImGui::ProgressBar(sweeping_progress_bar_fraction.load());
             }
         }
 
         if(sweeped == true) {
-            /*
             for(size_t i = 0; i < measurement_data.size(); i++) {
+                /*
                 ImGui::Text("Frequency: %f [Hz]", (tmp_measure_captures.config.get_start_freq() + (static_cast<double>(i) * tmp_measure_captures.config.get_inc_freq())));
                 ImGui::Text("Magnitude: %f [Ohm]", 
                     measurement_data[i].get_corrected_magnitude(
@@ -1010,7 +993,6 @@ namespace ImGuiSDL {
                     )
                 );
                 */
-               /*
                 std::printf("measurement_data[%zu]:\n", i);
                 std::printf("\tFrequency: %f [Hz]\n", (tmp_measure_captures.config.get_start_freq() + (static_cast<double>(i) * tmp_measure_captures.config.get_inc_freq())));
                 std::printf("\tMagnitude: %f [Ohm]\n", 
@@ -1041,9 +1023,8 @@ namespace ImGuiSDL {
                         calibration_data[i].get_system_phase()
                     )
                 );
-                std::printf("\n\n\n");
+                std::printf("\n");
             }
-            */
             sweeped = false;
         }
 
