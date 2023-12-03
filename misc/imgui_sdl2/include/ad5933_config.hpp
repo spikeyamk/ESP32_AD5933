@@ -217,8 +217,8 @@ public:
 	float get_temperature();
 	int16_t get_real_part();
 	int16_t get_imag_part();
-	float get_raw_magnitude();
-	float get_raw_phase();
+	double get_raw_magnitude();
+	double get_raw_phase();
 };
 
 class AD5933_CalibrationData : public AD5933_Data {
@@ -231,8 +231,8 @@ public:
 	);
 	AD5933_CalibrationData() = default;
 
-	float get_gain_factor(const int32_t calibration_impedance);
-	float get_system_phase();
+	double get_gain_factor(const int32_t calibration_impedance);
+	double get_system_phase();
 };
 
 class AD5933_MeasurementData : public AD5933_Data {
@@ -245,8 +245,8 @@ public:
 	);
 	AD5933_MeasurementData() = default;
 
-	float get_corrected_magnitude(const float gain_factor);
-	float get_corrected_phase(const float system_phase);
-	float get_corrected_resistance(const float gain_factor, const float system_phase);
-	float get_corrected_reactance(const float gain_factor, const float system_phase);
+	double get_corrected_magnitude(const double gain_factor);
+	double get_corrected_phase(const double system_phase);
+	double get_corrected_resistance(const double gain_factor, const double system_phase);
+	double get_corrected_reactance(const double gain_factor, const double system_phase);
 };

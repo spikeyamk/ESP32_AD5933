@@ -652,17 +652,17 @@ int16_t AD5933_Data::get_imag_part() {
 	return static_cast<int16_t>(imag_data.get_HB_LB_combined_bitset().to_ulong());
 }
 
-float AD5933_Data::get_raw_magnitude() {
-	float real_part = static_cast<float>(get_real_part());
-	float imag_part = static_cast<float>(get_imag_part());
-	return std::sqrtf( (real_part * real_part) + (imag_part * imag_part) );
+double AD5933_Data::get_raw_magnitude() {
+	double real_part = static_cast<double>(get_real_part());
+	double imag_part = static_cast<double>(get_imag_part());
+	return std::sqrt( (real_part * real_part) + (imag_part * imag_part) );
 }
 
-float AD5933_Data::get_raw_phase() {
+double AD5933_Data::get_raw_phase() {
 	// UNIMPLEMENTED
-	float real_part = static_cast<float>(get_real_part());
-	float imag_part = static_cast<float>(get_imag_part());
-	return std::atan2f(imag_part, real_part);
+	double real_part = static_cast<double>(get_real_part());
+	double imag_part = static_cast<double>(get_imag_part());
+	return std::atan2(imag_part, real_part);
 }
 
 AD5933_CalibrationData::AD5933_CalibrationData(
@@ -683,11 +683,11 @@ AD5933_CalibrationData::AD5933_CalibrationData(
 {}
 
 
-float AD5933_CalibrationData::get_gain_factor(const int32_t calibration_impedance) {
-	return (1.00f / static_cast<float>(calibration_impedance)) / get_raw_magnitude();
+double AD5933_CalibrationData::get_gain_factor(const int32_t calibration_impedance) {
+	return (1.00 / static_cast<double>(calibration_impedance)) / get_raw_magnitude();
 }
 
-float AD5933_CalibrationData::get_system_phase() {
+double AD5933_CalibrationData::get_system_phase() {
 	return get_raw_phase();
 }
 
@@ -708,22 +708,22 @@ AD5933_MeasurementData::AD5933_MeasurementData(
 	}
 {}
 
-float AD5933_MeasurementData::get_corrected_magnitude(const float gain_factor) {
-	return (1.00f / (gain_factor * get_raw_magnitude()));
+double AD5933_MeasurementData::get_corrected_magnitude(const double gain_factor) {
+	return (1.00 / (gain_factor * get_raw_magnitude()));
 }
 
-float AD5933_MeasurementData::get_corrected_phase(const float system_phase) {
+double AD5933_MeasurementData::get_corrected_phase(const double system_phase) {
 	return get_raw_phase() - system_phase;
 }
 
-float AD5933_MeasurementData::get_corrected_resistance(const float gain_factor, const float system_phase) {
-	const float magnitude = get_corrected_magnitude(gain_factor);
-	const float phase = get_corrected_phase(system_phase);
-	return (magnitude * std::cosf(phase));
+double AD5933_MeasurementData::get_corrected_resistance(const double gain_factor, const double system_phase) {
+	const double magnitude = get_corrected_magnitude(gain_factor);
+	const double phase = get_corrected_phase(system_phase);
+	return (magnitude * std::cos(phase));
 }
 
-float AD5933_MeasurementData::get_corrected_reactance(const float gain_factor, const float system_phase) {
-	const float magnitude = get_corrected_magnitude(gain_factor);
-	const float phase = get_corrected_phase(system_phase);
-	return (magnitude * std::sinf(phase));
+double AD5933_MeasurementData::get_corrected_reactance(const double gain_factor, const double system_phase) {
+	const double magnitude = get_corrected_magnitude(gain_factor);
+	const double phase = get_corrected_phase(system_phase);
+	return (magnitude * std::sin(phase));
 }
