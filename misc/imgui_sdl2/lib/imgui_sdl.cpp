@@ -1139,7 +1139,7 @@ namespace ImGuiSDL {
             std::transform(measurement_data.begin(), measurement_data.end(), corrected_impedance_vector.begin(), [cur_index = 0, calibration_impedance](AD5933_MeasurementData &e) mutable {
                 return e.get_corrected_magnitude(calibration_data[cur_index++].get_gain_factor(calibration_impedance));
             });
-            ImPlot::PlotLine("CORRECTED_IMPEDANCE [1/Ohm]", frequency_vector.data(), corrected_impedance_vector.data(), frequency_vector.size());
+            ImPlot::PlotLine("CORRECTED_IMPEDANCE [Ohm]", frequency_vector.data(), corrected_impedance_vector.data(), frequency_vector.size());
             ImPlot::EndPlot();
         }
          if(ImPlot::BeginPlot("Measurement Calculated Phase")) {
