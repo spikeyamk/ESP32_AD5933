@@ -692,11 +692,11 @@ namespace ImGuiSDL {
             ImGuiInputTextFlags_ReadOnly
         );
 
-        static const auto float_to_str_lambda = [](float number) -> std::string {
+        static const auto float_to_str_lambda = [](double number) -> std::string {
             std::ostringstream stream;
 
             // Calculate the magnitude of the number
-            float magnitude = std::abs(number);
+            double magnitude = std::abs(number);
             int precision = (magnitude == 0.0f) ? 0 : -static_cast<int>(std::floor(std::log10(magnitude))) + 7;
 
             stream << std::setprecision(precision) << number;
@@ -823,33 +823,40 @@ namespace ImGuiSDL {
         calibrated = true;
     }
 
-    void start_sweep_cb(bool &sweeping, bool &sweeped, std::atomic<float> &progress_bar_fraction, std::optional<ESP32_AD5933> &esp32_ad5933) {
-        esp32_ad5933.value().send(std::string(
-            MagicPackets::FrequencySweep::Command::start.begin(),
-            MagicPackets::FrequencySweep::Command::start.end()
-        ));
-
-        const uint16_t wished_size = measure_captures.load()->config.get_num_of_inc().value + 1;
-        const float progress_bar_step = 1.0f / static_cast<float>(wished_size);
-        measurement_data.clear();
-        measurement_data.reserve(wished_size);
-
+    void start_sweep_cb(bool &sweeping, bool &sweeped, std::atomic<float> &progress_bar_fraction, std::optional<ESP32_AD5933> &esp32_ad5933, bool &periodically_sweeping) {
         do {
-            const auto rx_payload = esp32_ad5933.value().rx_payload.read();
-            esp32_ad5933.value().rx_payload.clean();
-            AD5933_MeasurementData tmp_measurement_data {
-                static_cast<uint8_t>(rx_payload[0]),
-                static_cast<uint8_t>(rx_payload[1]),
-                static_cast<uint8_t>(rx_payload[2]),
-                static_cast<uint8_t>(rx_payload[3]),
-            };
+            esp32_ad5933.value().send(std::string(
+                MagicPackets::FrequencySweep::Command::start.begin(),
+                MagicPackets::FrequencySweep::Command::start.end()
+            ));
 
-            measurement_data.push_back(tmp_measurement_data);
-            progress_bar_fraction.fetch_add(progress_bar_step);
-        } while(measurement_data.size() != wished_size);
+            const uint16_t wished_size = measure_captures.load()->config.get_num_of_inc().value + 1;
+            const float progress_bar_step = 1.0f / static_cast<float>(wished_size);
+            std::vector<AD5933_MeasurementData> tmp_measurement_data_vector;
+            tmp_measurement_data_vector.reserve(wished_size);
+            progress_bar_fraction.store(0.0);
+
+            do {
+                const auto rx_payload = esp32_ad5933.value().rx_payload.read();
+                esp32_ad5933.value().rx_payload.clean();
+                AD5933_MeasurementData tmp_measurement_data {
+                    static_cast<uint8_t>(rx_payload[0]),
+                    static_cast<uint8_t>(rx_payload[1]),
+                    static_cast<uint8_t>(rx_payload[2]),
+                    static_cast<uint8_t>(rx_payload[3]),
+                };
+
+                tmp_measurement_data_vector.push_back(tmp_measurement_data);
+                progress_bar_fraction.fetch_add(progress_bar_step);
+            } while(tmp_measurement_data_vector.size() != wished_size);
+
+            measurement_data.clear();
+            measurement_data = tmp_measurement_data_vector;
+
+            sweeped = true;
+        } while(periodically_sweeping);
 
         sweeping = false;
-        sweeped = true;
     }
 }
 
@@ -945,6 +952,8 @@ namespace ImGuiSDL {
             ImGui::SameLine(); if(ImGui::Button("View Calibration Data")) {
                 plot_calibration_window_enable = true;
             }
+            static bool periodically_sweeping = false;
+            ImGui::Checkbox("Periodic Sweep", &periodically_sweeping);
             if(sweeping == false) {
                 if(ImGui::Button("Start Sweep")) {
                     sweeping = true;
@@ -954,7 +963,8 @@ namespace ImGuiSDL {
                         std::ref(sweeping),
                         std::ref(sweeped),
                         std::ref(sweeping_progress_bar_fraction),
-                        std::ref(esp32_ad5933)
+                        std::ref(esp32_ad5933),
+                        std::ref(periodically_sweeping)
                     ).detach();
                 }
             } else if(calibrating == false) {
@@ -978,35 +988,6 @@ namespace ImGuiSDL {
 }
 
 namespace ImGuiSDL {
-    void create_plot_measurement_window() {
-        ImPlot::CreateContext();
-        ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(600, 750), ImGuiCond_FirstUseEver);
-        ImGui::Begin("ImPlot Demo");
-
-        if(ImGui::BeginTabBar("ImPlotDemoTabs")) {
-            if (ImGui::BeginTabItem("RAW_DATA")) {
-                ImGui::Text("Tu budu data");
-                ImGui::EndTabItem();
-            }
-            if (ImGui::BeginTabItem("CALCULATED_DATA")) {
-                ImGui::Text("Tu budu vypocitane data");
-                ImGui::EndTabItem();
-            }
-            if (ImGui::BeginTabItem("CORRECTED_DATA")) {
-                ImGui::Text("Tu budu korigovane data");
-                ImGui::EndTabItem();
-            }
-            if (ImGui::BeginTabItem("IMPEDANCE_DATA")) {
-                ImGui::Text("Tu budu impedancne data");
-                ImGui::EndTabItem();
-            }
-        }
-        ImGui::EndTabBar();
-
-        ImGui::End();
-    }
-
     void calibration_raw_data_plots() {
         const auto start_freq = measure_captures.load()->config.get_start_freq();
         const auto inc_freq = measure_captures.load()->config.get_inc_freq();
@@ -1082,17 +1063,14 @@ namespace ImGuiSDL {
 
         if(ImGui::BeginTabBar("Calibration_PlotsBar")) {
             if (ImGui::BeginTabItem("RAW_DATA")) {
-                ImGui::Text("Tu budu data");
                 calibration_raw_data_plots();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("CALCULATED_DATA")) {
-                ImGui::Text("Tu budu vypocitane data");
                 calibration_calculated_data_plots();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("CALIBRATION_DATA")) {
-                ImGui::Text("Tu budu kalibracne data");
                 calibration_data_plots();
                 ImGui::EndTabItem();
             }
@@ -1139,7 +1117,7 @@ namespace ImGuiSDL {
             ImPlot::PlotLine("RAW_MAGNITUDE [1/Ohm]", frequency_vector.data(), raw_magnitude_vector.data(), frequency_vector.size());
             ImPlot::EndPlot();
         }
-         if(ImPlot::BeginPlot("Calibration Calculated Phase")) {
+         if(ImPlot::BeginPlot("Measurement Calculated Phase")) {
             ImPlot::SetupAxes("f [Hz]", "RAW_PHASE");
             std::vector<double> raw_phase_vector(measurement_data.size());
             std::transform(measurement_data.begin(), measurement_data.end(), raw_phase_vector.begin(), [](AD5933_MeasurementData &e) { return static_cast<double>(e.get_raw_phase()); });
@@ -1161,7 +1139,7 @@ namespace ImGuiSDL {
             std::transform(measurement_data.begin(), measurement_data.end(), corrected_impedance_vector.begin(), [cur_index = 0, calibration_impedance](AD5933_MeasurementData &e) mutable {
                 return e.get_corrected_magnitude(calibration_data[cur_index++].get_gain_factor(calibration_impedance));
             });
-            ImPlot::PlotLine("CORRECTED_IMPEDANCE [1/Ohm]", frequency_vector.data(), corrected_impedance_vector.data(), frequency_vector.size());
+            ImPlot::PlotLine("CORRECTED_IMPEDANCE [Ohm]", frequency_vector.data(), corrected_impedance_vector.data(), frequency_vector.size());
             ImPlot::EndPlot();
         }
          if(ImPlot::BeginPlot("Measurement Calculated Phase")) {
@@ -1221,22 +1199,18 @@ namespace ImGuiSDL {
 
         if(ImGui::BeginTabBar("FREQ_SWEEP_BAR")) {
             if (ImGui::BeginTabItem("RAW_DATA")) {
-                ImGui::Text("Tu budu data");
                 freq_sweep_raw_data_plots();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("CALCULATED_DATA")) {
-                ImGui::Text("Tu budu vypocitane data");
                 freq_sweep_calculated_data_plots();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("CORRECTED_DATA")) {
-                ImGui::Text("Tu budu kalibracne data");
                 freq_sweep_corrected_data_plots();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("IMPEDANCE_DATA")) {
-                ImGui::Text("Tu budu impedancne data");
                 freq_sweep_impedance_data_plots();
                 ImGui::EndTabItem();
             }
