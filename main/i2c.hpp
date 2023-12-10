@@ -96,7 +96,7 @@ public:
 		i2c_device_config_t device_config = {
 			.dev_addr_length = I2C_ADDR_BIT_LEN_7,
 			.device_address = device_address,
-			.scl_speed_hz = 100'000u
+			.scl_speed_hz = 400'000u
 		};
 		i2c_master_dev_handle_t device_handle;
 		ESP_ERROR_CHECK(
@@ -115,7 +115,7 @@ public:
 			i2c_device_config_t device_config = {
 				.dev_addr_length = I2C_ADDR_BIT_LEN_7,
 				.device_address = device_address,
-				.scl_speed_hz = 100'000u
+				.scl_speed_hz = 400'000u
 			};
 			i2c_master_dev_handle_t device_handle;
 			ESP_ERROR_CHECK(
@@ -219,19 +219,23 @@ public:
 	virtual std::optional<uint8_t> read_register(const RegisterAddr register_address) const {
 		uint8_t read_buffer;
 		uint8_t write_buffer = register_address.unwrap();
-		const int xfer_timeout_ms = -1;
-		ESP_ERROR_CHECK(
-			i2c_master_transmit_receive(
-				device_handle,
-				&write_buffer,
-				sizeof(write_buffer),
-				&read_buffer,
-				sizeof(read_buffer),
-				xfer_timeout_ms
-			)
-		);
+		const int xfer_timeout_ms = 100;
 
-		return std::optional {read_buffer};
+		const auto ret = i2c_master_transmit_receive(
+			device_handle,
+			&write_buffer,
+			sizeof(write_buffer),
+			&read_buffer,
+			sizeof(read_buffer),
+			xfer_timeout_ms
+		);
+		
+		if(ret == ESP_OK) {
+			return std::optional {read_buffer};
+		} else {
+			ESP_ERROR_CHECK_WITHOUT_ABORT(ret);
+			return std::nullopt;
+		}
 	}
 
 	bool register_address_range_exists(
@@ -252,7 +256,7 @@ public:
 			return std::nullopt;
 		}
 
-		const int xfer_timeout_ms = -1;
+		const int xfer_timeout_ms = 100;
 		std::vector<uint8_t> tmp_vector;
 
 		const uint8_t block_size = 10;
@@ -294,16 +298,19 @@ public:
 
 	bool write_to_register_wo_check(const RegisterAddr_RW address, const uint8_t value) const {
 		uint8_t write_buffer[2] { address.unwrap(), value};
-		const int xfer_timeout_ms = -1;
-		ESP_ERROR_CHECK(
-			i2c_master_transmit(
-				device_handle,
-				write_buffer,
-				sizeof(write_buffer),
-				xfer_timeout_ms
-			)
+		const int xfer_timeout_ms = 100;
+		esp_err_t ret = i2c_master_transmit(
+			device_handle,
+			write_buffer,
+			sizeof(write_buffer),
+			xfer_timeout_ms
 		);
-		return true;
+		if(ret == ESP_OK) {
+			return true;
+		} else {
+			ESP_ERROR_CHECK_WITHOUT_ABORT(ret);
+			return false;
+		}
 	}
 
 	bool write_to_register(const RegisterAddr_RW address, const uint8_t value) const {

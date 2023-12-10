@@ -53,6 +53,7 @@ namespace Util {
 		}
 
 		bool start(const std::chrono::duration<int> &in_blink_time) {
+    		std::lock_guard<std::mutex> lock(mutex);
 			if(blink_task_enable == true) {
 				return false;
 			}
@@ -66,6 +67,7 @@ namespace Util {
 		}
 
 		bool stop() {
+    		std::lock_guard<std::mutex> lock(mutex);
 			if(thread_handle.has_value() && thread_handle.value().joinable() && led_strip_handle != nullptr) {
 				blink_task_enable = false;	
 				thread_handle.value().join();

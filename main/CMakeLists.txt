@@ -1,3 +1,4 @@
+
 idf_component_register(SRCS 
 					   "main.cpp"
 					   "util.cpp"
@@ -9,3 +10,6 @@ idf_component_register(SRCS
 					   "ble_state_machine/packet_types.cpp"
 					   "sd_card.cpp"
                        INCLUDE_DIRS ".")
+
+# Publicly link `foo` to `main` component
+#target_link_libraries(main PUBLIC sml)

@@ -13,9 +13,7 @@
 #include "include/ble_state_machine.hpp"
 
 
-static States::bState* debug_prev_state = nullptr;
-class StateFunctions {
-public:
+namespace StateFunctions {
 	static void off() {
 		std::cout << "off" << std::endl << std::endl;
 		NimBLE::stopBLE();
@@ -59,9 +57,10 @@ public:
 		NimBLE::heartbeat_thread.value().join();
 	}
 
+	static States::bState* state_before_debug = nullptr;
 	static void debug_start() {
 		std::cout << "debug_start" << std::endl;
-		debug_prev_state = state_machine.prev_state;
+		state_before_debug = state_machine.prev_state;
 	}
 
 	static void debug() {
@@ -72,20 +71,20 @@ public:
 		std::cout << "program_all_registers" << " UNIMPLEMENTED" << std::endl;
 		if(NimBLE::received_packet.has_value() == false) {
 			std::cout << "ERROR: BLE_STATE_MACHINE: program_all_registers: failed to receive packet" << std::endl;
-			return;
+			std::exit(-1);
 		}
 
 		const auto footer_start_index_opt = MagicPackets::find_footer_start_index(NimBLE::received_packet.value());
 		if(footer_start_index_opt.has_value() == false) {
 			std::cout << "ERROR: BLE_STATE_MACHINE: program_all_registers: failed to find_footer_start_index" << std::endl;
-			return;
+			std::exit(-1);
 		}
 
 		const auto received_raw_register_data = MagicPackets::get_raw_packet_data(NimBLE::received_packet.value(), footer_start_index_opt.value());
 		if(received_raw_register_data.size() != 12) {
 			std::cout << "ERROR: BLE_STATE_MACHINE: program_all_registers: failed to receive packet of size 12 bytes" << std::endl;
 			std::cout << "ERROR: BLE_STATE_MACHINE: program_all_registers: received_raw_register_data.size(): " << received_raw_register_data.size() << std::endl;
-			return;
+			std::exit(-1);
 		}
 
 		std::array<uint8_t, 12> register_data_array;
@@ -93,7 +92,7 @@ public:
 
 		if(AD5933_Tests::ad5933.load()->program_all_registers(register_data_array) == false) {
 			std::cout << "ERROR: BLE_STATE_MACHINE: program_all_registers: failed to program_all_registers with register_data_array" << std::endl;
-			return;
+			std::exit(-1);
 		}
 
 		std::cout << "BLE_STATE_MACHINE: Registers succesfully programmed" << std::endl;
@@ -103,20 +102,20 @@ public:
 		std::cout << "control_HB_command" << " UNIMPLEMENTED" << std::endl;
 		if(NimBLE::received_packet.has_value() == false) {
 			std::cout << "ERROR: BLE_STATE_MACHINE: control_HB_command: failed to receive packet" << std::endl;
-			return;
+			std::exit(-1);
 		}
 
 		const auto footer_start_index_opt = MagicPackets::find_footer_start_index(NimBLE::received_packet.value());
 		if(footer_start_index_opt.has_value() == false) {
 			std::cout << "ERROR: BLE_STATE_MACHINE: control_HB_command: failed to find_footer_start_index" << std::endl;
-			return;
+			std::exit(-1);
 		}
 
 		const auto received_raw_register_data = MagicPackets::get_raw_packet_data(NimBLE::received_packet.value(), footer_start_index_opt.value());
 		if(received_raw_register_data.size() != 1) {
 			std::cout << "ERROR: BLE_STATE_MACHINE: control_HB_command: failed to receive packet of size 1 bytes" << std::endl;
 			std::cout << "ERROR: BLE_STATE_MACHINE: control_HB_command: received_raw_register_data.size(): " << received_raw_register_data.size() << std::endl;
-			return;
+			std::exit(-1);
 		}
 
 		AD5933::ControlHB::Commands command_to_activate;
@@ -125,12 +124,12 @@ public:
 		} catch(...) {
 			std::cout << "ERROR: BLE_STATE_MACHINE: control_HB_command: AD5933::ControlHB::Commands bad access" << std::endl;
 			std::cout << "ERROR: BLE_STATE_MACHINE: control_HB_command: received_raw_register_data[0]: " << received_raw_register_data[0] << std::endl;
-			return;
+			std::exit(-1);
 		}
 
 		if(AD5933_Tests::ad5933.load()->set_control_command(command_to_activate) == false) {
 			std::cout << "ERROR: BLE_STATE_MACHINE: control_HB_command: failed to set_control_command" << std::endl;
-			return;
+			std::exit(-1);
 		}
 
 		std::cout << "BLE_STATE_MACHINE: Registers succesfully programmed" << std::endl;
@@ -152,23 +151,32 @@ public:
 
 	static void debug_end() {
 		std::cout << "debug_end" << std::endl;
-		state_machine.change_to_state(debug_prev_state != nullptr ? debug_prev_state : &States::disconnect);
+		state_machine.change_to_state(state_before_debug != nullptr ? state_before_debug : &States::disconnect);
 	}
 
 	static void start_frequency_sweep_simple_cb(void *arg) {
 		std::cout << "start_frequency_sweep_simple" << " UNIMPLEMENTED" << std::endl;
+		if(AD5933_Tests::ad5933.load()->reset() == false) {
+			std::cout << "ERROR: BLE_STATE_MACHINE: start_frequency_sweep_simple: failed to AD5933_Tests::ad5933.load()->reset() == false\n";
+			state_machine.change_to_state(&States::disconnect);
+			vTaskDelete(nullptr);
+		}
+
 		if(AD5933_Tests::ad5933.load()->set_control_command(AD5933::ControlHB::Commands::STANDBY_MODE) == false) {
 			std::cout << "ERROR: BLE_STATE_MACHINE: start_frequency_sweep_simple: failed to AD5933_Tests::ad5933.load()->set_control_command(AD5933::ControlHB::Commands::STANDBY_MODE) == false\n";
-			return;
+			state_machine.change_to_state(&States::disconnect);
+			vTaskDelete(nullptr);
 		}
 		if(AD5933_Tests::ad5933.load()->set_control_command(AD5933::ControlHB::Commands::INITIALIZE_WITH_START_FREQUENCY) == false) {
 			std::cout << "ERROR: BLE_STATE_MACHINE: start_frequency_sweep_simple: failed to AD5933_Tests::ad5933.load()->set_control_command(AD5933::ControlHB::Commands::INITIALIZE_WITH_START_FREQUENCY) == false" << std::endl;
-			return;
+			state_machine.change_to_state(&States::disconnect);
+			vTaskDelete(nullptr);
 		}
 
 		if(AD5933_Tests::ad5933.load()->set_control_command(AD5933::ControlHB::Commands::START_FREQUENCY_SWEEP) == false) {
 			std::cout << "ERROR: BLE_STATE_MACHINE: start_frequency_sweep_simple: failed to AD5933_Tests::ad5933.load()->set_control_command(AD5933::ControlHB::Commands::START_FREQUENCY_SWEEP) == false" << std::endl;
-			return;
+			state_machine.change_to_state(&States::disconnect);
+			vTaskDelete(nullptr);
 		}
 
 		if(AD5933_Tests::ad5933.load()->has_status_condition(AD5933::Status::SWEEP_DONE) == false) {
@@ -176,7 +184,8 @@ public:
 
 			if(real_HB_LB_imag_HB_LB_state.has_value() == false) {
 				std::cout << "ERROR: BLE_STATE_MACHINE: start_frequency_sweep_simple: failed to AD5933_Tests::ad5933.load()->block_read_register(AD5933::RegisterAddrs::REAL_DATA_HB, 4); false\n";
-				return;
+				state_machine.change_to_state(&States::disconnect);
+				vTaskDelete(nullptr);
 			}
 
 			auto send_buf { MagicPackets::FrequencySweep::Command::read_data_valid_value };
@@ -187,14 +196,15 @@ public:
 
 		do {
 			while(AD5933_Tests::ad5933.load()->has_status_condition(AD5933::Status::IMPEDANCE_VALID) == false) {
-				std::cout << "BLE_STATE_MACHINE: start_frequency_sweep_simple: failed to AD5933_Tests::ad5933.load()->has_status_condition(AD5933::Status::IMPEDANCE_VALID): false\n";
+				//std::cout << "BLE_STATE_MACHINE: start_frequency_sweep_simple: failed to AD5933_Tests::ad5933.load()->has_status_condition(AD5933::Status::IMPEDANCE_VALID): false\n";
 				std::this_thread::yield();
 			}
 			const auto real_HB_LB_imag_HB_LB_state { AD5933_Tests::ad5933.load()->block_read_register<4>(AD5933::RegisterAddrs::RW_RO::REAL_DATA_HB) };
 
 			if(real_HB_LB_imag_HB_LB_state.has_value() == false) {
 				std::cout << "ERROR: BLE_STATE_MACHINE: start_frequency_sweep_simple: failed to AD5933_Tests::ad5933.load()->block_read_register(AD5933::RegisterAddrs::REAL_DATA_HB, 4); false\n";
-				return;
+				state_machine.change_to_state(&States::disconnect);
+				vTaskDelete(nullptr);
 			}
 
 			auto send_buf { MagicPackets::FrequencySweep::Command::read_data_valid_value };
@@ -204,10 +214,14 @@ public:
 
 			if(AD5933_Tests::ad5933.load()->set_control_command(AD5933::ControlHB::Commands::INCREMENT_FREQUENCY) == false) {
 				std::cout << "ERROR: BLE_STATE_MACHINE: start_frequency_sweep_simple: failed to AD5933_Tests::ad5933.load()->set_control_command(AD5933::ControlHB::Commands::INCREMENT_FREQUENCY) == false" << std::endl;
-				return;
+				state_machine.change_to_state(&States::disconnect);
+				vTaskDelete(nullptr);
 			}
 			std::this_thread::yield();
 		} while(AD5933_Tests::ad5933.load()->has_status_condition(AD5933::Status::SWEEP_DONE) == false);
+
+		std::cout << "INFO: BLE_STATE_MACHINE: start_frequency_sweep_simple complete\n";
+		state_machine.change_to_state(&States::connected);
 		vTaskDelete(nullptr);
 	}
 
@@ -224,6 +238,20 @@ public:
 
 	static void configure_frequency_sweep() {
 		std::cout << "configure_frequency_sweep" << " UNIMPLEMENTED" << std::endl;
+		if(NimBLE::received_packet.has_value() == false) {
+			std::cout << "ERROR: BLE_STATE_MACHINE: configure_frequency_sweep: failed to receive packet" << std::endl;
+			NimBLE::notify_with_footer<1>({0x01}, MagicPackets::FrequencySweep::Command::configure);
+			std::exit(-1);
+		}
+
+		std::span<uint8_t, 12> raw_register_data(NimBLE::received_packet.value().data(), 12);
+		if(AD5933_Tests::ad5933.load()->program_all_registers(raw_register_data) == false) {
+			std::cout << "ERROR: BLE_STATE_MACHINE: configure_frequency_sweep: AD5933_Tests::ad5933.load()->program_all_registers(raw_register_data): failed to program all registers" << std::endl;
+			NimBLE::notify_with_footer<1>({0x02}, MagicPackets::FrequencySweep::Command::configure);
+			std::exit(-1);
+		}
+
+		NimBLE::notify_with_footer<1>({0x00}, MagicPackets::FrequencySweep::Command::configure);
 	}
 
 	static void frequency_sweep_configured() {
@@ -243,7 +271,24 @@ public:
 	}
 
 	static void start_frequency_sweep() {
-		std::cout << "start_frequency_sweep" << " UNIMPLEMENTED" << std::endl;
+		if(AD5933_Tests::ad5933.load()->reset() == false) {
+			std::cout << "ERROR: BLE_STATE_MACHINE: start_frequency_sweep: failed to AD5933_Tests::ad5933.load()->reset() == false\n";
+			state_machine.change_to_state(&States::disconnect);
+		}
+
+		if(AD5933_Tests::ad5933.load()->set_control_command(AD5933::ControlHB::Commands::STANDBY_MODE) == false) {
+			std::cout << "ERROR: BLE_STATE_MACHINE: start_frequency_sweep: failed to AD5933_Tests::ad5933.load()->set_control_command(AD5933::ControlHB::Commands::STANDBY_MODE) == false\n";
+			state_machine.change_to_state(&States::disconnect);
+		}
+		if(AD5933_Tests::ad5933.load()->set_control_command(AD5933::ControlHB::Commands::INITIALIZE_WITH_START_FREQUENCY) == false) {
+			std::cout << "ERROR: BLE_STATE_MACHINE: start_frequency_sweep: failed to AD5933_Tests::ad5933.load()->set_control_command(AD5933::ControlHB::Commands::INITIALIZE_WITH_START_FREQUENCY) == false" << std::endl;
+			state_machine.change_to_state(&States::disconnect);
+		}
+
+		if(AD5933_Tests::ad5933.load()->set_control_command(AD5933::ControlHB::Commands::START_FREQUENCY_SWEEP) == false) {
+			std::cout << "ERROR: BLE_STATE_MACHINE: start_frequency_sweep: failed to AD5933_Tests::ad5933.load()->set_control_command(AD5933::ControlHB::Commands::START_FREQUENCY_SWEEP) == false" << std::endl;
+			state_machine.change_to_state(&States::disconnect);
+		}
 	}
 
 	static void frequency_sweep_started() {
@@ -301,10 +346,11 @@ public:
 	static void stop_frequency_sweep() {
 		std::cout << "stop_frequency_sweep" << " UNIMPLEMENTED" << std::endl;
 	}
-};
+}
 
 namespace States {
-	using sF = StateFunctions;
+	//using sF = StateFunctions;
+	namespace sF = StateFunctions;
 	using jPair = std::pair<decltype(MagicPackets::Debug::Command::start)*, const bState*>;
 	using jPairo = std::optional<jPair>;
 	using jPairoArray = std::array<jPairo, MAX_NUM_OF_JUMPS>;
@@ -340,9 +386,6 @@ namespace States {
 			jPairo {
 				jPair { &MagicPackets::FrequencySweep::Command::configure, &configure_frequency_sweep }
 			},
-			jPairo {
-				jPair { &MagicPackets::FrequencySweep::Command::start, &start_frequency_sweep_simple }
-			}
 		},
 		&disconnect
 	};
@@ -404,9 +447,12 @@ namespace States {
 		&sF::debug_end
 	};
 
-	constinit const iState start_frequency_sweep_simple {
+	constinit const eState start_frequency_sweep_simple {
 		&sF::start_frequency_sweep_simple,
-		&connected
+		jPairoArray {
+			jPair { nullptr, nullptr }
+		},
+		&disconnect
 	};
 
 	constinit const iState configure_frequency_sweep {

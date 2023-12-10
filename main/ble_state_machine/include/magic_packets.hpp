@@ -5,6 +5,7 @@
 #include <bitset>
 #include <vector>
 #include <cstdint>
+#include <span>
 
 namespace MagicPackets {
 	using MagicPacket_T = std::array<uint8_t, 20>;

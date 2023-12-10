@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <vector>
 #include <bitset>
+#include <span>
 
 namespace MagicPackets {
 	namespace Debug {
@@ -73,11 +74,13 @@ namespace MagicPackets {
 
 				0xa8, 0xca, 0x9e, 0x91, 0x8e, 0xd3, 0x88, 
 			};
+
 			constinit const MagicPacket_T initialize_with_start_freq {
 				0x9f, 0x0b, 0x0a, 0x00, 0x55, 0xe6, 0x2b, 0xe7, 
 				0x6f, 0x13, 0x94, 0x39, 0x85, 0x0e, 0xf4, 0x18, 
 				0x25, 0x23, 0x69, 0x36,
 			};
+
 			constinit const MagicPacket_T start {
 				0x91, 0x12, 0x0c, 0xbc, 0x10, 0x8c, 0x75, 0xcb, 
 				0x9f, 0x83, 0x91, 0x8c, 0x01, 0x7f, 0x43, 0x24, 
@@ -221,15 +224,13 @@ namespace MagicPackets {
 namespace MagicPackets {
 	static constexpr uint8_t magic_footer_starter = 0xFF;
 	std::optional<size_t> find_footer_start_index(const MagicPackets::MagicPacket_T& raw_packet) {
-		std::optional<size_t> index_opt { std::nullopt };
-
 		const auto it = std::find(std::rbegin(raw_packet), std::rend(raw_packet), magic_footer_starter);
 
 		if(it != std::rend(raw_packet)) {
-			index_opt = std::distance(it, std::rend(raw_packet)) - 1;
+			return std::distance(it, std::rend(raw_packet)) - 1;
 		}
 
-		return index_opt;
+		return std::nullopt;
 	}
 
 	MagicPackets::MagicPacket_T get_raw_packet_footer(const MagicPackets::MagicPacket_T &in_raw_packet, const size_t footer_start_index) {
@@ -241,7 +242,7 @@ namespace MagicPackets {
 	}
 
 	std::vector<uint8_t> get_raw_packet_data(const MagicPackets::MagicPacket_T &in_raw_packet, const size_t footer_start_index) {
-		return std::vector(in_raw_packet.begin(), in_raw_packet.begin() + (footer_start_index));
+		return std::vector<uint8_t>{ in_raw_packet.begin(), in_raw_packet.begin() + footer_start_index };
 	}
 
 	std::optional<std::vector<std::bitset<8>>> get_packet_data(const MagicPackets::MagicPacket_T &in_raw_packet) {

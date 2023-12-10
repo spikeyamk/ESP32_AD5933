@@ -12,7 +12,6 @@ namespace States {
     using sState = StateMachine::State::SpecialState<FuncPtr, decltype(MagicPackets::Debug::Command::start)*, MAX_NUM_OF_JUMPS>;
     using iState = StateMachine::State::IntermediateState<FuncPtr, decltype(MagicPackets::Debug::Command::start)*, MAX_NUM_OF_JUMPS>;
     using eState = StateMachine::State::EventListeningState<FuncPtr, decltype(MagicPackets::Debug::Command::start)*, MAX_NUM_OF_JUMPS>;
-    //extern std::array<uint8_t, FLASH_PAGE_SIZE> incoming_packet;
 
 	// States before connection with the client is established
 	extern const sState off;
@@ -36,7 +35,7 @@ namespace States {
 	extern const iState control_HB_command;
 	extern const sState debug_end;
 
-	extern const iState start_frequency_sweep_simple;
+	extern const eState start_frequency_sweep_simple;
 
 	// States related to configuring and initializing the frequency sweep loop
 	extern const eState frequency_sweep_configured;

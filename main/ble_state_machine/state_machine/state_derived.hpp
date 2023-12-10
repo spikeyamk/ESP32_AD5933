@@ -80,6 +80,52 @@ namespace StateMachine {
 				}
 			{}
 		};
+
+		template<typename T_FuncPtr, typename T_EventData, size_t MaxNumOfJumps>
+		class BlockingState : public EventListeningState<T_FuncPtr, T_EventData, MaxNumOfJumps> {
+			using Base = State<T_FuncPtr, T_EventData, MaxNumOfJumps>;
+			using T_JumpPair = std::pair<T_EventData, const Base*>;
+			using T_JumpPairOptional = std::optional<T_JumpPair>;
+			using T_JumpPairArray = std::array<T_JumpPairOptional, MaxNumOfJumps>;
+			using T_JumpInfo = T_JumpPairArray;
+		public:
+			constexpr BlockingState (
+				//const T_FuncPtr in_func_ptr,
+				//const T_JumpInfo &in_jump_info,
+				const Base* in_invalid_next_state
+			) :
+				Base {
+					//in_func_ptr,
+					T_JumpInfo {
+						T_JumpPairOptional {
+							T_JumpPair {
+								nullptr, nullptr
+							}
+						}
+					},
+					in_invalid_next_state
+				}
+			{}
+
+			constexpr BlockingState (
+				const T_FuncPtr in_func_ptr,
+				//const T_JumpInfo &in_jump_info,
+				const Base* in_invalid_next_state
+			) :
+				Base {
+					in_func_ptr,
+					T_JumpInfo {
+						T_JumpPairOptional {
+							T_JumpPair {
+								nullptr, nullptr
+							}
+						}
+					},
+					in_invalid_next_state
+				}
+			{}
+
+		};
 	}
 };
 

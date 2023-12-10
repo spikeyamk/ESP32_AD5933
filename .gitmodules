@@ -19,3 +19,6 @@
 [submodule "misc/magic_packets/urazr"]
 	path = misc/magic_packets/urazr
 	url = https://www.github.com/spikeyamk/urazr
+[submodule "sml"]
+	path = sml
+	url = https://github.com/boost-ext/sml.git

@@ -15,6 +15,7 @@
 #include <atomic>
 #include <type_traits>
 #include <stdexcept>
+#include <span>
 
 #include "util.hpp"
 #include "trielo/trielo.hpp"
@@ -36,72 +37,6 @@ public:
 
 	class RegisterAddrs {
 	public:
-		/* Upon powerup default ad5933->dump_all_registers():
-		 * AD5933: Register[0x80]: CONTROL_HB: '0xA0'
-		 * AD5933: Register[0x81]: CONTROL_LB: '0x00'
-		 * AD5933: Register[0x82]: FREQ_START_HB: '0xFD'
-		 * AD5933: Register[0x83]: FREQ_START_MB: '0xD7'
-		 * AD5933: Register[0x84]: FREQ_START_LB: '0xED'
-		 * AD5933: Register[0x85]: FREQ_INC_HB: '0xBF'
-		 * AD5933: Register[0x86]: FREQ_INC_MB: '0xB7'
-		 * AD5933: Register[0x87]: FREQ_INC_LB: '0xFC'
-		 * AD5933: Register[0x88]: INC_NUM_HB: '0x01'
-		 * AD5933: Register[0x89]: INC_NUM_LB: '0xF7'
-		 * AD5933: Register[0x8A]: SETTLING_CYCLES_HB: '0x07'
-		 * AD5933: Register[0x8B]: SETTLING_CYCLES_LB: '0xEB'
-		 * AD5933: Register[0x8F]: STATUS: '0x70'
-		 * AD5933: Register[0x92]: TEMP_DATA_HB: '0x00'
-		 * AD5933: Register[0x93]: TEMP_DATA_LB: '0x00'
-		 * AD5933: Register[0x94]: REAL_DATA_HB: '0x7F'
-		 * AD5933: Register[0x95]: REAL_DATA_LB: '0xEF'
-		 * AD5933: Register[0x96]: IMAG_DATA_HB: '0xFD'
-		 * AD5933: Register[0x97]: IMAG_DATA_HB: '0xBF'
-		 */
-
-		/* Read/Write registers initial default state upon powerup:
-		 * AD5933: Register[0x80]: CONTROL_HB: '0xA0': '0b1010'0000'
-		       ControlHB::Commands::POWER_DOWN_MODE: '0b1010'
-		       ControlHB::OutputExcitationVoltageRange::TWO_VOLT_PPK: '0b00'
-			   ControlHB::PGA_Gain::FiveTimes: '0b1'
-
-		 * AD5933: Register[0x81]: CONTROL_LB: '0x00'
-		       ControlLB::SYSCLK::INT_SYSCLK: '0b0'
-		       ControlLB::RESET: '0b0'
-
-		 * AD5933: Register[0x82]: FREQ_START_HB: '0xFD'
-		 * AD5933: Register[0x83]: FREQ_START_MB: '0xD7'
-		 * AD5933: Register[0x84]: FREQ_START_LB: '0xED'
-		 *     FREQ_START == around 516'456 Hz
-		 * 
-		 * AD5933: Register[0x85]: FREQ_INC_HB: '0xBF'
-		 * AD5933: Register[0x86]: FREQ_INC_MB: '0xB7'
-		 * AD5933: Register[0x87]: FREQ_INC_LB: '0xFC'
-		 *     FREQ_INC == around 390'060 Hz
-		 * 
-		 * AD5933: Register[0x88]: INC_NUM_HB: '0x01'
-		 * AD5933: Register[0x89]: INC_NUM_LB: '0xF7'
-		 *     INC_NUM == 503 times
-		 * 
-		 * AD5933: Register[0x8A]: SETTLING_CYCLES_HB: '0x07'
-		 *     SettlingCyclesHB::Multiplier::FOUR_TIMES: '0b11'
-		 * AD5933: Register[0x8B]: SETTLING_CYCLES_LB: '0xEB'
-		 *     Settling Cycles == 491 times
-		 * 
-		 * Special STATUS register initial default state upon powerup:
-		 * AD5933: Register[0x8F]: STATUS: '0x70'
-		 *     TEMP_DATA_VALID == 0b0 == false
-		 *     REAL_DATA_VALID == 0b0 == false
-		 *     IMAG_DATA_VALID == 0b0 == false
-		 * 
-		 * Read-only registers initial default state upon powerup:
-		 * AD5933: Register[0x92]: TEMP_DATA_HB: '0x00'
-		 * AD5933: Register[0x93]: TEMP_DATA_LB: '0x00'
-		 * AD5933: Register[0x94]: REAL_DATA_HB: '0x7F'
-		 * AD5933: Register[0x95]: REAL_DATA_LB: '0xEF'
-		 * AD5933: Register[0x96]: IMAG_DATA_HB: '0xFD'
-		 * AD5933: Register[0x97]: IMAG_DATA_HB: '0xBF'
-		 */
-
 		/* Read/Write Register addresses */
 		static constexpr RegisterAddr_RW CONTROL_HB			{ 0x80 };
 		static constexpr RegisterAddr_RW CONTROL_LB		    { 0x81 }; // Done
@@ -382,6 +317,33 @@ public:
 
 	template<size_t n_bytes>
 	bool block_write_to_register(const RegisterAddrs::RW &register_address, const std::array<uint8_t, n_bytes> &message) const {
+		static_assert(n_bytes <= 12, "n_bytes must be less than or equal to 12");
+		if(write_to_register_address_pointer(RegisterAddrs::RW_RO(static_cast<uint8_t>(register_address))) == false) {
+			return false;
+		}
+
+		std::array<uint8_t, n_bytes + 2> write_buffer { 
+			static_cast<uint8_t>(AD5933::CommandCodes::BLOCK_WRITE),
+			static_cast<uint8_t>(message.size())
+		};
+		std::copy(message.begin(), message.end(), write_buffer.begin() + 2);
+		const int xfer_timeout_ms = 100;
+
+		if(i2c_master_transmit(
+			device_handle,
+			write_buffer.data(),
+			write_buffer.size(),
+			xfer_timeout_ms
+		) == ESP_OK) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	template<size_t n_bytes>
+	bool block_write_to_register(const RegisterAddrs::RW &register_address, const std::span<uint8_t, n_bytes> &message) const {
+		static_assert(n_bytes <= 12, "n_bytes must be less than or equal to 12");
 		if(write_to_register_address_pointer(RegisterAddrs::RW_RO(static_cast<uint8_t>(register_address))) == false) {
 			return false;
 		}
@@ -405,8 +367,9 @@ public:
 		}
 	}
 
-	bool program_all_registers(const std::array<uint8_t, 12> &register_data_array) {
-		return block_write_to_register<12>(AD5933::RegisterAddrs::RW::CONTROL_HB, register_data_array);
+	template<typename T_Collection>
+	bool program_all_registers(const T_Collection &register_data) {
+		return block_write_to_register<12>(AD5933::RegisterAddrs::RW::CONTROL_HB, register_data);
 	}
 
 	std::optional<std::array<uint8_t, 19>> dump_all_registers_as_array() {
@@ -437,7 +400,6 @@ public:
 		return ret_array;
 	}
 
-/*
 	std::optional<ControlHB::Commands> read_control_mode() {
 		const std::optional<uint8_t> control_hb_state = read_register(RegisterAddrs::RW_RO::CONTROL_HB);
 		if(control_hb_state.has_value() == false) {
@@ -467,7 +429,7 @@ public:
 		);
 		write_to_register_wo_check(RegisterAddrs::CONTROL_LB, reset_command);
 
-		const std::optional<uint8_t> control_lb_state_after_reset = read_register(RegisterAddrs::CONTROL_LB);
+		const std::optional<uint8_t> control_lb_state_after_reset = read_register(RegisterAddrs::RW_RO::CONTROL_LB);
 		if(control_lb_state_after_reset.has_value() == false) {
 			std::printf("AD5933: Reset: Failed to read the CONTROL_LB register\n");
 			return false;
@@ -492,6 +454,7 @@ public:
 		return true;
 	}
 
+	/*
 	bool set_sysclk_src(const ControlLB::SYSCLK_SRC clk_src) {
 		const std::optional<uint8_t> control_lb_state_before_set_sysclk { read_register(RegisterAddrs::CONTROL_LB).value() };
 		if(control_lb_state_before_set_sysclk.has_value() == false) {

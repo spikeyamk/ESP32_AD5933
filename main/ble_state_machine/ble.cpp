@@ -101,6 +101,20 @@ namespace NimBLE {
         heartbeat_thread = std::move(tmp_thread);
 	}
 
+    bool notify(const std::array<uint8_t, 20> &send_buf) {
+        struct os_mbuf *txom = ble_hs_mbuf_from_flat(send_buf.data(), send_buf.size());
+        if(txom == nullptr) {
+            std::cout << "NimBLE::notify: failed to ble_hs_mbuf_from_flat\n";
+            return false;
+        }
+        if(ble_gatts_notify_custom(NimBLE::conn_handle, NimBLE::body_composition_measurement_characteristic_handle, txom) == 0) {
+            return true;
+        } else {
+            std::cout << "NimBLE::notify: failed to ble_gatts_notify_custom\n";
+            return false;
+        }
+    }
+
     static int gap_event_cb(struct ble_gap_event *event, void *arg) {
 	    struct ble_gap_conn_desc desc;
         int rc;
