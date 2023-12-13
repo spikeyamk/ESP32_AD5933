@@ -1,15 +1,16 @@
-
 idf_component_register(SRCS 
 					   "main.cpp"
-					   "util.cpp"
-					   "ad5933.cpp"
-					   "ble_state_machine/ble.cpp"
-					   "ble_state_machine/ble_state_machine.cpp"
-					   "ble_state_machine/ble_states.cpp"
-					   "ble_state_machine/magic_packets.cpp"
-					   "ble_state_machine/packet_types.cpp"
-					   "sd_card.cpp"
-                       INCLUDE_DIRS ".")
-
-# Publicly link `foo` to `main` component
-#target_link_libraries(main PUBLIC sml)
+					   "lib/util.cpp"
+					   "lib/i2c/i2c.cpp"
+					   "lib/i2c/bus.cpp"
+					   "lib/i2c/device.cpp"
+					   "lib/ad5933/driver/driver.cpp"
+					   "lib/ad5933/driver/tests.cpp"
+					   #"lib/ad5933/ad5933.cpp"
+					   #"ble/state_machine/ble.cpp"
+					   "lib/ble/state_machine/state_machine.cpp"
+					   #"ble/state_machine/states.cpp"
+					   #"ble_state_machine/magic_packets.cpp"
+					   #"ble_state_machine/packet_types.cpp"
+					   "lib/sd_card.cpp"
+                       INCLUDE_DIRS "include")
