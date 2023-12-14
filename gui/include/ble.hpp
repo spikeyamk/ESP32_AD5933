@@ -1,7 +1,9 @@
 #pragma once
 
+#include <iostream>
 #include <optional>
 #include <atomic>
+#include <vector>
 #include <string>
 #include <memory>
 #include <string>
@@ -23,7 +25,7 @@ public:
     void clean();
 };
 
-std::optional<SimpleBLE::Peripheral> find_esp32_ad5933();
+std::optional<SimpleBLE::Peripheral> find_esp32_ad5933(const bool &done);
 bool is_peripheral_esp32_ad5933(SimpleBLE::Peripheral &peripheral);
 class ESP32_AD5933 {
 private:
@@ -53,3 +55,11 @@ public:
     void print_mtu();
     ~ESP32_AD5933();
 };
+
+std::ostream& operator<<(std::ostream& os, SimpleBLE::Peripheral& peripheral);
+std::ostream& operator<<(std::ostream& os, SimpleBLE::Adapter& adapter);
+std::ostream& operator<<(std::ostream& os, SimpleBLE::Service& service);
+std::ostream& operator<<(std::ostream& os, SimpleBLE::Characteristic& characteristic);
+std::ostream& operator<<(std::ostream& os, SimpleBLE::Descriptor& descriptor);
+std::ostream& operator<<(std::ostream& os, std::vector<SimpleBLE::Adapter> &adapters);
+

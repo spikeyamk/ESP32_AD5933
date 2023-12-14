@@ -12,7 +12,7 @@
 #include <vector>
 #include <numeric>
 
-#include "trielo.hpp"
+#include "trielo/trielo.hpp"
 #include "fmt/core.h"
 #include "fmt/color.h"
 #include "SDL2/SDL.h"
@@ -22,7 +22,7 @@
 #include "backends/imgui_impl_sdl2.h"
 #include "backends/imgui_impl_sdlrenderer2.h"
 #include "implot.h"
-#include "magic_packets.hpp"
+#include "magic/packets.hpp"
 #include "types.hpp"
 
 #include "dark_mode_switcher.hpp"
@@ -131,7 +131,12 @@ namespace ImGuiSDL {
         Trielo::trieloxit_lambda<SDL_Init>(Trielo::OkErrCode(0), sdl_error_lambda, SDL_INIT_VIDEO | SDL_INIT_TIMER);
         Trielo::trielo_lambda<SDL_SetHint>(Trielo::OkErrCode(SDL_TRUE), sdl_error_lambda, SDL_HINT_IME_SHOW_UI, "1");
 
-        SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_HIDDEN);
+        SDL_WindowFlags window_flags = (SDL_WindowFlags)(
+            SDL_WINDOW_RESIZABLE
+            | SDL_WINDOW_ALLOW_HIGHDPI
+            | SDL_WINDOW_MINIMIZED
+            //| SDL_WINDOW_HIDDEN
+        );
         SDL_Window* window = Trielo::trieloxit_lambda<SDL_CreateWindow>(
             Trielo::FailErrCode(static_cast<SDL_Window*>(nullptr)),
             sdl_error_lambda,
@@ -241,25 +246,9 @@ namespace ImGuiSDL {
     inline void connecting_window() {
         static constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize;
         ImGui::Begin("ESP32_AD5933", NULL, flags);                          // Create a window called "Hello, world!" and append into it.
-        static uint8_t dot_count = 0;
-        switch(dot_count) {
-            case 0:
-                ImGui::Text("Connecting.");
-                break;
-            case 1:
-                ImGui::Text("Connecting..");
-                break;
-            case 2:
-                ImGui::Text("Connecting...");
-                break;
-            default:
-                ImGui::Text("Connecting");
-                break;
-        }
-        dot_count++;
-        if(dot_count > 2) {
-            dot_count = 0;
-        }
+        ImGui::Text("Connecting");
+        ImGui::SameLine();
+        ImGui::Spinner("ConnectingSpinner", 5.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
         ImGui::End();
     }
 }
@@ -556,15 +545,15 @@ namespace ImGuiSDL {
     }
 
     void send_debug_start_req_thread_cb(std::optional<ESP32_AD5933> &esp32_ad5933) {
-        esp32_ad5933.value().send(std::string(MagicPackets::Debug::Command::start.begin(), MagicPackets::Debug::Command::start.end()));
+        esp32_ad5933.value().send(std::string(Magic::Packets::Debug::start.begin(), Magic::Packets::Debug::start.end()));
     }
 
     void send_debug_end_req_thread_cb(std::optional<ESP32_AD5933> &esp32_ad5933) {
-        esp32_ad5933.value().send(std::string(MagicPackets::Debug::Command::end.begin(), MagicPackets::Debug::Command::end.end()));
+        esp32_ad5933.value().send(std::string(Magic::Packets::Debug::end.begin(), Magic::Packets::Debug::end.end()));
     }
    
     void send_dump_all_registers_req_thread_cb(std::optional<ESP32_AD5933> &esp32_ad5933) {
-        esp32_ad5933.value().send(std::string(MagicPackets::Debug::Command::dump_all_registers.begin(), MagicPackets::Debug::Command::dump_all_registers.end()));
+        esp32_ad5933.value().send(std::string(Magic::Packets::Debug::dump_all_registers.begin(), Magic::Packets::Debug::dump_all_registers.end()));
         const auto rx_register_info = esp32_ad5933.value().rx_payload.read();
         esp32_ad5933.value().rx_payload.clean();
 
@@ -589,7 +578,7 @@ namespace ImGuiSDL {
     }
 
     void program_all_registers_thread_cb(std::array<uint8_t, 12> raw_message, std::optional<ESP32_AD5933> &esp32_ad5933) {
-        auto buf_to_send = MagicPackets::Debug::Command::program_all_registers;
+        auto buf_to_send = Magic::Packets::Debug::program_all_registers;
         std::copy(raw_message.begin(), raw_message.end(), buf_to_send.begin());
         const auto tmp_dbg_var = std::string(buf_to_send.begin(), buf_to_send.end());
         esp32_ad5933.value().send(tmp_dbg_var);
@@ -603,7 +592,7 @@ namespace ImGuiSDL {
     }
 
     void control_command_thread_cb(const ControlHB::CommandOrMask command, std::optional<ESP32_AD5933> &esp32_ad5933) {
-        auto buf_to_send = MagicPackets::Debug::Command::control_HB_command;
+        auto buf_to_send = Magic::Packets::Debug::control_HB_command;
         buf_to_send[0] = static_cast<uint8_t>(command);
         esp32_ad5933.value().send(std::string(buf_to_send.begin(), buf_to_send.end()));
         send_dump_all_registers_req_thread_cb(esp32_ad5933);
@@ -795,8 +784,8 @@ namespace ImGuiSDL {
 
     void calibrate_cb(bool &calibrating, bool &calibrated, std::atomic<float> &progress_bar_fraction, std::optional<ESP32_AD5933> &esp32_ad5933) {
         esp32_ad5933.value().send(std::string(
-            MagicPackets::FrequencySweep::Command::start.begin(),
-            MagicPackets::FrequencySweep::Command::start.end()
+            Magic::Packets::FrequencySweep::start.begin(),
+            Magic::Packets::FrequencySweep::start.end()
         ));
 
         const uint16_t wished_size = measure_captures.load()->config.get_num_of_inc().value + 1;
@@ -826,8 +815,8 @@ namespace ImGuiSDL {
     void start_sweep_cb(bool &sweeping, bool &sweeped, std::atomic<float> &progress_bar_fraction, std::optional<ESP32_AD5933> &esp32_ad5933, bool &periodically_sweeping) {
         do {
             esp32_ad5933.value().send(std::string(
-                MagicPackets::FrequencySweep::Command::start.begin(),
-                MagicPackets::FrequencySweep::Command::start.end()
+                Magic::Packets::FrequencySweep::start.begin(),
+                Magic::Packets::FrequencySweep::start.end()
             ));
 
             const uint16_t wished_size = measure_captures.load()->config.get_num_of_inc().value + 1;
@@ -1250,7 +1239,7 @@ namespace ImGuiSDL {
 }
 
 namespace ImGuiSDL {
-    void loop(std::optional<ESP32_AD5933> &esp32_ad5933) {
+    void loop(std::optional<ESP32_AD5933> &esp32_ad5933, bool &done) {
         SDL_Window* window;
         SDL_Renderer* renderer;
         {
@@ -1259,7 +1248,6 @@ namespace ImGuiSDL {
             renderer = std::get<1>(ret);
         }
 
-        bool done = false;
         const ImVec4 clear_color { 0.45f, 0.55f, 0.60f, 1.00f };
 
         while(
@@ -1270,7 +1258,6 @@ namespace ImGuiSDL {
             start_new_frame();
             create_connecting_window();
             render(renderer, clear_color);
-            std::this_thread::sleep_for(std::chrono::seconds(1));
         }
 
         while(done == false) {

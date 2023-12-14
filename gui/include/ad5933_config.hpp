@@ -124,69 +124,69 @@ public:
 	AD5933_Config(const std::array<uint8_t, 12> &in_config_message_raw);
 
 public:
-    inline std::array<std::bitset<8>, 12> get_ad5933_config_message() const;
-    inline std::array<uint8_t, 12> get_ad5933_config_message_raw() const;
+    std::array<std::bitset<8>, 12> get_ad5933_config_message() const;
+    std::array<uint8_t, 12> get_ad5933_config_message_raw() const;
 
-	inline Register8_t get_control_HB(
+	Register8_t get_control_HB(
 		const Register8_t previous_state,
 		const ControlHB::CommandOrMask command
 	) const;
 
-	inline Register8_t get_control_HB(
+	Register8_t get_control_HB(
 		const Register8_t previous_state,
 		const ControlHB::OutputVoltageRangeOrMask range
 	) const;
 
-	inline Register8_t get_control_HB(
+	Register8_t get_control_HB(
 		const Register8_t previous_state,
 		const ControlHB::PGA_GainOrMask pga_gain
 	) const;
 
-	inline Register8_t get_control_HB(
+	Register8_t get_control_HB(
 		const Register8_t previous_state,
 		const ControlHB::CommandOrMask command,
 		const ControlHB::OutputVoltageRangeOrMask range
 	) const;
 
-	inline Register8_t get_control_HB(
+	Register8_t get_control_HB(
 		const Register8_t previous_state,
 		const ControlHB::CommandOrMask command,
 		const ControlHB::PGA_GainOrMask pga_gain
 	) const;
 
-	inline Register8_t get_control_HB(
+	Register8_t get_control_HB(
 		const Register8_t previous_state,
 		const ControlHB::OutputVoltageRangeOrMask range,
 		const ControlHB::PGA_GainOrMask pga_gain
 	) const;
 
-	inline Register8_t get_control_HB(
+	Register8_t get_control_HB(
 		const ControlHB::CommandOrMask command,
 		const ControlHB::OutputVoltageRangeOrMask range,
 		const ControlHB::PGA_GainOrMask pga_gain
 	) const;
 
-    inline Register8_t get_control_LB(const ControlLB::SYSCLK_SRC_OrMask sysclk_src) const;
-    inline Register8_t get_control_LB(const ControlLB::SYSCLK_SRC_OrMask sysclk_src, bool reset) const;
-    inline Register8_t get_control_LB(const Register8_t previous_state, bool reset) const;
-    inline Register24_t get_freq_register(const uint32_t frequency) const;
-    inline Register16_t get_num_of_inc(const uint9_t in_num_of_inc) const;
-    inline Register16_t get_settling_time_cycles(const Register16_t previous_state, const uint9_t number) const;
-    inline Register16_t get_settling_time_cycles(const Register16_t previous_state, const SettlingTimeCyclesMultiplierOrMask multiplier) const;
-    inline Register16_t get_settling_time_cycles(const uint9_t number, const SettlingTimeCyclesMultiplierOrMask multiplier) const;
+    Register8_t get_control_LB(const ControlLB::SYSCLK_SRC_OrMask sysclk_src) const;
+    Register8_t get_control_LB(const ControlLB::SYSCLK_SRC_OrMask sysclk_src, bool reset) const;
+    Register8_t get_control_LB(const Register8_t previous_state, bool reset) const;
+    Register24_t get_freq_register(const uint32_t frequency) const;
+    Register16_t get_num_of_inc(const uint9_t in_num_of_inc) const;
+    Register16_t get_settling_time_cycles(const Register16_t previous_state, const uint9_t number) const;
+    Register16_t get_settling_time_cycles(const Register16_t previous_state, const SettlingTimeCyclesMultiplierOrMask multiplier) const;
+    Register16_t get_settling_time_cycles(const uint9_t number, const SettlingTimeCyclesMultiplierOrMask multiplier) const;
 
-	inline ControlHB::CommandOrMask get_command() const;
-    inline ControlHB::OutputVoltageRangeOrMask get_voltage_range() const;
-    inline ControlHB::PGA_GainOrMask get_pga_gain() const;
-    inline ControlLB::SYSCLK_SRC_OrMask get_sysclk_src() const;
+	ControlHB::CommandOrMask get_command() const;
+    ControlHB::OutputVoltageRangeOrMask get_voltage_range() const;
+    ControlHB::PGA_GainOrMask get_pga_gain() const;
+    ControlLB::SYSCLK_SRC_OrMask get_sysclk_src() const;
     bool get_reset() const;
-    inline SettlingTimeCyclesMultiplierOrMask get_settling_time_cycles_multiplier() const;
-    inline uint9_t get_uint9_t(const Register16_t state) const;
-    inline uint9_t get_settling_time_cycles_number() const;
-    inline uint9_t get_num_of_inc() const;
-    inline double get_freq(const Register24_t state) const;
-    inline double get_start_freq() const;
-    inline double get_inc_freq() const;
+    SettlingTimeCyclesMultiplierOrMask get_settling_time_cycles_multiplier() const;
+    uint9_t get_uint9_t(const Register16_t state) const;
+    uint9_t get_settling_time_cycles_number() const;
+    uint9_t get_num_of_inc() const;
+    double get_freq(const Register24_t state) const;
+    double get_start_freq() const;
+    double get_inc_freq() const;
 
 	void set_command(ControlHB::CommandOrMask command);
 	void set_voltage_range(ControlHB::OutputVoltageRangeOrMask range);

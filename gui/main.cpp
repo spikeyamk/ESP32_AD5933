@@ -7,14 +7,13 @@
 
 #include "ble.hpp"
 #include "imgui_sdl.hpp"
-#include "magic_packets.hpp"
 
 void gui_main() {
     std::optional<ESP32_AD5933> esp32_ad5933 { std::nullopt };
-    std::thread imgui_sdl_thread(ImGuiSDL::loop, std::ref(esp32_ad5933));
-
+    bool done = false;
+    std::thread imgui_sdl_thread(ImGuiSDL::loop, std::ref(esp32_ad5933), std::ref(done));
     std::optional<SimpleBLE::Peripheral> esp32_ret { std::nullopt };
-    if((esp32_ret = find_esp32_ad5933()).has_value()) {
+    if((esp32_ret = find_esp32_ad5933(done)).has_value()) {
         esp32_ad5933 = ESP32_AD5933 { esp32_ret.value() };
         if(esp32_ad5933.value().connect() == false) {
             std::cout << "BLE: could not connect to ESP32_AD5933\n";
@@ -25,7 +24,6 @@ void gui_main() {
     imgui_sdl_thread.join();
 }
 
-// Commented out SDL_main()
 int main(int argc, char* argv[]) {
     gui_main();
     return 0;

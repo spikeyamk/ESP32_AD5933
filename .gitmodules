@@ -1,6 +1,3 @@
-[submodule "misc/imgui_sdl2/lib/trielo"]
-	path = gui/lib/trielo
-	url = https://www.github.com/spikeyamk/trielo
 [submodule "misc/imgui_sdl2/lib/imgui"]
 	path = gui/lib/imgui
 	url = https://github.com/ocornut/imgui
@@ -14,5 +11,10 @@
 	path = gui/lib/SimpleBLE
 	url = https://github.com/OpenBluetoothToolbox/SimpleBLE
 [submodule "main/lib/external/trielo_wrapper/trielo"]
-	path = main/lib/external/trielo_wrapper/trielo
+	path = common/trielo_wrapper/trielo
 	url = https://github.com/spikeyamk/trielo.git
+[submodule "multiprecision"]
+	branch = Boost_1_83_0
+[submodule "common/ad5933_config/lib/multiprecision"]
+	path = common/ad5933_config/lib/multiprecision
+	url = https://github.com/boostorg/multiprecision.git

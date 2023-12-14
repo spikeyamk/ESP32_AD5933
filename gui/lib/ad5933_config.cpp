@@ -258,7 +258,7 @@ AD5933_Config::AD5933_Config(const std::array<uint8_t, 12> &in_config_message_ra
 	ad5933_config_message_raw { get_ad5933_config_message_raw() }
 {}
 
-inline std::array<std::bitset<8>, 12> AD5933_Config::get_ad5933_config_message() const {
+std::array<std::bitset<8>, 12> AD5933_Config::get_ad5933_config_message() const {
 	return std::array<std::bitset<8>, 12> {
 		control_HB.HB,
 		control_LB.HB,
@@ -275,7 +275,7 @@ inline std::array<std::bitset<8>, 12> AD5933_Config::get_ad5933_config_message()
 	};
 }
 
-inline std::array<uint8_t, 12> AD5933_Config::get_ad5933_config_message_raw() const {
+std::array<uint8_t, 12> AD5933_Config::get_ad5933_config_message_raw() const {
 	std::array<uint8_t, 12> ret_val;
 	for(size_t i = 0; i < 12; ++i) {
 		ret_val[i] = static_cast<uint8_t>(ad5933_config_message[i].to_ulong());
@@ -283,7 +283,7 @@ inline std::array<uint8_t, 12> AD5933_Config::get_ad5933_config_message_raw() co
 	return ret_val;
 }
 
-inline Register8_t AD5933_Config::get_control_HB(
+Register8_t AD5933_Config::get_control_HB(
 	const Register8_t previous_state,
 	const ControlHB::CommandOrMask command
 ) const {
@@ -292,7 +292,7 @@ inline Register8_t AD5933_Config::get_control_HB(
 	return Register8_t { HB };
 }
 
-inline Register8_t AD5933_Config::get_control_HB(
+Register8_t AD5933_Config::get_control_HB(
 	const Register8_t previous_state,
 	const ControlHB::OutputVoltageRangeOrMask range
 ) const {
@@ -301,7 +301,7 @@ inline Register8_t AD5933_Config::get_control_HB(
 	return Register8_t { HB };
 }
 
-inline Register8_t AD5933_Config::get_control_HB(
+Register8_t AD5933_Config::get_control_HB(
 	const Register8_t previous_state,
 	const ControlHB::PGA_GainOrMask pga_gain
 ) const {
@@ -311,7 +311,7 @@ inline Register8_t AD5933_Config::get_control_HB(
 
 }
 
-inline Register8_t AD5933_Config::get_control_HB(
+Register8_t AD5933_Config::get_control_HB(
 	const Register8_t previous_state,
 	const ControlHB::CommandOrMask command,
 	const ControlHB::OutputVoltageRangeOrMask range
@@ -323,7 +323,7 @@ inline Register8_t AD5933_Config::get_control_HB(
 
 }
 
-inline Register8_t AD5933_Config::get_control_HB(
+Register8_t AD5933_Config::get_control_HB(
 	const Register8_t previous_state,
 	const ControlHB::CommandOrMask command,
 	const ControlHB::PGA_GainOrMask pga_gain
@@ -335,7 +335,7 @@ inline Register8_t AD5933_Config::get_control_HB(
 
 }
 
-inline Register8_t AD5933_Config::get_control_HB(
+Register8_t AD5933_Config::get_control_HB(
 	const Register8_t previous_state,
 	const ControlHB::OutputVoltageRangeOrMask range,
 	const ControlHB::PGA_GainOrMask pga_gain
@@ -347,7 +347,7 @@ inline Register8_t AD5933_Config::get_control_HB(
 
 }
 
-inline Register8_t AD5933_Config::get_control_HB(
+Register8_t AD5933_Config::get_control_HB(
 	const ControlHB::CommandOrMask command,
 	const ControlHB::OutputVoltageRangeOrMask range,
 	const ControlHB::PGA_GainOrMask pga_gain
@@ -359,12 +359,12 @@ inline Register8_t AD5933_Config::get_control_HB(
 	return Register8_t { HB };
 }
 
-inline Register8_t AD5933_Config::get_control_LB(const ControlLB::SYSCLK_SRC_OrMask sysclk_src) const {
+Register8_t AD5933_Config::get_control_LB(const ControlLB::SYSCLK_SRC_OrMask sysclk_src) const {
 	const std::bitset<8> HB { static_cast<uint8_t>(sysclk_src) };
 	return Register8_t { HB };
 } 
 
-inline Register8_t AD5933_Config::get_control_LB(const ControlLB::SYSCLK_SRC_OrMask sysclk_src, bool reset) const {
+Register8_t AD5933_Config::get_control_LB(const ControlLB::SYSCLK_SRC_OrMask sysclk_src, bool reset) const {
 	std::bitset<8> HB { static_cast<uint8_t>(sysclk_src) };
 	if(reset == true) {
 		HB |= ControlLB::RESET_SetMask;
@@ -372,7 +372,7 @@ inline Register8_t AD5933_Config::get_control_LB(const ControlLB::SYSCLK_SRC_OrM
 	return Register8_t { HB };
 } 
 
-inline Register8_t AD5933_Config::get_control_LB(const Register8_t previous_state, bool reset) const {
+Register8_t AD5933_Config::get_control_LB(const Register8_t previous_state, bool reset) const {
 	std::bitset<8> HB { previous_state.HB };
 	if(reset == true) {
 		HB |= ControlLB::RESET_SetMask;
@@ -380,7 +380,7 @@ inline Register8_t AD5933_Config::get_control_LB(const Register8_t previous_stat
 	return Register8_t { HB };
 } 
 
-inline Register24_t AD5933_Config::get_freq_register(const uint32_t frequency) const {
+Register24_t AD5933_Config::get_freq_register(const uint32_t frequency) const {
 	/*
 	const uint24_t binary_coded_frequency = static_cast<uint24_t>(
 		static_cast<double>(frequency * 4) *
@@ -414,7 +414,7 @@ inline Register24_t AD5933_Config::get_freq_register(const uint32_t frequency) c
 	};
 }
 
-inline Register16_t AD5933_Config::get_num_of_inc(const uint9_t in_num_of_inc) const {
+Register16_t AD5933_Config::get_num_of_inc(const uint9_t in_num_of_inc) const {
 	std::bitset<8> HB { 0b0000'0000 };
 	auto tmp = in_num_of_inc.get_bit_8_MSB()[0];
 	HB[0] = tmp;
@@ -424,7 +424,7 @@ inline Register16_t AD5933_Config::get_num_of_inc(const uint9_t in_num_of_inc) c
 	return Register16_t { HB, LB };
 }
 
-inline Register16_t AD5933_Config::get_settling_time_cycles(const Register16_t previous_state, const uint9_t number) const {
+Register16_t AD5933_Config::get_settling_time_cycles(const Register16_t previous_state, const uint9_t number) const {
 	std::bitset<8> HB { previous_state.HB };
 	HB[0] = number.get_bit_8_MSB()[0];
 
@@ -433,7 +433,7 @@ inline Register16_t AD5933_Config::get_settling_time_cycles(const Register16_t p
 	return Register16_t { HB , LB };
 }
 
-inline Register16_t AD5933_Config::get_settling_time_cycles(const Register16_t previous_state, const SettlingTimeCyclesMultiplierOrMask multiplier) const {
+Register16_t AD5933_Config::get_settling_time_cycles(const Register16_t previous_state, const SettlingTimeCyclesMultiplierOrMask multiplier) const {
 	std::bitset<8> HB { previous_state.HB };
 	HB |= std::bitset<8>{ static_cast<uint8_t>(multiplier) };
 
@@ -442,7 +442,7 @@ inline Register16_t AD5933_Config::get_settling_time_cycles(const Register16_t p
 	return Register16_t { HB , LB };
 }
 
-inline Register16_t AD5933_Config::get_settling_time_cycles(const uint9_t number, const SettlingTimeCyclesMultiplierOrMask multiplier) const {
+Register16_t AD5933_Config::get_settling_time_cycles(const uint9_t number, const SettlingTimeCyclesMultiplierOrMask multiplier) const {
 	std::bitset<8> HB { 0b0000'0000 };
 	HB[0] = number.get_bit_8_MSB()[0];
 	HB |= std::bitset<8>{ static_cast<uint8_t>(multiplier) };
@@ -452,22 +452,22 @@ inline Register16_t AD5933_Config::get_settling_time_cycles(const uint9_t number
 	return Register16_t { HB , LB };
 }
 
-inline ControlHB::CommandOrMask AD5933_Config::get_command() const {
+ControlHB::CommandOrMask AD5933_Config::get_command() const {
 	const std::bitset<8> command_state { control_HB.HB & ControlHB::CommandAndMask };
 	return ControlHB::CommandOrMask(static_cast<uint8_t>(command_state.to_ulong()));
 }
 
-inline ControlHB::OutputVoltageRangeOrMask AD5933_Config::get_voltage_range() const {
+ControlHB::OutputVoltageRangeOrMask AD5933_Config::get_voltage_range() const {
 	const std::bitset<8> voltage_range_state { control_HB.HB & ControlHB::OutputVoltageRangeAndMask };
 	return ControlHB::OutputVoltageRangeOrMask(static_cast<uint8_t>(voltage_range_state.to_ulong()));
 }
 
-inline ControlHB::PGA_GainOrMask AD5933_Config::get_pga_gain() const {
+ControlHB::PGA_GainOrMask AD5933_Config::get_pga_gain() const {
 	const std::bitset<8> pga_gain_state { control_HB.HB & ControlHB::PGA_GainAndMask };
 	return ControlHB::PGA_GainOrMask(static_cast<uint8_t>(pga_gain_state.to_ulong()));
 }
 
-inline ControlLB::SYSCLK_SRC_OrMask AD5933_Config::get_sysclk_src() const {
+ControlLB::SYSCLK_SRC_OrMask AD5933_Config::get_sysclk_src() const {
 	const std::bitset<8> sysclk_src_state { control_LB.HB & ControlLB::SYSCLK_SRC_AndMask };
 	return ControlLB::SYSCLK_SRC_OrMask(static_cast<uint8_t>(sysclk_src_state.to_ulong()));
 }
@@ -481,26 +481,26 @@ bool AD5933_Config::get_reset() const {
 	}
 }
 
-inline SettlingTimeCyclesMultiplierOrMask AD5933_Config::get_settling_time_cycles_multiplier() const {
+SettlingTimeCyclesMultiplierOrMask AD5933_Config::get_settling_time_cycles_multiplier() const {
 	const std::bitset<8> settling_time_cycles_multiplier_state { settling_time_cycles.HB & SettlingTimeCyclesMultiplierAndMask };
 	return SettlingTimeCyclesMultiplierOrMask(static_cast<uint8_t>(settling_time_cycles_multiplier_state.to_ulong()));
 }
 
-inline uint9_t AD5933_Config::get_uint9_t(const Register16_t state) const {
+uint9_t AD5933_Config::get_uint9_t(const Register16_t state) const {
    	const std::bitset<16> HB_LB_combined { state.get_HB_LB_combined_bitset() };
 	const uint16_t HB_LB_comined_raw = static_cast<uint16_t>(HB_LB_combined.to_ulong());
 	return static_cast<uint9_t>(HB_LB_comined_raw);
 }
 
-inline uint9_t AD5933_Config::get_settling_time_cycles_number() const {
+uint9_t AD5933_Config::get_settling_time_cycles_number() const {
 	return get_uint9_t(settling_time_cycles);
 }
 
-inline uint9_t AD5933_Config::get_num_of_inc() const {
+uint9_t AD5933_Config::get_num_of_inc() const {
 	return get_uint9_t(num_of_inc);
 }
 
-inline double AD5933_Config::get_freq(const Register24_t state) const {
+double AD5933_Config::get_freq(const Register24_t state) const {
 	const std::bitset<24> HB_MB_LB_combined { state.get_HB_MB_LB_combined_bitset() };
 	/*
 	const uint24_t HB_MB_LB_combined_raw = static_cast<uint24_t>(HB_MB_LB_combined.to_ulong());
@@ -524,11 +524,11 @@ inline double AD5933_Config::get_freq(const Register24_t state) const {
 	return frequency;
 }
 
-inline double AD5933_Config::get_start_freq() const {
+double AD5933_Config::get_start_freq() const {
 	return std::round(get_freq(start_freq));
 }
 
-inline double AD5933_Config::get_inc_freq() const {
+double AD5933_Config::get_inc_freq() const {
 	return std::round(get_freq(inc_freq));
 }
 
@@ -681,7 +681,6 @@ AD5933_CalibrationData::AD5933_CalibrationData(
 		}
 	}
 {}
-
 
 double AD5933_CalibrationData::get_gain_factor(const int32_t calibration_impedance) {
 	return (1.00 / static_cast<double>(calibration_impedance)) / get_raw_magnitude();

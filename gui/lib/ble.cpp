@@ -7,12 +7,12 @@
 #include <atomic>
 #include <memory>
 
+#include "ble.hpp"
+
 #include <simpleble/SimpleBLE.h>
-#include "trielo.hpp"
+#include "trielo/trielo.hpp"
 #include "fmt/core.h"
 #include "fmt/color.h"
-
-#include "ble.hpp"
 
 const std::string BLE_ESP_IDENTIFIER { "nimble" };
 const std::string BLE_ESP_ADDRESS { "40:4c:ca:43:11:b2" };
@@ -294,7 +294,7 @@ ESP32_AD5933::~ESP32_AD5933() {
     disconnect();
 }
 
-std::optional<SimpleBLE::Peripheral> find_esp32_ad5933() {
+std::optional<SimpleBLE::Peripheral> find_esp32_ad5933(const bool &done) {
     if(Trielo::trielo<SimpleBLE::Adapter::bluetooth_enabled>(Trielo::OkErrCode(true)) == false) {
         std::cout << "ERROR: BLE: Bleutooth disabled\n";
         return std::nullopt;
@@ -344,7 +344,7 @@ std::optional<SimpleBLE::Peripheral> find_esp32_ad5933() {
     });
 
     adapter.scan_start();
-    while(adapter.scan_is_active()) {
+    while(adapter.scan_is_active() && (done == false)) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
