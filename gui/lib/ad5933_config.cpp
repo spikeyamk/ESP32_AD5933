@@ -548,6 +548,7 @@ void AD5933_Config::print() const {
 void AD5933_Config::set_command(ControlHB::CommandOrMask command) {
 	control_HB = get_control_HB(control_HB, command);
 }
+
 void AD5933_Config::set_voltage_range(ControlHB::OutputVoltageRangeOrMask range) {
 	control_HB = get_control_HB(control_HB, range);
 }

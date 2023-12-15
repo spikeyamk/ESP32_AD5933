@@ -15,6 +15,3 @@
 	url = https://github.com/spikeyamk/trielo.git
 [submodule "multiprecision"]
 	branch = Boost_1_83_0
-[submodule "common/ad5933_config/lib/multiprecision"]
-	path = common/ad5933_config/lib/multiprecision
-	url = https://github.com/boostorg/multiprecision.git

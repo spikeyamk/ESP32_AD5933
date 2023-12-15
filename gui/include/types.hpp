@@ -98,8 +98,8 @@ struct uint9_t {
         result.value = (value << shift) & 0x1FFu; // Ensure the value is within 9 bits
         return result;
     }
-    // Compound assignment operators
 
+    // Compound assignment operators
     // Addition assignment operator (+=)
     constexpr uint9_t& operator+=(const uint9_t& other) {
         value = (value + other.value) & 0x1FFu; // Add and ensure the value is within 9 bits

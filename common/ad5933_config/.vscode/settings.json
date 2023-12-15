@@ -3,6 +3,11 @@
     "files.associations": {
         "memory_resource": "cpp",
         "sstream": "cpp",
-        "tuple": "cpp"
+        "tuple": "cpp",
+        "bitset": "cpp",
+        "utility": "cpp",
+        "array": "cpp",
+        "iostream": "cpp",
+        "ostream": "cpp"
     }
 }
