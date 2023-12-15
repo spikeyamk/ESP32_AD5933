@@ -4,9 +4,9 @@
 #include <array>
 #include <cmath>
 
-#include "ad5933/config/register_types.hpp"
+#include "ad5933/register_types.hpp"
+#include "ad5933/uint_types.hpp"
 #include "ad5933/config/masks.hpp"
-#include "ad5933/config/uint_types.hpp"
 
 namespace AD5933 {
     enum class SysClkFreq : uint32_t {

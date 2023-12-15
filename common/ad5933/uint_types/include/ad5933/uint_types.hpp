@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <bitset>
 #include <cstdint>
 #include <cassert>
 
