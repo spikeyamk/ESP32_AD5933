@@ -14,7 +14,7 @@
 #include "ad5933/extension/extension.hpp"
 #include "ad5933/masks/masks.hpp"
 #include "ble/server/server.hpp"
-#include "ble/sender/sender.hpp"
+#include "ble/server/sender.hpp"
 
 namespace BLE {
 	namespace States {
@@ -111,7 +111,7 @@ namespace BLE {
 				std::printf("BLE::StateMachine::Actions::%send\n", namespace_name);
 			}
 
-			static void dump(Sender &sender, AD5933::Extension &ad5933) {
+			static void dump(Server::Sender &sender, AD5933::Extension &ad5933) {
 				std::unique_lock lock(sender.mutex);
 				std::printf("BLE::StateMachine::Actions::%sdump\n", namespace_name);
 				const auto ret { ad5933.driver.dump_all_registers() };
@@ -142,7 +142,7 @@ namespace BLE {
 			}
 
 			//static void run(Sender &sender, AD5933::Extension &ad5933, boost::sml::back::process<Events::FreqSweep::Private::sweep_complete> process_event) {
-			static void run(std::atomic<bool> &processing, Sender &sender, AD5933::Extension &ad5933) {
+			static void run(std::atomic<bool> &processing, Server::Sender &sender, AD5933::Extension &ad5933) {
 				std::unique_lock lock(sender.mutex);
 				processing = true;
 				std::printf("BLE::StateMachine::Actions::%srun\n", namespace_name);

@@ -2,7 +2,7 @@ if(ESP_PLATFORM)
 	idf_component_register(SRCS
 						   "lib/state_machine.cpp"
                        	   INCLUDE_DIRS "include"
-						   REQUIRES sender sml_wrapper extension masks server
+						   REQUIRES sml_wrapper extension masks server
 	)
 else()
 	cmake_minimum_required(VERSION 3.13)

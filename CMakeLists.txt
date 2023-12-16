@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.16)
 
 set(EXTRA_COMPONENT_DIRS
     "main/lib/ble"
-    ##"main/lib/ble/state_machine/lib"
+    "main/lib/ble/state_machine/lib"
     "main/lib/ad5933"
     "main/lib"
     "common"

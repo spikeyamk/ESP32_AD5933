@@ -466,6 +466,7 @@ namespace BLE {
                 std::cout << "BLE::Servernotify: failed to ble_hs_mbuf_from_flat\n";
                 return false;
             }
+
             if(ble_gatts_notify_custom(conn_handle, body_composition_measurement_characteristic_handle, txom) == 0) {
                 return true;
             } else {
