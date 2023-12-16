@@ -18,7 +18,7 @@
 #include "esp_bt.h"
 #include "trielo/trielo.hpp"
 
-#include "ble/ble_server.hpp"
+#include "ble/server/server.hpp"
 #include "magic/packets.hpp"
 
 namespace BLE {
@@ -47,12 +47,8 @@ namespace BLE {
 
         char characteristic_received_value[500] { 0x00 };
 
-        static void set_addr() {
-            Trielo::trielo<&ble_hs_util_ensure_addr>(Trielo::OkErrCode(0), 0);
-            Trielo::trielo<&ble_hs_id_infer_auto>(Trielo::OkErrCode(0), 0, &own_addr_type);
-        }
-
-        void stopBLE() {//! Call this function to stop BLE 
+        void stop() {//! Call this function to stop BLE 
+            std::printf("BLE::Server::stop\n");
             //! Below is the sequence of APIs to be called to disable/deinit NimBLE host and ESP controller:
             printf("\n Stoping BLE and notification task \n");
             if(Trielo::trielo<nimble_port_stop>(Trielo::OkErrCode(0)) == 0) {
@@ -62,6 +58,7 @@ namespace BLE {
         }
 
         void heartbeat_cb() {
+            std::printf("BLE::Server::heartbeat_cb\n");
             char write_buffer[20];
             struct os_mbuf *txom;
             while(heartbeat_running) {
@@ -77,6 +74,7 @@ namespace BLE {
         }
 
         void create_heartbeat_task() {
+            std::printf("BLE::Server::create_heartbeat_task\n");
             if(heartbeat_running == true) {
                 return;
             }
@@ -85,6 +83,7 @@ namespace BLE {
         }
 
         static int gap_event_cb(struct ble_gap_event *event, void *arg) {
+            std::printf("BLE::Server::gap_event_cb\n");
             struct ble_gap_conn_desc desc;
             int rc;
             switch(event->type) {
@@ -122,7 +121,6 @@ namespace BLE {
                 } */ 
 
                 //state_machine.change_to_state(static_cast<const States::bState*>(&States::disconnect));
-                advertise();
                 break;
 
             case BLE_GAP_EVENT_CONN_UPDATE:
@@ -184,6 +182,7 @@ namespace BLE {
         }
 
         static int gatt_svr_chr_write(struct os_mbuf *om, uint16_t min_len, uint16_t max_len, void *dst, uint16_t *len) {
+            std::printf("BLE::Server::gatt_svr_chr_write\n");
             uint16_t om_len;
             int rc;
 
@@ -206,6 +205,7 @@ namespace BLE {
             struct ble_gatt_access_ctxt *ctxt,
             void *arg
         ) {
+            std::printf("BLE::Server::body_composition_feature_characteristic_access_cb\n");
             int rc;
             struct os_mbuf *txom;
             std::optional<const Magic::Packets::Packet_T *> received_packet_pointer;
@@ -244,23 +244,15 @@ namespace BLE {
         }
 
         void advertise() {
-            static constexpr ble_gap_adv_params adv_params {
-                .conn_mode = BLE_GAP_CONN_MODE_UND,
-                .disc_mode = BLE_GAP_DISC_MODE_GEN,
-                .itvl_min = 0,
-                .itvl_max = 0,
-                .channel_map = 0,
-                .filter_policy = 0,
-                .high_duty_cycle = 0,
-            };
-
+            std::printf("BLE::Server::advertise\n");
             static constexpr ble_uuid16_t uuids16 {
                 .u = BLE_UUID_TYPE_16,
                 .value = PROFILE_BODY_COMPOSITION_UUID,
             };
 
             static constexpr uint8_t name[] { 'n', 'i', 'm', 'b', 'l', 'e' };
-            static constexpr ble_hs_adv_fields adv_fields = {
+
+            constexpr ble_hs_adv_fields adv_fields {
                 .flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP,
                 .uuids16 = &uuids16,
                 .num_uuids16 = 1,
@@ -296,6 +288,17 @@ namespace BLE {
             };
 
             Trielo::trielo<&ble_gap_adv_set_fields>(Trielo::OkErrCode(0), &adv_fields);
+
+            constexpr ble_gap_adv_params adv_params {
+                .conn_mode = BLE_GAP_CONN_MODE_UND,
+                .disc_mode = BLE_GAP_DISC_MODE_GEN,
+                .itvl_min = 0,
+                .itvl_max = 0,
+                .channel_map = 0,
+                .filter_policy = 0,
+                .high_duty_cycle = 0,
+            };
+
             Trielo::trielo<&ble_gap_adv_start>(
                 Trielo::OkErrCode(0),
                 own_addr_type,
@@ -308,17 +311,18 @@ namespace BLE {
         }
 
         void reset_cb(int reason) {
-            std::cout << "BLE resetting: '" << reason << "'\n";
+            std::printf("BLE::Server::reset_cb: reason: %d\n", reason);
         }
 
         static void sync_cb() {
+            std::printf("BLE::Server::sync_cb\n");
             /* Generate a non-resolvable private address. */
-            Trielo::trielo<set_addr>();
-            /* Advertise indefinitely. */
-            Trielo::trielo<advertise>();
+            Trielo::trielo<&ble_hs_util_ensure_addr>(Trielo::OkErrCode(0), 0);
+            Trielo::trielo<&ble_hs_id_infer_auto>(Trielo::OkErrCode(0), 0, &own_addr_type);
         }
 
         void gatt_register_cb(ble_gatt_register_ctxt *ctxt, void *arg) {
+            std::printf("BLE::Server::gatt_register_cb\n");
             char buf[BLE_UUID_STR_LEN];
 
             switch(ctxt->op) {
@@ -354,18 +358,19 @@ namespace BLE {
             struct ble_gatt_access_ctxt *ctxt,
             void *arg
         ) {
+            std::printf("BLE::Server::body_composition_measurement_characteristic_access_cb\n");
             /* Is supposed to be empty because no write or read access only notify and indicate */
             return 0;
         }
 
         void task_cb(void *param) {
-            //ESP_LOGI(tag, "BLE Host Task Started");
-            /* This function will return only when nimble_port_stop() is executed */
+            std::printf("BLE::Server::task_cb\n");
             Trielo::trielo<nimble_port_run>();
             Trielo::trielo<nimble_port_freertos_deinit>();
         }
 
         void run() {
+            std::printf("BLE::Server::run\n");
             esp_err_t ret = Trielo::trielo<nvs_flash_init>(Trielo::OkErrCode(ESP_OK));
             if(ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
                 Trielo::trielo<nvs_flash_erase>(Trielo::OkErrCode(ESP_OK));
@@ -384,19 +389,23 @@ namespace BLE {
             Trielo::trielo<ble_svc_gap_init>();
             Trielo::trielo<ble_svc_gatt_init>();
 
-            static constexpr ble_uuid16_t body_composition_feature_characteristic_uuid {
-                .u = BLE_UUID_TYPE_16,
-                .value = CHARACTERISTIC_BODY_COMPOSITION_FEATURE_UUID
+            static constexpr ble_uuid_any_t body_composition_feature_characteristic_uuid {
+                .u16 = {
+                    .u = BLE_UUID_TYPE_16,
+                    .value = CHARACTERISTIC_BODY_COMPOSITION_FEATURE_UUID
+                },
             };
 
-            static constexpr ble_uuid16_t body_composition_measurement_characteristic_uuid {
-                .u = BLE_UUID_TYPE_16,
-                .value = CHARACTERISTIC_BODY_COMPOSITION_MEASUREMENT_UUID
+            static constexpr ble_uuid_any_t body_composition_measurement_characteristic_uuid {
+                .u16 = {
+                    .u = BLE_UUID_TYPE_16,
+                    .value = CHARACTERISTIC_BODY_COMPOSITION_MEASUREMENT_UUID
+                }
             };
 
             // Initialize your characteristic definition.
-            static constinit const ble_gatt_chr_def body_composition_feature_characteristic {
-                .uuid = reinterpret_cast<const ble_uuid_t*>(&body_composition_feature_characteristic_uuid),
+            static constexpr ble_gatt_chr_def body_composition_feature_characteristic {
+                .uuid = &body_composition_feature_characteristic_uuid.u,
                 .access_cb = body_composition_feature_characteristic_access_cb,
                 .arg = nullptr,  // Replace with your actual argument.
                 .descriptors = nullptr,
@@ -406,8 +415,8 @@ namespace BLE {
             };
 
             // Initialize your characteristic definition.
-            static constinit const ble_gatt_chr_def body_composition_measurement_characteristic {
-                .uuid = reinterpret_cast<const ble_uuid_t*>(&body_composition_measurement_characteristic_uuid),
+            static constexpr ble_gatt_chr_def body_composition_measurement_characteristic {
+                .uuid = &body_composition_measurement_characteristic_uuid.u,
                 .access_cb = body_composition_measurement_characteristic_access_cb,
                 .arg = nullptr,  // Replace with your actual argument.
                 .descriptors = nullptr,
@@ -416,35 +425,33 @@ namespace BLE {
                 .val_handle = &body_composition_measurement_characteristic_handle,  // The value handle will be filled in at registration time.
             };
 
-            static constexpr ble_uuid16_t body_composition_service_uuid {
-                .u = BLE_UUID_TYPE_16,
-                .value = 0x181B
+            static constexpr ble_uuid_any_t body_composition_service_uuid {
+                .u16 = {
+                    .u = BLE_UUID_TYPE_16,
+                    .value = 0x181B
+                }
             };
 
-            static const ble_gatt_chr_def body_composition_service_characteristics[] { 
+            static constexpr ble_gatt_chr_def body_composition_service_characteristics[] { 
                 body_composition_feature_characteristic,
                 body_composition_measurement_characteristic,
                 { nullptr, nullptr, nullptr, nullptr, 0, 0, nullptr },
-                //{0},
             };
 
-            static constinit const ble_gatt_svc_def body_composition_service {
+            static constexpr ble_gatt_svc_def body_composition_service {
                 .type = BLE_GATT_SVC_TYPE_PRIMARY,  // Or BLE_GATT_SVC_TYPE_SECONDARY.
-                .uuid = reinterpret_cast<const ble_uuid_t*>(&body_composition_service_uuid),
+                .uuid = &body_composition_service_uuid.u,
                 .includes = nullptr,  // If there are no included services.
                 .characteristics = body_composition_service_characteristics,
             };
 
-            static const ble_gatt_svc_def gatt_services[] {
+            static constexpr ble_gatt_svc_def gatt_services[] {
                 body_composition_service,
                 { 0, nullptr, nullptr, nullptr },
-                //{0},
             };
 
             Trielo::trielo<ble_gatts_count_cfg>(Trielo::OkErrCode(0), gatt_services);
             Trielo::trielo<&ble_gatts_add_svcs>(Trielo::OkErrCode(0), gatt_services);
-        
-            //ble_svc_gap_device_name_set("nimble-ble"); //!! Set the name of this device
             Trielo::trielo<ble_att_set_preferred_mtu>(Trielo::OkErrCode(0), 23);
             Trielo::trielo<nimble_port_freertos_init>(task_cb);
         }

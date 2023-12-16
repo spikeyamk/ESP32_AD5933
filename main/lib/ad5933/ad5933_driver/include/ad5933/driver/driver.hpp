@@ -12,19 +12,20 @@
 
 namespace AD5933 {
     extern const char* namespace_name;
-    constexpr size_t REG_COUNT = 19;
-    constexpr size_t RW_REG_COUNT = static_cast<size_t>(static_cast<uint8_t>(RegAddrs::RW::SetCyclesLB) - static_cast<uint8_t>(RegAddrs::RW::ControlHB) + 1);
     constexpr uint8_t SLAVE_ADDRESS = 0x0D; 
-    enum class CommandCodes {
-		BlockWrite     = 0b1010'0000,
-		BlockRead      = 0b1010'0001,
-		AddressPointer = 0b1011'0000,
-    };
 
-    class Driver : public I2C::Device<RegAddrs::RW, RegAddrs::RW_RO, REG_COUNT> {
+    class Driver : public I2C::Device<RegAddrs::RW, RegAddrs::RW_RO, 19> {
     private:
+        static constexpr size_t REG_COUNT = 19;
+        static constexpr size_t RW_REG_COUNT = static_cast<size_t>(static_cast<uint8_t>(RegAddrs::RW::SetCyclesLB) - static_cast<uint8_t>(RegAddrs::RW::ControlHB) + 1);
         static constexpr char class_name[] = "Driver::";
+        enum class CommandCodes {
+            BlockWrite     = 0b1010'0000,
+            BlockRead      = 0b1010'0001,
+            AddressPointer = 0b1011'0000,
+        };
     public:
+        Driver() = delete;
         Driver(const i2c_master_dev_handle_t device_handle);
         bool write_to_register_address_pointer(const RegAddrs::RW_RO register_address) const;
 
@@ -155,31 +156,7 @@ namespace AD5933 {
 
         bool program_all_registers(const std::array<uint8_t, RW_REG_COUNT> &message) const;
         void print_all_registers() const;
-    private:
-        bool register_set_mask(const RegAddrs::RW reg, const uint8_t set_mask, const std::bitset<8> clear_mask) const;
-    public:
-        bool set_command(Masks::Or::Ctrl::HB::Command or_mask) const;
-        bool has_status_condition(Masks::Or::Status or_mask) const;
-        std::optional<std::array<uint8_t, 2>> read_temperature_data() const;
-        std::optional<std::array<uint8_t, 4>> read_impedance_data() const;
 
-        /*
-        bool set_voltage_range(Masks::Or::Ctrl::HB::VoltageRange or_mask) const {
-            return register_set_mask(RegAddrs::RW::ControlHB, static_cast<uint8_t>(or_mask), Masks::And::Ctrl::HB::VoltageRange);
-        }
-
-        bool set_pga_gain(Masks::Or::Ctrl::HB::PGA_Gain or_mask) const {
-            return register_set_mask(RegAddrs::RW::ControlHB, static_cast<uint8_t>(or_mask), Masks::And::Ctrl::HB::PGA_Gain);
-        }
-
-        bool set_sysclk_src(Masks::Or::Ctrl::LB::SysClkSrc or_mask) const {
-            return register_set_mask(RegAddrs::RW::ControlLB, static_cast<uint8_t>(or_mask), Masks::And::Ctrl::LB::SysClkSrc);
-        }
-
-        bool set_settling_time_cycles_multiplier(Masks::Or::SettlingTimeCyclesHB::Multiplier or_mask) const {
-            return register_set_mask(RegAddrs::RW::SetCyclesHB, static_cast<uint8_t>(or_mask), Masks::And::SettlingTimeCyclesHB::Multiplier);
-        }
-        */
     public:
         friend std::ostream& operator<<(std::ostream &os, const Driver &driver) {
             os << reinterpret_cast<const void*>(&driver);

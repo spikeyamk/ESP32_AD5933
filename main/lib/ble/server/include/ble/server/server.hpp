@@ -4,5 +4,6 @@ namespace BLE {
     namespace Server {
         void run();
         void advertise();
+        void stop();
     }
 }

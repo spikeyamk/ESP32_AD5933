@@ -3,7 +3,9 @@
 cmake_minimum_required(VERSION 3.16)
 
 set(EXTRA_COMPONENT_DIRS
-    "main/lib/external"
+    "main/lib/ble"
+    "main/lib/ad5933"
+    "main/lib"
     "common"
     "common/ad5933"
 )

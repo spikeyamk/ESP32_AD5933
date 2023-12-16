@@ -43,39 +43,4 @@ namespace AD5933 {
             });
         }
     }
-
-    bool Driver::has_status_condition(Masks::Or::Status or_mask) const {
-        const auto ret = read_register(RegAddrs::RW_RO::Status);
-        if(ret.has_value() == false) {
-            return false;
-        }
-        if((ret.value() & static_cast<uint8_t>(or_mask)) == static_cast<uint8_t>(or_mask)) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    bool Driver::set_command(Masks::Or::Ctrl::HB::Command or_mask) const {
-        return register_set_mask(RegAddrs::RW::ControlHB, static_cast<uint8_t>(or_mask), Masks::And::Ctrl::HB::Command);
-    }
-
-    bool Driver::register_set_mask(const RegAddrs::RW reg, const uint8_t set_mask, const std::bitset<8> clear_mask) const {
-        const auto ret = read_register(RegAddrs::RW_RO(static_cast<uint8_t>(reg)));
-        if(ret.has_value() == false) {
-            return false;
-        }
-        uint8_t message = ret.value();
-        message &= static_cast<uint8_t>(~clear_mask.to_ulong());
-        message |= set_mask;
-        return write_to_register(reg, message);
-    }
-
-    std::optional<std::array<uint8_t, 2>> Driver::read_temperature_data() const {
-        return block_read_register<2, RegAddrs::RW_RO::TempDataHB>();
-    }
-
-    std::optional<std::array<uint8_t, 4>> Driver::read_impedance_data() const {
-        return block_read_register<4, RegAddrs::RW_RO::RealDataHB>();
-    }
 }
