@@ -45,7 +45,7 @@ namespace BLE {
                 nimble_sm.process_event(Events::Debug::program_all_registers{});
                 assert(nimble_sm.is(sml::state<States::debug>));
 
-                nimble_sm.process_event(Events::Debug::ctrlHB_command{ 0xFF });
+                nimble_sm.process_event(Events::Debug::command{ 0xFF });
                 assert(nimble_sm.is(sml::state<States::debug>));
 
                 nimble_sm.process_event(Events::Debug::end{});

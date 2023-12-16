@@ -43,7 +43,7 @@ void run_foo() {
 		nimble_sm.process_event(NimBLE::Events::Debug::program_all_registers{});
 		assert(nimble_sm.is(sml::state<NimBLE::States::debug>));
 
-		nimble_sm.process_event(NimBLE::Events::Debug::ctrlHB_command{});
+		nimble_sm.process_event(NimBLE::Events::Debug::command{});
 		assert(nimble_sm.is(sml::state<NimBLE::States::debug>));
 
 		nimble_sm.process_event(NimBLE::Events::Debug::end{});

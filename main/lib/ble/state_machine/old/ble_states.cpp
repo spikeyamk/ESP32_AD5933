@@ -167,6 +167,7 @@ namespace StateFunctions {
 			state_machine.change_to_state(&States::disconnect);
 			vTaskDelete(nullptr);
 		}
+
 		if(AD5933_Tests::ad5933.load()->set_control_command(AD5933::ControlHB::Commands::INITIALIZE_WITH_START_FREQUENCY) == false) {
 			std::cout << "ERROR: BLE_STATE_MACHINE: start_frequency_sweep_simple: failed to AD5933_Tests::ad5933.load()->set_control_command(AD5933::ControlHB::Commands::INITIALIZE_WITH_START_FREQUENCY) == false" << std::endl;
 			state_machine.change_to_state(&States::disconnect);

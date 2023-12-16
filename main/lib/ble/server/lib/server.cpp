@@ -39,7 +39,7 @@ namespace BLE {
         const uint8_t SERVICE_BODY_COMPOSITION_UUID[2] = { 0x18, 0x1B };
         static uint8_t own_addr_type;
         static uint16_t body_composition_feature_characteristic_handle;
-        uint16_t conn_handle = 0;
+        static uint16_t conn_handle = 0;
         uint16_t body_composition_measurement_characteristic_handle = 0;
         //static uint16_t body_composition_measurement_characteristic_handle;
         std::atomic<bool> heartbeat_running = false;
@@ -369,6 +369,7 @@ namespace BLE {
             Trielo::trielo<nimble_port_freertos_deinit>();
         }
 
+        //void run(BLE::T_StateMachine &state_machine) {
         void run() {
             std::printf("BLE::Server::run\n");
             esp_err_t ret = Trielo::trielo<nvs_flash_init>(Trielo::OkErrCode(ESP_OK));
@@ -454,6 +455,24 @@ namespace BLE {
             Trielo::trielo<&ble_gatts_add_svcs>(Trielo::OkErrCode(0), gatt_services);
             Trielo::trielo<ble_att_set_preferred_mtu>(Trielo::OkErrCode(0), 23);
             Trielo::trielo<nimble_port_freertos_init>(task_cb);
+        }
+    }
+
+    namespace Server {
+        bool notify(const Magic::Packets::Packet_T &message) {
+            struct os_mbuf *txom = ble_hs_mbuf_from_flat(message.data(), message.size());
+            if(txom == nullptr) {
+    		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ");
+                std::cout << "BLE::Servernotify: failed to ble_hs_mbuf_from_flat\n";
+                return false;
+            }
+            if(ble_gatts_notify_custom(conn_handle, body_composition_measurement_characteristic_handle, txom) == 0) {
+                return true;
+            } else {
+    		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ");
+                std::cout << "BLE::Server::notify: failed to ble_gatts_notify_custom\n";
+                return false;
+            }
         }
     }
 }

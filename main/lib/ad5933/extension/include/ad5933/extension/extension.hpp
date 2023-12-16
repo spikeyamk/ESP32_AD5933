@@ -11,8 +11,9 @@
 namespace AD5933 {
     class Extension {
     private:
-        Driver& driver;
     public:
+        Driver& driver;
+
         Extension() = delete;
         Extension(Driver &driver);
 

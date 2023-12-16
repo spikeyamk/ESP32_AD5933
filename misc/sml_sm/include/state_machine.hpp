@@ -38,7 +38,7 @@ namespace NimBLE {
 			struct dump_all_registers {};
 			struct program_all_registers {};
 			struct ctrlHB_command {
-				uint8_t ctrlHB_command_or_mask;
+				uint8_t mask;
             };
 		}
 
@@ -88,7 +88,7 @@ namespace NimBLE {
 			}
 
 			static void ctrlHB_command(const Events::Debug::ctrlHB_command &event) {
-				std::cout << namespace_name << "ctrlHB_command: " << static_cast<int>(event.ctrlHB_command_or_mask) << "\n";
+				std::cout << namespace_name << "ctrlHB_command: " << static_cast<int>(event.mask) << "\n";
 			}
 		}
 
