@@ -1,32 +1,34 @@
 #pragma once
 
+#include <iostream>
 #include <cstdint>
 #include <array>
 #include <optional>
+#include <span>
 
 #include "i2c/device.hpp"
-#include "ad5933/register_addrs.hpp"
+#include "ad5933/reg_addrs/reg_addrs.hpp"
+#include "ad5933/masks/masks.hpp"
 
 namespace AD5933 {
     extern const char* namespace_name;
     constexpr size_t REG_COUNT = 19;
-    constexpr size_t RW_REG_COUNT = static_cast<size_t>(static_cast<uint8_t>(RegsRW_RO::SetCyclesLB) - static_cast<uint8_t>(RegsRW_RO::ControlHB) + 1);
+    constexpr size_t RW_REG_COUNT = static_cast<size_t>(static_cast<uint8_t>(RegAddrs::RW::SetCyclesLB) - static_cast<uint8_t>(RegAddrs::RW::ControlHB) + 1);
     constexpr uint8_t SLAVE_ADDRESS = 0x0D; 
-	constexpr uint32_t POW_2_27 = 134217728ul;
     enum class CommandCodes {
 		BlockWrite     = 0b1010'0000,
 		BlockRead      = 0b1010'0001,
 		AddressPointer = 0b1011'0000,
     };
 
-    class Driver : public I2C::Device<RegsRW, RegsRW_RO, REG_COUNT> {
+    class Driver : public I2C::Device<RegAddrs::RW, RegAddrs::RW_RO, REG_COUNT> {
     private:
         static constexpr char class_name[] = "Driver::";
     public:
-        Driver(I2C::Bus &bus, const i2c_master_dev_handle_t device_handle);
-        bool write_to_register_address_pointer(const RegsRW_RO register_address) const;
+        Driver(const i2c_master_dev_handle_t device_handle);
+        bool write_to_register_address_pointer(const RegAddrs::RW_RO register_address) const;
 
-        virtual std::optional<uint8_t> read_register(const RegsRW_RO reg) const override {
+        virtual std::optional<uint8_t> read_register(const RegAddrs::RW_RO reg) const override {
             if(write_to_register_address_pointer(reg) == false) {
                 return std::nullopt;
             }
@@ -45,8 +47,13 @@ namespace AD5933 {
             return read_buffer;
         }
 
-        template<size_t n_bytes>
-        std::optional<std::array<uint8_t, n_bytes>> block_read_register(const RegsRW_RO reg) const {
+        template<size_t n_bytes, RegAddrs::RW_RO reg>
+        std::optional<std::array<uint8_t, n_bytes>> block_read_register() const {
+            static_assert((n_bytes > 1) && (n_bytes <= 12));
+            static_assert(
+                (((n_bytes + static_cast<size_t>(reg) - 1) <= static_cast<size_t>(RegAddrs::RW_RO::SetCyclesLB))
+                || (n_bytes + static_cast<size_t>(reg) - 1) <= static_cast<size_t>(RegAddrs::RW_RO::ImagDataLB))
+                , "invalid range");
             if(write_to_register_address_pointer(reg) == false) {
                 return std::nullopt;
             }
@@ -69,18 +76,18 @@ namespace AD5933 {
         }
 
         virtual std::optional<std::array<uint8_t, REG_COUNT>> dump_all_registers() const override {
-            const auto rw_ret = block_read_register<RW_REG_COUNT>(RegsRW_RO::ControlHB);
+            const auto rw_ret = block_read_register<RW_REG_COUNT, RegAddrs::RW_RO::ControlHB>();
             if(rw_ret.has_value() == false) {
                 return std::nullopt;
             }
 
-            const auto status_ret = read_register(RegsRW_RO::Status);
+            const auto status_ret = read_register(RegAddrs::RW_RO::Status);
             if(status_ret.has_value() == false) {
                 return std::nullopt;
             }
 
-            constexpr auto ro_n_bytes = static_cast<size_t>(static_cast<uint8_t>(RegsRW_RO::ImagDataLB) - static_cast<uint8_t>(RegsRW_RO::TempDataHB) + 1);
-            const auto ro_ret = block_read_register<ro_n_bytes>(RegsRW_RO::TempDataHB);
+            constexpr auto ro_n_bytes = static_cast<size_t>(static_cast<uint8_t>(RegAddrs::RW_RO::ImagDataLB) - static_cast<uint8_t>(RegAddrs::RW_RO::TempDataHB) + 1);
+            const auto ro_ret = block_read_register<ro_n_bytes, RegAddrs::RW_RO::TempDataHB>();
             if(ro_ret.has_value() == false) {
                 return std::nullopt;
             }
@@ -92,10 +99,38 @@ namespace AD5933 {
             return ret_array;
         }
 
-        template<size_t n_bytes>
-        bool block_write_to_register(const RegsRW reg, const std::array<uint8_t, n_bytes> &message) const {
+        template<size_t n_bytes, RegAddrs::RW reg>
+        bool block_write_to_register(const std::array<uint8_t, n_bytes> &message) const {
+            static_assert((n_bytes > 1) && (n_bytes <= 12));
+            static_assert((n_bytes + static_cast<size_t>(reg) - 1) <= static_cast<size_t>(RegAddrs::RW::SetCyclesLB), "invalid range");
+            if(write_to_register_address_pointer(RegAddrs::RW_RO(static_cast<uint8_t>(reg))) == false) {
+                return false;
+            }
+
+            std::array<uint8_t, n_bytes + 2> write_buffer { 
+                static_cast<uint8_t>(CommandCodes::BlockWrite),
+                static_cast<uint8_t>(message.size())
+            };
+            std::copy(message.begin(), message.end(), write_buffer.begin() + 2);
+            const int xfer_timeout_ms = 100;
+
+            if(i2c_master_transmit(
+                device_handle,
+                write_buffer.data(),
+                write_buffer.size(),
+                xfer_timeout_ms
+            ) == ESP_OK) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        template<size_t n_bytes, RegAddrs::RW reg>
+        bool block_write_to_register(const std::span<uint8_t, n_bytes> &message) const {
             static_assert(n_bytes <= 12, "n_bytes must be less than or equal to 12");
-            if(write_to_register_address_pointer(RegsRW_RO(static_cast<uint8_t>(reg))) == false) {
+            static_assert((n_bytes + static_cast<size_t>(reg) - 1) <= static_cast<size_t>(RegAddrs::RW::SetCyclesLB), "invalid range");
+            if(write_to_register_address_pointer(RegAddrs::RW_RO(static_cast<uint8_t>(reg))) == false) {
                 return false;
             }
 
@@ -120,5 +155,35 @@ namespace AD5933 {
 
         bool program_all_registers(const std::array<uint8_t, RW_REG_COUNT> &message) const;
         void print_all_registers() const;
+    private:
+        bool register_set_mask(const RegAddrs::RW reg, const uint8_t set_mask, const std::bitset<8> clear_mask) const;
+    public:
+        bool set_command(Masks::Or::Ctrl::HB::Command or_mask) const;
+        bool has_status_condition(Masks::Or::Status or_mask) const;
+        std::optional<std::array<uint8_t, 2>> read_temperature_data() const;
+        std::optional<std::array<uint8_t, 4>> read_impedance_data() const;
+
+        /*
+        bool set_voltage_range(Masks::Or::Ctrl::HB::VoltageRange or_mask) const {
+            return register_set_mask(RegAddrs::RW::ControlHB, static_cast<uint8_t>(or_mask), Masks::And::Ctrl::HB::VoltageRange);
+        }
+
+        bool set_pga_gain(Masks::Or::Ctrl::HB::PGA_Gain or_mask) const {
+            return register_set_mask(RegAddrs::RW::ControlHB, static_cast<uint8_t>(or_mask), Masks::And::Ctrl::HB::PGA_Gain);
+        }
+
+        bool set_sysclk_src(Masks::Or::Ctrl::LB::SysClkSrc or_mask) const {
+            return register_set_mask(RegAddrs::RW::ControlLB, static_cast<uint8_t>(or_mask), Masks::And::Ctrl::LB::SysClkSrc);
+        }
+
+        bool set_settling_time_cycles_multiplier(Masks::Or::SettlingTimeCyclesHB::Multiplier or_mask) const {
+            return register_set_mask(RegAddrs::RW::SetCyclesHB, static_cast<uint8_t>(or_mask), Masks::And::SettlingTimeCyclesHB::Multiplier);
+        }
+        */
+    public:
+        friend std::ostream& operator<<(std::ostream &os, const Driver &driver) {
+            os << reinterpret_cast<const void*>(&driver);
+            return os;
+        }
     };
 }

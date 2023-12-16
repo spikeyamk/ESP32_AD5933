@@ -52,6 +52,17 @@ namespace AD5933 {
                     FourTimes  = 0b0000'0110u,
                 };
             } 
+
+            enum class Status {
+                NoStatus = 0b00000000,
+                ValidTemp = 0b00000001,
+                ValidData = 0b00000010,
+                ValidDataAndValidTemp = 0b00000011,
+                FreqSweepComplete = 0b00000100,
+                FreqSweepCompleteAndValidTemp = 0b00000101,
+                FreqSweepCompleteAndValidData = 0b00000110,
+                FreqSweepCompleteAndValidDataAndValidTemp = 0b00000111,
+            };
         }
        
         namespace And {

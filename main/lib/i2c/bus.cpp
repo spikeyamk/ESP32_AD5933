@@ -2,8 +2,6 @@
 
 #include "esp_log.h"
 
-#include "i2c/i2c.hpp"
-
 #include "i2c/bus.hpp"
 
 namespace I2C {

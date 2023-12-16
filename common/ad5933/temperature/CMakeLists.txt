@@ -1,6 +1,6 @@
 if(ESP_PLATFORM)
 	idf_component_register(SRCS
-						   "lib/calibration.cpp"
+						   "lib/temperature.cpp"
                        	   INCLUDE_DIRS "include"
 	)
 else()

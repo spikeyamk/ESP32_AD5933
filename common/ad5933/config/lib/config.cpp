@@ -1,7 +1,7 @@
 
 #include <iostream>
 
-#include "ad5933/config/maps.hpp"
+#include "ad5933/masks/maps.hpp"
 
 #include "ad5933/config/config.hpp"
 

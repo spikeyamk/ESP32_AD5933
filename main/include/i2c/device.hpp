@@ -10,26 +10,17 @@
 
 #include "i2c/bus.hpp"
 
-#include "i2c/register_addr.hpp"
-
 namespace I2C {
     template<typename RegRW_T, typename RegRW_RO_T, size_t reg_count>
     class Device {
     public:
         static constexpr char class_name[] = "Device::";
         const uint16_t slave_addr;
-        Bus& bus;
         const i2c_master_dev_handle_t device_handle;
-        Device(const uint16_t slave_addr, Bus &bus, const i2c_master_dev_handle_t device_handle) :
+        Device(const uint16_t slave_addr, const i2c_master_dev_handle_t device_handle) :
             slave_addr{slave_addr},
-            bus{bus},
             device_handle{device_handle}
         {}
-
-        ~Device() {
-            std::printf("%s%s~Device: Removing slave device on addr: 0x%02X\n", namespace_name, class_name, slave_addr);
-            bus.device_remove(slave_addr);
-        }
 
         virtual std::optional<uint8_t> read_register(const RegRW_RO_T reg) const {
             uint8_t read_buffer;

@@ -1,9 +1,8 @@
 if(ESP_PLATFORM)
 	idf_component_register(SRCS
 						   "lib/config.cpp"
-						   "lib/maps.cpp"
-						   "lib/masks.cpp"
                        	   INCLUDE_DIRS "include"
+						   REQUIRES reg_types uint_types masks
 	)
 else()
 	cmake_minimum_required(VERSION 3.13)
@@ -18,19 +17,20 @@ else()
 
 	set(AD5933_CONFIG_SRCS
 		lib/config.cpp
-		lib/maps.cpp
-		lib/masks.cpp
 	)
 
 	set(AD5933_REG_TYPES_DIR ${CMAKE_CURRENT_LIST_DIR}/../reg_types)
 	set(AD5933_UINT_TYPES_DIR ${CMAKE_CURRENT_LIST_DIR}/../uint_types)
+	set(AD5933_MASKS_DIR ${CMAKE_CURRENT_LIST_DIR}/../masks)
 
 	add_subdirectory(${AD5933_REG_TYPES_DIR} {CMAKE_BINARY_DIR}/reg_types)
 	add_subdirectory(${AD5933_UINT_TYPES_DIR} {CMAKE_BINARY_DIR}/uint_types)
+	add_subdirectory(${AD5933_MASKS_DIR} {CMAKE_BINARY_DIR}/masks)
 
 	set(AD5933_CONFIG_LINK_LIBS
 		AD5933_reg_types
 		AD5933_uint_types
+		AD5933_masks
 	)
 
 	option(AD5933_CONFIG_TEST "Enable AD5933::Config Tests" OFF)

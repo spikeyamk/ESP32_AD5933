@@ -1,16 +1,8 @@
-#include "ad5933/config/maps.hpp"
+#include "ad5933/masks/maps.hpp"
 
 namespace AD5933 {
     namespace Masks {
-        template<typename T_Enum, typename T_Map>
-        const char* get_map_str(const T_Enum e, const T_Map &map) {
-            for(const auto &i: map) {
-                if(i.first == e) {
-                    return i.second;
-                }
-            }
-            return nullptr;
-        }
+
     }
 }
 

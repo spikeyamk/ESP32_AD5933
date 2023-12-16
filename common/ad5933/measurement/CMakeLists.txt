@@ -1,7 +1,8 @@
 if(ESP_PLATFORM)
 	idf_component_register(SRCS
-						   "lib/calibration.cpp"
+						   "lib/measurement.cpp"
                        	   INCLUDE_DIRS "include"
+						   REQUIRES data calibration
 	)
 else()
 	cmake_minimum_required(VERSION 3.13)

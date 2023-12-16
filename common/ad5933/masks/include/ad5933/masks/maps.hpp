@@ -4,7 +4,7 @@
 #include <array>
 #include <utility>
 
-#include "ad5933/config/masks.hpp"
+#include "ad5933/masks/masks.hpp"
 
 namespace AD5933 {
     namespace Masks {
@@ -59,6 +59,30 @@ namespace AD5933 {
                     MultiplierPair{ Multiplier::Reserved, "Reserved" },
                 };
             }
+
+            using StatusPair = std::pair<Status, const char*>;
+            constexpr std::array<StatusPair, 8> status_map {
+                StatusPair{ Status::NoStatus, "NoStatus" },
+                StatusPair{ Status::ValidTemp, "ValidTemp" },
+                StatusPair{ Status::ValidData, "ValidData" },
+                StatusPair{ Status::ValidDataAndValidTemp, "ValidDataAndValidTemp" },
+                StatusPair{ Status::FreqSweepComplete, "FreqSweepComplete" },
+                StatusPair{ Status::FreqSweepCompleteAndValidTemp, "FreqSweepCompleteAndValidTemp" },
+                StatusPair{ Status::FreqSweepCompleteAndValidData, "FreqSweepCompleteAndValidData" },
+                StatusPair{ Status::FreqSweepCompleteAndValidDataAndValidTemp, "FreqSweepCompleteAndValidDataAndValidTemp" },
+            };
+        }
+    }
+
+    namespace Masks {
+        template<typename T_Enum, typename T_Map>
+        const char* get_map_str(const T_Enum e, const T_Map &map) {
+            for(const auto &i: map) {
+                if(i.first == e) {
+                    return i.second;
+                }
+            }
+            return nullptr;
         }
     }
 }
