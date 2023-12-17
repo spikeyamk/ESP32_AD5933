@@ -15,8 +15,9 @@ namespace I2C {
     class Device {
     public:
         static constexpr char class_name[] = "Device::";
-        const uint16_t slave_addr;
-        const i2c_master_dev_handle_t device_handle;
+        const uint16_t slave_addr = 0;
+        i2c_master_dev_handle_t device_handle = nullptr;
+        Device() = default;
         Device(const uint16_t slave_addr, const i2c_master_dev_handle_t device_handle) :
             slave_addr{slave_addr},
             device_handle{device_handle}

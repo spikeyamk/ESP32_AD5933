@@ -6,6 +6,7 @@
 #include <atomic>
 #include <array>
 #include <cstdint>
+#include <variant>
 
 #include "nvs_flash.h"
 #include "nimble/nimble_port.h"
@@ -20,6 +21,11 @@
 
 #include "ble/server/server.hpp"
 #include "magic/packets.hpp"
+
+#include "ad5933/driver/driver.hpp"
+#include "ad5933/extension/extension.hpp"
+#include "ble/server/sender.hpp"
+#include "ble/server/server.hpp"
 
 namespace BLE {
     namespace Server {
@@ -43,10 +49,60 @@ namespace BLE {
         uint16_t body_composition_measurement_characteristic_handle = 0;
         //static uint16_t body_composition_measurement_characteristic_handle;
         std::atomic<bool> heartbeat_running = false;
-        std::optional<Magic::Packets::Packet_T> received_packet = std::nullopt;
 
         char characteristic_received_value[500] { 0x00 };
+    }
 
+    namespace Server {
+        Server::Sender sender {};
+        AD5933::Driver dummy_driver {};
+        AD5933::Extension dummy_extension {dummy_driver};
+        std::atomic<bool> processing = false;
+        T_StateMachine dummy_state_machine { sender, dummy_extension, processing };
+    }
+
+    class Decoder {
+    private:
+        using T_Variant = std::variant<
+            Events::disconnect,
+            Events::Debug::start,
+            Events::Debug::program,
+            Events::Debug::command,
+            Events::Debug::dump,
+            Events::Debug::end,
+            Events::FreqSweep::configure,
+            Events::FreqSweep::start,
+            Events::FreqSweep::end
+        >;
+ 
+        using T_Pair = std::pair<Magic::Packets::Packet_T, T_Variant>;
+        static constexpr std::array<T_Pair, 8> jump_info {
+            T_Pair{ Magic::Packets::Debug::start, Events::Debug::start{} },
+            T_Pair{ Magic::Packets::Debug::dump_all_registers, Events::Debug::dump{} },
+            T_Pair{ Magic::Packets::Debug::program_all_registers, Events::Debug::program{} },
+            T_Pair{ Magic::Packets::Debug::control_HB_command, Events::Debug::command{} },
+
+            T_Pair{ Magic::Packets::FrequencySweep::configure, Events::FreqSweep::configure{} },
+            T_Pair{ Magic::Packets::FrequencySweep::start, Events::FreqSweep::start{} },
+            T_Pair{ Magic::Packets::FrequencySweep::stop_frequency_sweep, Events::FreqSweep::end{} },
+        };
+    public:
+        constexpr Decoder() = default;
+        T_Variant find_event(const Magic::Packets::Packet_T &packet) const {
+            size_t i = 0;
+            for(const auto &j: jump_info) {
+                if(j.first == packet) {
+                    std::printf("BLE::Decoder::find_event: found something: i: %zu\n", i);
+                    return j.second;
+                }
+                i++;
+            }
+            std::printf("BLE::Decoder::find_event: found nothing: i: %zu\n", i);
+            return Events::disconnect{};
+        }
+    };
+
+    namespace Server {
         void stop() {//! Call this function to stop BLE 
             std::printf("BLE::Server::stop\n");
             //! Below is the sequence of APIs to be called to disable/deinit NimBLE host and ESP controller:
@@ -82,6 +138,12 @@ namespace BLE {
             std::thread(heartbeat_cb).detach();
         }
 
+        static void wakeup_cb() {
+            std::printf("BLE::Server::wakeup_cb\n");
+            std::this_thread::sleep_for(std::chrono::seconds(10));
+            dummy_state_machine.process_event(BLE::Events::wakeup{});
+        }
+
         static int gap_event_cb(struct ble_gap_event *event, void *arg) {
             std::printf("BLE::Server::gap_event_cb\n");
             struct ble_gap_conn_desc desc;
@@ -95,21 +157,19 @@ namespace BLE {
                 if(event->connect.status == 0) {
                     rc = ble_gap_conn_find(event->connect.conn_handle, &desc);
                     assert(rc == 0);
-                    //bleprph_print_conn_desc(&desc);
                 }
                 MODLOG_DFLT(INFO, "\n");
 
                 if(event->connect.status != 0) {
                     /* Connection failed; resume advertising. */
-                    //state_machine.change_to_state(static_cast<const States::bState*>(&States::disconnect));
+                    dummy_state_machine.process_event(BLE::Events::advertise{});
                 }
                 conn_handle = event->connect.conn_handle;
-                //state_machine.change_to_state(static_cast<const States::bState*>(&States::connect));
+                dummy_state_machine.process_event(BLE::Events::connect{});
                 break;
 
             case BLE_GAP_EVENT_DISCONNECT:
                 MODLOG_DFLT(INFO, "disconnect; reason=%d ", event->disconnect.reason);
-                //bleprph_print_conn_desc(&event->disconnect.conn);
                 MODLOG_DFLT(INFO, "\n");
 
                 /* Connection terminated; resume advertising. */
@@ -120,7 +180,7 @@ namespace BLE {
                     heartbeat_thread.value().join();
                 } */ 
 
-                //state_machine.change_to_state(static_cast<const States::bState*>(&States::disconnect));
+                dummy_state_machine.process_event(BLE::Events::disconnect{});
                 break;
 
             case BLE_GAP_EVENT_CONN_UPDATE:
@@ -129,7 +189,6 @@ namespace BLE {
                             event->conn_update.status);
                 rc = ble_gap_conn_find(event->conn_update.conn_handle, &desc);
                 assert(rc == 0);
-                //bleprph_print_conn_desc(&desc);
                 MODLOG_DFLT(INFO, "\n");
                 break;
 
@@ -142,7 +201,14 @@ namespace BLE {
                     heartbeat_running = false;
                     heartbeat_thread.value().join();
                 } */
-                //state_machine.change_to_state(static_cast<const States::bState*>(&States::advertise));
+                if(event->adv_complete.reason == BLE_HS_ETIMEOUT) {
+                    //std::thread([]() {
+                        //std::thread(wakeup_cb).detach();
+                        //dummy_state_machine.process_event(BLE::Events::sleep{});
+                    //}).detach();
+                    dummy_state_machine.process_event(BLE::Events::sleep{});
+                }
+                dummy_state_machine.process_event(BLE::Events::advertise{});
                 break;
 
             case BLE_GAP_EVENT_SUBSCRIBE:
@@ -208,7 +274,8 @@ namespace BLE {
             std::printf("BLE::Server::body_composition_feature_characteristic_access_cb\n");
             int rc;
             struct os_mbuf *txom;
-            std::optional<const Magic::Packets::Packet_T *> received_packet_pointer;
+            Magic::Packets::Packet_T received_packet { 0x00 };
+            static constexpr Decoder decoder {};
             switch(ctxt->op) {
             case BLE_GATT_ACCESS_OP_WRITE_CHR: //!! In case user accessed this characterstic to write, bellow lines will executed.
                 rc = gatt_svr_chr_write(ctxt->om, 1, 700, &characteristic_received_value, NULL); //!! Function "gatt_svr_chr_write" will fire.
@@ -219,25 +286,11 @@ namespace BLE {
                     }
                     std::printf("0x%02X, ", characteristic_received_value[i]);
                 }
-                //! Use received value in you code. For example
-                //if(std::strlen(characteristic_received_value) == MagicPackets::Debug::Command::start.size()){ commented because strlen not working
-                if(true){
-                    received_packet = Magic::Packets::Packet_T { 0x00 };
-                } else {
-                    received_packet = std::nullopt;
-                }
-                std::memcpy(received_packet.value().data(), reinterpret_cast<uint8_t*>(characteristic_received_value), received_packet.value().size()); 
+                std::memcpy(received_packet.data(), reinterpret_cast<uint8_t*>(characteristic_received_value), received_packet.size()); 
                 std::memset(characteristic_received_value, 0, sizeof(characteristic_received_value));
-                //received_packet_pointer = Magic::Packets::get_magic_packet_pointer(received_packet.value());
-                if(received_packet_pointer.has_value()) {
-                    //state_machine.process_event_data(received_packet_pointer.value());
-                } else {
-                    //state_machine.change_to_state(static_cast<const States::bState*>(&States::disconnect));
-                    // Received buffer gets immediately sent out disabled for debugging
-                    //txom = ble_hs_mbuf_from_flat(characteristic_received_value, strlen(characteristic_received_value));
-                    //ble_gatts_notify_custom(conn_handle, body_composition_measurement_characteristic_handle, txom);
-                }
-
+                std::visit([](auto &&arg) {
+                    dummy_state_machine.process_event(arg);
+                }, decoder.find_event(received_packet));
                 return rc;
             }
             return BLE_ATT_ERR_UNLIKELY;
@@ -252,7 +305,7 @@ namespace BLE {
 
             static constexpr uint8_t name[] { 'n', 'i', 'm', 'b', 'l', 'e' };
 
-            constexpr ble_hs_adv_fields adv_fields {
+            static constexpr ble_hs_adv_fields adv_fields {
                 .flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP,
                 .uuids16 = &uuids16,
                 .num_uuids16 = 1,
@@ -289,7 +342,7 @@ namespace BLE {
 
             Trielo::trielo<&ble_gap_adv_set_fields>(Trielo::OkErrCode(0), &adv_fields);
 
-            constexpr ble_gap_adv_params adv_params {
+            static constexpr ble_gap_adv_params adv_params {
                 .conn_mode = BLE_GAP_CONN_MODE_UND,
                 .disc_mode = BLE_GAP_DISC_MODE_GEN,
                 .itvl_min = 0,
@@ -299,11 +352,13 @@ namespace BLE {
                 .high_duty_cycle = 0,
             };
 
+            //static constexpr int32_t advertising_timeout_ms = BL_HS_FOREVER;
+            static constexpr int32_t advertising_timeout_ms = 60'000;
             Trielo::trielo<&ble_gap_adv_start>(
                 Trielo::OkErrCode(0),
                 own_addr_type,
                 nullptr,
-                BLE_HS_FOREVER,
+                advertising_timeout_ms,
                 &adv_params,
                 &gap_event_cb,
                 nullptr
@@ -369,8 +424,14 @@ namespace BLE {
             Trielo::trielo<nimble_port_freertos_deinit>();
         }
 
-        //void run(BLE::T_StateMachine &state_machine) {
+        void inject(const i2c_master_dev_handle_t handle) {
+            std::printf("BLE::Server::inject\n");
+            dummy_driver.device_handle = handle;
+            dummy_state_machine.process_event(Events::turn_on{});
+        }
+
         void run() {
+            //esp_nimble_hci_and_controller_init();
             std::printf("BLE::Server::run\n");
             esp_err_t ret = Trielo::trielo<nvs_flash_init>(Trielo::OkErrCode(ESP_OK));
             if(ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -455,6 +516,7 @@ namespace BLE {
             Trielo::trielo<&ble_gatts_add_svcs>(Trielo::OkErrCode(0), gatt_services);
             Trielo::trielo<ble_att_set_preferred_mtu>(Trielo::OkErrCode(0), 23);
             Trielo::trielo<nimble_port_freertos_init>(task_cb);
+            dummy_state_machine.process_event(Events::advertise{});
         }
     }
 

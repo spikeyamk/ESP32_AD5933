@@ -14,7 +14,7 @@ namespace AD5933 {
     public:
         Driver& driver;
 
-        Extension() = delete;
+        Extension() = default;
         Extension(Driver &driver);
 
         inline bool set_command(Masks::Or::Ctrl::HB::Command or_mask) const {

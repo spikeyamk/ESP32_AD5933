@@ -56,6 +56,7 @@ namespace Util {
 		bool start(const std::chrono::duration<int, std::milli> &in_blink_time);
 		bool stop();
 		void set_blink_time(const std::chrono::duration<int, std::milli> &in_blink_time);
+		bool is_running() const;
 	private:
 		void toggle_led(const bool led_state);
 		void configure_led();
@@ -87,4 +88,6 @@ namespace Util {
 
 		return result;
 	}
+
+	void restart_button();
 }

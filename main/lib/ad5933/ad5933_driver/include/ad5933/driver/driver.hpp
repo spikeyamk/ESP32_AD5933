@@ -25,7 +25,7 @@ namespace AD5933 {
             AddressPointer = 0b1011'0000,
         };
     public:
-        Driver() = delete;
+        Driver() = default;
         Driver(const i2c_master_dev_handle_t device_handle);
         bool write_to_register_address_pointer(const RegAddrs::RW_RO register_address) const;
 

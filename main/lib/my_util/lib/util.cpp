@@ -14,6 +14,9 @@
 #include "trielo/trielo.hpp"
 #include "freertos/FreeRTOS.h"
 
+#include <inttypes.h>
+#include "driver/gpio.h"
+
 #include "ad5933/driver/driver.hpp"
 
 #include "util.hpp"
@@ -56,6 +59,10 @@ namespace Util {
 
 	void Blinky::set_blink_time(const std::chrono::duration<int, std::milli> &in_blink_time) {
 		blink_time = in_blink_time;
+	}
+
+	bool Blinky::is_running() const {
+		return blink_task_enable;
 	}
 
 	void Blinky::toggle_led(const bool led_state) {
@@ -287,5 +294,17 @@ namespace Util {
 		return ss.str();
 	}
 
+	static void IRAM_ATTR blinky_button_isr_handler(void* arg) {
+		esp_restart();
+	}
+
+	void restart_button() {
+		Trielo::trielo<gpio_set_direction>(Trielo::OkErrCode(ESP_OK), GPIO_NUM_23, GPIO_MODE_INPUT);
+		Trielo::trielo<gpio_set_pull_mode>(Trielo::OkErrCode(ESP_OK), GPIO_NUM_23, GPIO_PULLDOWN_ONLY);
+		Trielo::trielo<gpio_set_intr_type>(Trielo::OkErrCode(ESP_OK), GPIO_NUM_23, GPIO_INTR_POSEDGE);
+		Trielo::trielo<gpio_install_isr_service>(Trielo::OkErrCode(ESP_OK), 0);
+		TRIELO_EQ(ESP_OK, gpio_isr_handler_add(GPIO_NUM_23, blinky_button_isr_handler, nullptr));
+		Trielo::trielo<gpio_intr_enable>(Trielo::OkErrCode(ESP_OK), GPIO_NUM_23);
+	}
 }
 

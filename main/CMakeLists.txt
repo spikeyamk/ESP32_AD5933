@@ -1,6 +1,5 @@
 idf_component_register(SRCS
    "main.cpp"
-   "lib/util.cpp"
    #"ble/state_machine/ble.cpp"
    #"lib/ble/state_machine/state_machine.cpp"
    #"ble/state_machine/states.cpp"

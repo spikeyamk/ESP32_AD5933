@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <chrono>
 #include <thread>
+#include <cctype>
 #include <optional>
 #include <utility>
 #include <atomic>
@@ -92,7 +93,12 @@ std::string Payload::read() {
 }
 
 bool is_peripheral_esp32_ad5933(SimpleBLE::Peripheral &peripheral) {
-    if(peripheral.address() == BLE_ESP_ADDRESS && peripheral.identifier() == BLE_ESP_IDENTIFIER) {
+    const auto to_lower = [](const std::string &string) { 
+        auto ret = string;
+        std::transform(ret.begin(), ret.end(), ret.begin(), [](unsigned char c) { return std::tolower(c); });
+        return ret;
+    };
+    if(to_lower(peripheral.address()) == BLE_ESP_ADDRESS && peripheral.identifier() == BLE_ESP_IDENTIFIER) {
         return true;
     } else {
         return false;
@@ -322,6 +328,8 @@ std::optional<SimpleBLE::Peripheral> find_esp32_ad5933(const bool &done) {
 
     std::optional<SimpleBLE::Peripheral> esp32_ad5933_peripheral = std::nullopt;
     adapter.set_callback_on_scan_found([&](SimpleBLE::Peripheral peripheral) {
+        std::cout << "BLE: Found device\n";
+        std::cout << peripheral;
         if(is_peripheral_esp32_ad5933(peripheral)) {
             std::cout << "BLE: Found ESP32 AD5933\n";
             std::cout << peripheral;
@@ -333,6 +341,8 @@ std::optional<SimpleBLE::Peripheral> find_esp32_ad5933(const bool &done) {
     });
 
     adapter.set_callback_on_scan_updated([&](SimpleBLE::Peripheral peripheral) {
+        std::cout << "BLE: Found device\n";
+        std::cout << peripheral;
         if(is_peripheral_esp32_ad5933(peripheral)) {
             std::cout << "BLE: ESP32 AD5933: Updated status\n";
             std::cout << peripheral;
