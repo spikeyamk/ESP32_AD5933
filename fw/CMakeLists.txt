@@ -7,8 +7,8 @@ set(EXTRA_COMPONENT_DIRS
     "main/lib/ble/server/lib"
     "main/lib/ad5933"
     "main/lib"
-    "common"
-    "common/ad5933"
+    "../common"
+    "../common/ad5933"
 )
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
