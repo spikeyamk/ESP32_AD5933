@@ -16,3 +16,6 @@
 [submodule "main/lib/ble/server/lib/sml_wrapper/sml"]
 	path = main/lib/ble/server/lib/sml_wrapper/sml
 	url = https://github.com/boost-ext/sml.git
+[submodule "common/trielo_wrapper/trielo"]
+	path = common/trielo_wrapper/trielo
+	url = https://github.com/spikeyamk/trielo
