@@ -90,7 +90,7 @@ namespace BLE {
 			struct configure {
 				std::array<uint8_t, 12> raw_config {};
 			};
-			struct start {};
+			struct run {};
 			struct end {};
 			namespace Private {
 				struct configure_complete {}; //Commented out because I want to make it inaccessible to other translation units
@@ -102,6 +102,7 @@ namespace BLE {
 	namespace Actions {
 		void turn_on();
 		void advertise();
+		void advertising();
 		void connect();
 		void disconnect();
 		void unexpected();
@@ -129,17 +130,57 @@ namespace BLE {
 		bool neg_processing(std::atomic<bool> &processing);
 	}
 
+	struct my_logger {
+		// https://github.com/boost-ext/sml/blob/master/example/logging.cpp
+		template <class SM, class TEvent>
+		void log_process_event(const TEvent&) {
+			std::printf("[%s][process_event] %s\n",
+				boost::sml::aux::get_type_name<SM>(),
+				boost::sml::aux::get_type_name<TEvent>()
+			);
+		}
+
+		template <class SM, class TGuard, class TEvent>
+		void log_guard(const TGuard&, const TEvent&, bool result) {
+			std::printf("[%s][guard] %s %s %s\n",
+				boost::sml::aux::get_type_name<SM>(),
+				boost::sml::aux::get_type_name<TGuard>(),
+				boost::sml::aux::get_type_name<TEvent>(), (result ? "[OK]" : "[Reject]")
+			);
+		}
+
+		template <class SM, class TAction, class TEvent>
+		void log_action(const TAction&, const TEvent&) {
+			std::printf("[%s][action] %s %s\n",
+				boost::sml::aux::get_type_name<SM>(),
+				boost::sml::aux::get_type_name<TAction>(),
+				boost::sml::aux::get_type_name<TEvent>()
+			);
+		}
+
+		template <class SM, class TSrcState, class TDstState>
+		void log_state_change(const TSrcState& src, const TDstState& dst) {
+			std::printf("[%s][transition] %s -> %s\n",
+				boost::sml::aux::get_type_name<SM>(),
+				src.c_str(),
+				dst.c_str()
+			);
+		}
+	};
+
 	struct Connection {
 		auto operator()() const {
 			using namespace boost::sml;
 			using namespace std;
 			auto ret = make_transition_table(
 				*state<States::off>        + event<Events::turn_on>      	     / function{Actions::turn_on}      		   = state<States::on>,
-				state<States::on>          + event<Events::advertise>    		 / function{Actions::advertise}    		   = state<States::advertising>,
+				state<States::on>          + event<Events::advertise>													   = state<States::advertise>,
 				state<States::advertise>										 / function{Actions::advertise}    		   = state<States::advertising>,
+				state<States::advertising> + event<Events::advertise>			 / function{Actions::advertising}    	   = state<States::advertise>,
+				state<States::advertising> + event<Events::disconnect>			 / function{Actions::disconnect}    	   = state<States::advertise>,
 		       	state<States::advertising> + event<Events::connect>      		 / function{Actions::connect}      		   = state<States::connected>,
 		       	state<States::advertising> + event<Events::sleep>      		     / function{Actions::sleep}      		   = state<States::sleeping>,
-		       	state<States::sleeping>    + event<Events::wakeup>      		 / function{Actions::wakeup}      		   = state<States::advertise>,
+		       	//state<States::sleeping>    + event<Events::wakeup>      		 / function{Actions::wakeup}      		   = state<States::advertise>,
 				state<States::connected>   + event<Events::disconnect>   		 / function{Actions::disconnect}   		   = state<States::advertise>,
 				state<States::connected>   + event<Events::Debug::start> 		 / function{Actions::Debug::start} 		   = state<States::debug>,
 				state<States::connected>   + event<Events::FreqSweep::configure> / function{Actions::FreqSweep::configure} = state<States::FreqSweep::configuring>,
@@ -150,22 +191,22 @@ namespace BLE {
 				state<States::debug> + event<Events::Debug::program> / function{Actions::Debug::program} = state<States::debug>,
 				state<States::debug> + event<Events::Debug::command> / function{Actions::Debug::command} = state<States::debug>,
 
-				state<States::FreqSweep::configuring> + event<Events::disconnect>     									   / function{Actions::disconnect}     = state<States::advertise>,
-				state<States::FreqSweep::configuring> + event<Events::FreqSweep::end> 									   / function{Actions::FreqSweep::end} = state<States::connected>,
-				state<States::FreqSweep::configuring> + event<Events::FreqSweep::start> [function{Guards::processing}]     / function{Actions::FreqSweep::run} = state<States::FreqSweep::running>,
-				state<States::FreqSweep::configuring> + event<Events::FreqSweep::start> [function{Guards::neg_processing}] / function{Actions::unexpected}     = state<States::error>,
+				state<States::FreqSweep::configuring> + event<Events::disconnect>     									 / function{Actions::disconnect}     = state<States::advertise>,
+				state<States::FreqSweep::configuring> + event<Events::FreqSweep::end> 									 / function{Actions::FreqSweep::end} = state<States::connected>,
+				state<States::FreqSweep::configuring> + event<Events::FreqSweep::run> [function{Guards::processing}]     / function{Actions::FreqSweep::run} = state<States::FreqSweep::running>,
+				state<States::FreqSweep::configuring> + event<Events::FreqSweep::run> [function{Guards::neg_processing}] / function{Actions::unexpected}     = state<States::error>,
 
 				state<States::FreqSweep::running> + event<Events::disconnect>     									       / function{Actions::disconnect}           = state<States::advertise>,
 				state<States::FreqSweep::running> + event<Events::FreqSweep::end> 										   / function{Actions::FreqSweep::end}       = state<States::connected>,
-				state<States::FreqSweep::running> + event<Events::FreqSweep::start>     [function{Guards::processing}] 	   / function{Actions::FreqSweep::run}       = state<States::FreqSweep::running>,
+				state<States::FreqSweep::running> + event<Events::FreqSweep::run>       [function{Guards::processing}] 	   / function{Actions::FreqSweep::run}       = state<States::FreqSweep::running>,
 				state<States::FreqSweep::running> + event<Events::FreqSweep::configure> [function{Guards::processing}] 	   / function{Actions::FreqSweep::configure} = state<States::FreqSweep::configuring>,
 				state<States::FreqSweep::running> + event<Events::FreqSweep::configure> [function{Guards::neg_processing}] / function{Actions::unexpected}  		 = state<States::error>,
-				state<States::FreqSweep::running> + event<Events::FreqSweep::start>     [function{Guards::neg_processing}] / function{Actions::unexpected} 			 = state<States::error>
+				state<States::FreqSweep::running> + event<Events::FreqSweep::run>       [function{Guards::neg_processing}] / function{Actions::unexpected} 			 = state<States::error>
 			);
 			return ret;
 		}
 	};
 
 	//using T_StateMachine = boost::sml::sm<Connection, boost::sml::process_queue<std::queue>, boost::sml::thread_safe<std::recursive_mutex>>;
-	using T_StateMachine = boost::sml::sm<Connection, boost::sml::thread_safe<std::recursive_mutex>>;
+	using T_StateMachine = boost::sml::sm<Connection, boost::sml::logger<my_logger>, boost::sml::thread_safe<std::recursive_mutex>>;
 }

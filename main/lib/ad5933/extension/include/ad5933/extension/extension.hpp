@@ -17,6 +17,10 @@ namespace AD5933 {
         Extension() = default;
         Extension(Driver &driver);
 
+        inline bool reset() const {
+            return p_register_set_mask(RegAddrs::RW::ControlLB, static_cast<uint8_t>(Masks::Or::Ctrl::LB::Reset), Masks::And::Ctrl::LB::Reset);
+        }
+
         inline bool set_command(Masks::Or::Ctrl::HB::Command or_mask) const {
             return p_register_set_mask(RegAddrs::RW::ControlHB, static_cast<uint8_t>(or_mask), Masks::And::Ctrl::HB::Command);
         }

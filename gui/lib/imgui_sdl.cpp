@@ -598,6 +598,13 @@ namespace ImGuiSDL {
         send_dump_all_registers_req_thread_cb(esp32_ad5933);
     }
 
+    void configure_cb(std::array<uint8_t, 12> raw_message, std::optional<ESP32_AD5933> &esp32_ad5933) {
+        auto buf_to_send = Magic::Packets::FrequencySweep::configure;
+        std::copy(raw_message.begin(), raw_message.end(), buf_to_send.begin());
+        const auto tmp_dbg_var = std::string(buf_to_send.begin(), buf_to_send.end());
+        esp32_ad5933.value().send(tmp_dbg_var);
+    }
+
     static const auto default_config = AD5933_Config::get_default();
     void debug_registers_window(std::optional<ESP32_AD5933> &esp32_ad5933) {
         static constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize;
@@ -784,8 +791,8 @@ namespace ImGuiSDL {
 
     void calibrate_cb(bool &calibrating, bool &calibrated, std::atomic<float> &progress_bar_fraction, std::optional<ESP32_AD5933> &esp32_ad5933) {
         esp32_ad5933.value().send(std::string(
-            Magic::Packets::FrequencySweep::start.begin(),
-            Magic::Packets::FrequencySweep::start.end()
+            Magic::Packets::FrequencySweep::run.begin(),
+            Magic::Packets::FrequencySweep::run.end()
         ));
 
         const uint16_t wished_size = measure_captures.load()->config.get_num_of_inc().value + 1;
@@ -814,9 +821,10 @@ namespace ImGuiSDL {
 
     void start_sweep_cb(bool &sweeping, bool &sweeped, std::atomic<float> &progress_bar_fraction, std::optional<ESP32_AD5933> &esp32_ad5933, bool &periodically_sweeping) {
         do {
+            const auto start = std::chrono::high_resolution_clock::now();
             esp32_ad5933.value().send(std::string(
-                Magic::Packets::FrequencySweep::start.begin(),
-                Magic::Packets::FrequencySweep::start.end()
+                Magic::Packets::FrequencySweep::run.begin(),
+                Magic::Packets::FrequencySweep::run.end()
             ));
 
             const uint16_t wished_size = measure_captures.load()->config.get_num_of_inc().value + 1;
@@ -843,6 +851,8 @@ namespace ImGuiSDL {
             measurement_data = tmp_measurement_data_vector;
 
             sweeped = true;
+            const auto finish = std::chrono::high_resolution_clock::now();
+            std::cout << "start_sweep_cb: " << std::chrono::duration_cast<std::chrono::milliseconds>(finish - start) << '\n';
         } while(periodically_sweeping);
 
         sweeping = false;
@@ -890,30 +900,28 @@ namespace ImGuiSDL {
 
         ImGui::Separator(); 
 
-        ImGui::Combo("Output Excitation Voltage Range", &tmp_measure_captures.voltage_range_combo, "2 Vppk""\0""200 mVppk""\0""400 mVppk""\0""1 Vppk");
+        ImGui::Combo("Output Excitation Voltage Range", &tmp_measure_captures.voltage_range_combo, "2 Vppk\0""200 mVppk\0""400 mVppk\0""1 Vppk\0");
 
         ImGui::Separator();
 
-        ImGui::Combo("PGA Gain", &tmp_measure_captures.pga_gain_combo, "x5\0x1");
+        ImGui::Combo("PGA Gain", &tmp_measure_captures.pga_gain_combo, "x5\0""x1\0");
 
         ImGui::Separator();
 
         ImGui::InputText("Number of Settling Time Cycles", tmp_measure_captures.settling_time_cycles_num.data(), tmp_measure_captures.settling_time_cycles_num.size(), input_flags);
-        ImGui::Combo("Settling Time Cycles Multiplier", &tmp_measure_captures.settling_time_cycles_multiplier_combo, "x1\0x2\0x4");
+        ImGui::Combo("Settling Time Cycles Multiplier", &tmp_measure_captures.settling_time_cycles_multiplier_combo, "x1\0""x2\0""x4\0");
 
         ImGui::Separator();
 
-        ImGui::Combo("System Clock Source", &tmp_measure_captures.sysclk_src_combo, "Internal\0External");
+        ImGui::Combo("System Clock Source", &tmp_measure_captures.sysclk_src_combo, "Internal\0""External\0");
         ImGui::InputText("System Clock Frequency", tmp_measure_captures.sysclk_freq.data(), tmp_measure_captures.sysclk_freq.size(), ImGuiInputTextFlags_ReadOnly);
 
         ImGui::Separator(); 
 
-        if(ImGui::Button("Program Device Registers")) {
+        if(ImGui::Button("Configure")) {
             std::thread(
                 [tmp_measure_captures, &esp32_ad5933]() {
-                    send_debug_start_req_thread_cb(esp32_ad5933);
-                    program_all_registers_thread_cb(tmp_measure_captures.config.get_ad5933_config_message_raw(), esp32_ad5933);
-                    send_debug_end_req_thread_cb(esp32_ad5933);
+                    configure_cb(tmp_measure_captures.config.get_ad5933_config_message_raw(), esp32_ad5933);
                 }
             ).detach();
         }

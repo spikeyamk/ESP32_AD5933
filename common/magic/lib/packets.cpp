@@ -26,14 +26,14 @@ namespace Magic {
 
 			FrequencySweep::configure,
 			FrequencySweep::initialize_with_start_freq,
-			FrequencySweep::start,
+			FrequencySweep::run,
 			FrequencySweep::check_for_data_valid,
 			FrequencySweep::read_data_valid_value,
 			FrequencySweep::repeat_freq,
 			FrequencySweep::check_for_sweep_complete,
 			FrequencySweep::increment_frequency,
 			FrequencySweep::repeat_frequency_sweep,
-			FrequencySweep::stop_frequency_sweep
+			FrequencySweep::end
 		};
 	}
 }
