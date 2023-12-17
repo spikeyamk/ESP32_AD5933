@@ -14,6 +14,7 @@ set(SDL2_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/SDL2)
 set(IMGUI_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/imgui)
 set(IMPLOT_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/implot)
 set(MAGIC_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/magic)
+set(AD5933_MASKS_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/ad5933/masks)
 
 set(IMGUI_SRCS
 	${IMGUI_DIR}/backends/imgui_impl_sdl2.cpp
@@ -35,12 +36,15 @@ add_subdirectory(${TRIELO_DIR} ${CMAKE_BINARY_DIR}/trielo)
 add_subdirectory(${SIMPLEBLE_DIR})
 add_subdirectory(${MAGIC_DIR} ${CMAKE_BINARY_DIR}/magic)
 add_subdirectory(${SDL2_DIR})
+add_subdirectory(${AD5933_MASKS_DIR} ${CMAKE_BINARY_DIR}/AD5933_masks)
 
 add_executable(main main.cpp
 	lib/ad5933_config.cpp
 	lib/ble.cpp
 	lib/dark_mode_switcher.cpp
 	lib/imgui_sdl.cpp
+	lib/boilerplate.cpp
+	lib/spinner.cpp
 	${IMGUI_SRCS}
 	${IMPLOT_SRCS}
 )
@@ -61,6 +65,7 @@ set(GUI_LINK_LIBS
 	magic
 	SDL2::SDL2main
 	SDL2::SDL2-static
+	AD5933_masks
 	#windowsapp
 )
 

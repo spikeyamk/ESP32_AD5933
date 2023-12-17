@@ -29,254 +29,16 @@
 #include "imgui_sdl.hpp"
 #include "ble.hpp"
 #include "ad5933_config.hpp"
+#include "boilerplate.hpp"
+#include "spinner.hpp"
+
+#include "ad5933/masks/maps.hpp"
 
 #if !SDL_VERSION_ATLEAST(2,0,17)
 #error This backend requires SDL 2.0.17+ because of SDL_RenderGeometry() function
 #endif
 
-namespace ImGui {
-    /* https://github.com/ocornut/imgui/issues/1901#issue-335266223 */
-    bool BufferingBar(const char* label, float value,  const ImVec2& size_arg, const ImU32& bg_col, const ImU32& fg_col) {
-        ImGuiWindow* window = GetCurrentWindow();
-        if (window->SkipItems)
-            return false;
-        
-        ImGuiContext& g = *GImGui;
-        const ImGuiStyle& style = g.Style;
-        const ImGuiID id = window->GetID(label);
-
-        ImVec2 pos = window->DC.CursorPos;
-        ImVec2 size = size_arg;
-        size.x -= style.FramePadding.x * 2;
-        
-        const ImRect bb(pos, ImVec2(pos.x + size.x, pos.y + size.y));
-        ItemSize(bb, style.FramePadding.y);
-        if (!ItemAdd(bb, id))
-            return false;
-        
-        // Render
-        const float circleStart = size.x * 0.7f;
-        const float circleEnd = size.x;
-        const float circleWidth = circleEnd - circleStart;
-        
-        window->DrawList->AddRectFilled(bb.Min, ImVec2(pos.x + circleStart, bb.Max.y), bg_col);
-        window->DrawList->AddRectFilled(bb.Min, ImVec2(pos.x + circleStart*value, bb.Max.y), fg_col);
-        
-        const float t = static_cast<float>(g.Time);
-        const float r = size.y / 2.0f;
-        const float speed = 1.5f;
-        
-        const float a = speed * 0.0f;
-        const float b = speed * 0.333f;
-        const float c = speed * 0.666f;
-        
-        const float o1 = (circleWidth+r) * (t+a - speed * (int)((t+a) / speed)) / speed;
-        const float o2 = (circleWidth+r) * (t+b - speed * (int)((t+b) / speed)) / speed;
-        const float o3 = (circleWidth+r) * (t+c - speed * (int)((t+c) / speed)) / speed;
-        
-        window->DrawList->AddCircleFilled(ImVec2(pos.x + circleEnd - o1, bb.Min.y + r), r, bg_col);
-        window->DrawList->AddCircleFilled(ImVec2(pos.x + circleEnd - o2, bb.Min.y + r), r, bg_col);
-        window->DrawList->AddCircleFilled(ImVec2(pos.x + circleEnd - o3, bb.Min.y + r), r, bg_col);
-        return true;
-    }
-
-    bool Spinner(const char* label, float radius, float thickness, const ImU32& color) {
-        ImGuiWindow* window = GetCurrentWindow();
-        if (window->SkipItems)
-            return false;
-        
-        ImGuiContext& g = *GImGui;
-        const ImGuiStyle& style = g.Style;
-        const ImGuiID id = window->GetID(label);
-        
-        ImVec2 pos = window->DC.CursorPos;
-        ImVec2 size((radius )*2, (radius + style.FramePadding.y)*2);
-        
-        const ImRect bb(pos, ImVec2(pos.x + size.x, pos.y + size.y));
-        ItemSize(bb, style.FramePadding.y);
-        if (!ItemAdd(bb, id))
-            return false;
-        
-        // Render
-        window->DrawList->PathClear();
-        
-        int num_segments = 30;
-        float start = abs(ImSin(static_cast<float>(g.Time) * 1.8f) * (num_segments - 5));
-        
-        const float a_min = IM_PI * 2.0f * ((float) start) / (float) num_segments;
-        const float a_max = IM_PI * 2.0f * ((float) num_segments - 3) / (float) num_segments;
-
-        const ImVec2 centre = ImVec2(pos.x+radius, pos.y+radius+style.FramePadding.y);
-        
-        for (int i = 0; i < num_segments; i++) {
-            const float a = a_min + ((float)i / (float)num_segments) * (a_max - a_min);
-            window->DrawList->PathLineTo(ImVec2(centre.x + ImCos(a + static_cast<float>(g.Time) * 8) * radius,
-                                                centre.y + ImSin(a + static_cast<float>(g.Time) * 8) * radius));
-        }
-
-        window->DrawList->PathStroke(color, false, thickness);
-        return true;
-    }
-}
-
-namespace ImGuiSDL {
-    // ImGuiSDL utility boilerplate functions
-    static const auto sdl_error_lambda = []() { std::cout << SDL_GetError() << std::endl; };
-
-    bool check_version() {
-        return IMGUI_CHECKVERSION();
-    }
-
-    std::tuple<SDL_Window*, SDL_Renderer*> init() {
-        Trielo::trieloxit_lambda<SDL_Init>(Trielo::OkErrCode(0), sdl_error_lambda, SDL_INIT_VIDEO | SDL_INIT_TIMER);
-        Trielo::trielo_lambda<SDL_SetHint>(Trielo::OkErrCode(SDL_TRUE), sdl_error_lambda, SDL_HINT_IME_SHOW_UI, "1");
-
-        SDL_WindowFlags window_flags = (SDL_WindowFlags)(
-            SDL_WINDOW_RESIZABLE
-            | SDL_WINDOW_ALLOW_HIGHDPI
-            | SDL_WINDOW_MINIMIZED
-            //| SDL_WINDOW_HIDDEN
-        );
-        SDL_Window* window = Trielo::trieloxit_lambda<SDL_CreateWindow>(
-            Trielo::FailErrCode(static_cast<SDL_Window*>(nullptr)),
-            sdl_error_lambda,
-            "AD5933",
-            SDL_WINDOWPOS_CENTERED,
-            SDL_WINDOWPOS_CENTERED,
-            1280,
-            720,
-            window_flags
-        );
-
-        SDL_Renderer* renderer = Trielo::trieloxit_lambda<SDL_CreateRenderer>(
-            Trielo::FailErrCode(static_cast<SDL_Renderer*>(nullptr)),
-            sdl_error_lambda,
-            window,
-            -1,
-            SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED
-        );
-        {
-            SDL_RendererInfo info;
-            Trielo::trielo_lambda<SDL_GetRendererInfo>(
-                Trielo::OkErrCode(0),
-                sdl_error_lambda,
-                renderer,
-                &info
-            );
-            SDL_Log("Current SDL_Renderer: %s", info.name);
-        }
-
-        Trielo::trieloxit<check_version>(Trielo::OkErrCode(true));
-        if(ImGui::CreateContext() == nullptr) {
-            std::cout << "ImGui failed to create context\n";
-        }
-
-        ImGuiIO& io = ImGui::GetIO();
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-
-        // Setup Platform/Renderer backends
-        ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
-        ImGui_ImplSDLRenderer2_Init(renderer);
-
-        /*
-        DarkModeSwitcher dark_mode_switcher { window };
-        if(DarkModeSwitcher::isGlobalDarkModeActive()) {
-            ImGui::StyleColorsDark();
-        } else {
-            ImGui::StyleColorsLight();
-        }
-        */
-        //Commented out because of a bug in a lambda capture of this and segfault on when darkModeRevoker is fired
-        //dark_mode_switcher.enable_dynamic_switching();
-
-        ImGui::StyleColorsDark();
-        SDL_MaximizeWindow(window);
-        return std::tuple { window, renderer };
-    } 
-
-    void shutdown(SDL_Renderer* renderer, SDL_Window* window) {
-        ImGui_ImplSDLRenderer2_Shutdown();
-        ImGui_ImplSDL2_Shutdown();
-        ImGui::DestroyContext();
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-    }
-
-    inline void render(SDL_Renderer* renderer, const ImVec4& clear_color) {
-        ImGuiIO& io = ImGui::GetIO();
-        ImGui::Render();
-        if(SDL_RenderSetScale(renderer, io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y) != 0) {
-            fmt::print(fmt::fg(fmt::color::yellow), "WARNING: SDL_RenderSetScale failed");
-            sdl_error_lambda();
-        }
-        if(SDL_SetRenderDrawColor(renderer, (Uint8)(clear_color.x * 255), (Uint8)(clear_color.y * 255), (Uint8)(clear_color.z * 255), (Uint8)(clear_color.w * 255)) != 0) {
-            fmt::print(fmt::fg(fmt::color::yellow), "WARNING: SDL_SetRenderDrawColor failed");
-            sdl_error_lambda();
-        }
-        if(SDL_RenderClear(renderer) != 0) {
-            fmt::print(fmt::fg(fmt::color::yellow), "WARNING: SDL_RenderClear failed\n");
-            sdl_error_lambda();
-        }
-        ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData());
-        SDL_RenderPresent(renderer);
-    }
-
-    inline void process_events(SDL_Window* window, bool &done) {
-        SDL_Event event;
-        while (SDL_PollEvent(&event)) {
-            ImGui_ImplSDL2_ProcessEvent(&event);
-            if(event.type == SDL_QUIT) {
-                done = true;
-            }
-            if(event.type == SDL_WINDOWEVENT &&
-            event.window.event == SDL_WINDOWEVENT_CLOSE &&
-            event.window.windowID == SDL_GetWindowID(window)) {
-                done = true;
-            }
-        }
-    }
-
-    inline void start_new_frame() {
-        ImGui_ImplSDLRenderer2_NewFrame();
-        ImGui_ImplSDL2_NewFrame();
-        ImGui::NewFrame();
-    }
-
-    inline void connecting_window() {
-        static constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize;
-        ImGui::Begin("ESP32_AD5933", NULL, flags);                          // Create a window called "Hello, world!" and append into it.
-        ImGui::Text("Connecting");
-        ImGui::SameLine();
-        ImGui::Spinner("ConnectingSpinner", 5.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
-        ImGui::End();
-    }
-}
-
-namespace ImGuiSDL {
-    // Demos - unused for now
-    inline void periodic_temperature_measurement_demo_window(std::optional<ESP32_AD5933> &esp32_ad5933) {
-        static constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize;
-        ImGui::Begin("Periodic Temperature Measurement Demo", NULL, flags);                          // Create a window called "Hello, world!" and append into it.
-        static bool toggle_capture;
-        bool toggle_capture_prev = toggle_capture;
-        ImGui::Checkbox("Toggle Temperature Measurement: ", &toggle_capture);
-        if(esp32_ad5933.has_value() && (toggle_capture != toggle_capture_prev)) {
-            if(toggle_capture == true) {
-                esp32_ad5933.value().subscribe_to_body_composition_measurement_indicate();
-            } else {
-                esp32_ad5933.value().unsubscribe_from_body_composistion_measurement();
-            }
-        }
-        ImGui::SameLine();
-        if(esp32_ad5933.has_value()) {
-            ImGui::Text(esp32_ad5933.value().temp_payload.value_or("0xFFFF'FFFF").c_str());
-        }
-        ImGui::End();
-    }
-}
-
-namespace ImGuiSDL {
+namespace GUI {
     // Related to measurement_window  
     static auto freq_start_array_init_lambda = [](AD5933_Config &config) -> std::array<char, 7> {
         std::array<char, 7> ret_val { 0x00 };
@@ -375,7 +137,7 @@ namespace ImGuiSDL {
     std::atomic<std::shared_ptr<MeasurementWindowCaptures>> measure_captures { std::make_shared<MeasurementWindowCaptures>() };
 }
 
-namespace ImGuiSDL {
+namespace GUI {
     // Related to dbg_registers_window   
     template<size_t N>
     class DebugReadWriteRegistersCaptures {
@@ -568,13 +330,13 @@ namespace ImGuiSDL {
         while(debug_window_enable.load() > 0) {
             debug_window_enable.wait(debug_window_enable);
             if(debug_window_enable.load() == 2) {
-                std::cout << "ImGuiSDL: Loading rx_payload content\n";
+                std::cout << "GUI: Loading rx_payload content\n";
                 debug_window_enable.store(1);
             }
         }
 
         debug_window_enable.store(0);
-        std::cout << "ImGuiSDL: ending dbg_registers_thread_cb\n";
+        std::cout << "GUI: ending dbg_registers_thread_cb\n";
     }
 
     void program_all_registers_thread_cb(std::array<uint8_t, 12> raw_message, std::optional<ESP32_AD5933> &esp32_ad5933) {
@@ -785,7 +547,7 @@ namespace ImGuiSDL {
     }
 }
 
-namespace ImGuiSDL {
+namespace GUI {
     std::vector<AD5933_MeasurementData> measurement_data;
     std::vector<AD5933_CalibrationData> calibration_data;
 
@@ -859,7 +621,7 @@ namespace ImGuiSDL {
     }
 }
 
-namespace ImGuiSDL {
+namespace GUI {
     inline void measurement_window(ImVec2 &measurement_window_size, std::optional<ESP32_AD5933> &esp32_ad5933, bool &plot_calibration_window_enable, bool &plot_freq_sweep_window_enable) {
         static constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize;
         ImGui::Begin("Measurement", NULL, flags);                          // Create a window called "Hello, world!" and append into it.
@@ -940,7 +702,7 @@ namespace ImGuiSDL {
                 ).detach();
             }
         } else if(sweeping == false) {
-            ImGui::Spinner("Calibrating", 10.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+            Spinner::Spinner("Calibrating", 10.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
             ImGui::ProgressBar(calibrating_progress_bar_fraction.load());
         }
 
@@ -965,7 +727,7 @@ namespace ImGuiSDL {
                     ).detach();
                 }
             } else if(calibrating == false) {
-                ImGui::Spinner("Measuring", 10.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                Spinner::Spinner("Measuring", 10.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                 ImGui::ProgressBar(sweeping_progress_bar_fraction.load());
             }
         }
@@ -984,7 +746,7 @@ namespace ImGuiSDL {
     }
 }
 
-namespace ImGuiSDL {
+namespace GUI {
     void calibration_raw_data_plots() {
         const auto start_freq = measure_captures.load()->config.get_start_freq();
         const auto inc_freq = measure_captures.load()->config.get_inc_freq();
@@ -1078,7 +840,7 @@ namespace ImGuiSDL {
     }
 }
 
-namespace ImGuiSDL {
+namespace GUI {
     void freq_sweep_raw_data_plots() {
         const auto start_freq = measure_captures.load()->config.get_start_freq();
         const auto inc_freq = measure_captures.load()->config.get_inc_freq();
@@ -1185,7 +947,6 @@ namespace ImGuiSDL {
             ImPlot::PlotLine("REACTANCE [Ohm]", frequency_vector.data(), reactance_vector.data(), frequency_vector.size());
             ImPlot::EndPlot();
         }
-
     }
 
     void create_freq_sweep_window_enable(bool &running) {
@@ -1218,20 +979,26 @@ namespace ImGuiSDL {
     }
 }
 
-namespace ImGuiSDL {
-    inline void create_connecting_window() {
+namespace GUI {
+    void create_connecting_window() {
         ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
         ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
-        connecting_window();
+        static constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize;
+        ImGui::Begin("ESP32_AD5933", NULL, flags);
+        ImGui::Text("Connecting");
+        ImGui::SameLine();
+        Spinner::Spinner("ConnectingSpinner", 5.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+        ImGui::End();
     }
 
-    inline void create_main_window(std::optional<ESP32_AD5933> &esp32_ad5933) {
+    void create_main_window(std::optional<ESP32_AD5933> &esp32_ad5933) {
         static ImVec2 measurement_window_size = ImGui::GetIO().DisplaySize;
         ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
         ImGui::SetNextWindowSize(measurement_window_size);
         static bool plot_calibration_window_enable = false;
         static bool plot_freq_sweep_window_enable = false;
         measurement_window(measurement_window_size, esp32_ad5933, plot_calibration_window_enable, plot_freq_sweep_window_enable);
+        /*
         if(debug_window_enable.load()) {
             ImGui::SetNextWindowPos(ImVec2(measurement_window_size.x, 0.0f));
             ImGui::SetNextWindowSize(measurement_window_size);
@@ -1243,15 +1010,16 @@ namespace ImGuiSDL {
         if(plot_freq_sweep_window_enable) {
             create_freq_sweep_window_enable(plot_freq_sweep_window_enable);
         }
+        */
     }
 }
 
-namespace ImGuiSDL {
-    void loop(std::optional<ESP32_AD5933> &esp32_ad5933, bool &done) {
+namespace GUI {
+    void run(std::optional<ESP32_AD5933> &esp32_ad5933, bool &done) {
         SDL_Window* window;
         SDL_Renderer* renderer;
         {
-            const auto ret = init();
+            const auto ret { Boilerplate::init() };
             window = std::get<0>(ret);
             renderer = std::get<1>(ret);
         }
@@ -1262,19 +1030,19 @@ namespace ImGuiSDL {
             (esp32_ad5933.has_value() == false || esp32_ad5933.value().is_connected() == false)
             && done == false
         ) {
-            process_events(window, done);
-            start_new_frame();
+            Boilerplate::process_events(window, done);
+            Boilerplate::start_new_frame();
             create_connecting_window();
-            render(renderer, clear_color);
+            Boilerplate::render(renderer, clear_color);
         }
 
         while(done == false) {
-            process_events(window, done);
-            start_new_frame();
+            Boilerplate::process_events(window, done);
+            Boilerplate::start_new_frame();
             create_main_window(esp32_ad5933);
-            render(renderer, clear_color);
+            Boilerplate::render(renderer, clear_color);
         }
 
-        shutdown(renderer, window);
+        Boilerplate::shutdown(renderer, window);
     }
 }

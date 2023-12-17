@@ -16,7 +16,6 @@ else()
 	endif()
 
 	set(AD5933_MASKS_SRCS
-		lib/config.cpp
 		lib/maps.cpp
 		lib/masks.cpp
 	)
