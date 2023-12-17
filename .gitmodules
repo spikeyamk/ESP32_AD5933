@@ -15,6 +15,6 @@
 	url = https://github.com/spikeyamk/trielo.git
 [submodule "multiprecision"]
 	branch = Boost_1_83_0
-[submodule "main/lib/external/sml_wrapper/--force"]
-	path = main/lib/ble/state_machine/lib/sml_wrapper/sml
+[submodule "main/lib/ble/server/lib/sml_wrapper/sml"]
+	path = main/lib/ble/server/lib/sml_wrapper/sml
 	url = https://github.com/boost-ext/sml.git
