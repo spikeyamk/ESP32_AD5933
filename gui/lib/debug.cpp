@@ -1,6 +1,0 @@
-
-namespace GUI {
-    namespace Debug {
-
-    }
-}

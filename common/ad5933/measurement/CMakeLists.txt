@@ -55,7 +55,7 @@ else()
 	target_include_directories(AD5933_measurement PUBLIC
 		${CMAKE_CURRENT_LIST_DIR}/include
 	)
-	target_link_libraries(AD5933_measurement PRIVATE
+	target_link_libraries(AD5933_measurement PUBLIC
 		${AD5933_MEASUREMENT_LINK_LIBS}
 	)
 endif()

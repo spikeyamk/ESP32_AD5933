@@ -48,7 +48,7 @@ public:
     void subscribe_to_body_composition_measurement_indicate();
     void unsubscribe_from_body_composistion_measurement();
     void toggle_subscribe_to_body_composition_measurement();
-    void send(const SimpleBLE::ByteArray &data);
+    bool send(const SimpleBLE::ByteArray &data);
     void subscribe_to_body_composition_measurement_notify();
     void disconnect();
     bool is_connected();

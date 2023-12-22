@@ -68,7 +68,7 @@ else()
 		${CMAKE_CURRENT_LIST_DIR}/include
 	)
 
-	target_link_libraries(AD5933_config PRIVATE
+	target_link_libraries(AD5933_config PUBLIC
 		${AD5933_CONFIG_LINK_LIBS}
 	)
 endif()

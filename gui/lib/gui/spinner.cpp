@@ -1,6 +1,6 @@
 #include "imgui_internal.h"
 
-#include "spinner.hpp"
+#include "gui/spinner.hpp"
 
 namespace GUI {
     namespace Spinner {

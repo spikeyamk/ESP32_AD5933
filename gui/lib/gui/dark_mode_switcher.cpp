@@ -1,7 +1,18 @@
 #include <cassert>
-#include "SDL_video.h"
+#include "SDL3/SDL_video.h"
 
-#include "dark_mode_switcher.hpp"
+#include "gui/dark_mode_switcher.hpp"
+
+void switch_imgui_theme() {
+    switch(SDL_GetSystemTheme()) {
+        case SDL_SYSTEM_THEME_DARK:
+            ImGui::StyleColorsDark();
+            break;
+        default:
+            ImGui::StyleColorsLight();
+            break;
+    }
+}
 
 /*
 DarkModeSwitcher::DarkModeSwitcher(SDL_Window* in_window) : 
@@ -16,7 +27,9 @@ DarkModeSwitcher::DarkModeSwitcher(SDL_Window* in_window) :
         dark_mode_active = false;
     }
 }
+*/
 
+/*
 //https://github.com/libsdl-org/SDL/issues/4776#issuecomment-926976455
 void DarkModeSwitcher::setTitleBarDarkMode(const bool on_or_off) {
     SDL_SysWMinfo wmi;

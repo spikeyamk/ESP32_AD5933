@@ -3,7 +3,7 @@
 #include <tuple>
 #include "imgui.h"
 
-#include "SDL2/SDL.h"
+#include "SDL3/SDL.h"
 
 namespace GUI {
     namespace Boilerplate {

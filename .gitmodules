@@ -1,14 +1,8 @@
-[submodule "misc/imgui_sdl2/lib/imgui"]
-	path = gui/lib/imgui
-	url = https://github.com/ocornut/imgui
 [submodule "misc/imgui_sdl2/lib/implot"]
-	path = gui/lib/implot
+	path = gui/lib/extern/implot
 	url = https://github.com/epezent/implot
-[submodule "misc/imgui_sdl2/lib/SDL2"]
-	path = gui/lib/SDL2
-	url = https://github.com/libsdl-org/SDL
 [submodule "misc/imgui_sdl2/lib/SimpleBLE"]
-	path = gui/lib/SimpleBLE
+	path = gui/lib/extern/SimpleBLE
 	url = https://github.com/OpenBluetoothToolbox/SimpleBLE
 [submodule "main/lib/external/trielo_wrapper/trielo"]
 	path = common/trielo_wrapper/trielo
@@ -19,3 +13,9 @@
 [submodule "common/trielo_wrapper/trielo"]
 	path = common/trielo_wrapper/trielo
 	url = https://github.com/spikeyamk/trielo
+[submodule "gui/lib/SDL"]
+	path = gui/lib/extern/SDL3
+	url = https://github.com/libsdl-org/SDL.git
+[submodule "gui/lib/imgui"]
+	path = gui/lib/extern/imgui
+	url = https://github.com/ocornut/imgui.git

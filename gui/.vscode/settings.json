@@ -85,7 +85,24 @@
         "xtree": "cpp",
         "xutility": "cpp",
         "*.tcc": "cpp",
-        "*.def": "cpp"
+        "*.def": "cpp",
+        "cwctype": "cpp",
+        "strstream": "cpp",
+        "cfenv": "cpp",
+        "codecvt": "cpp",
+        "unordered_set": "cpp",
+        "memory_resource": "cpp",
+        "numeric": "cpp",
+        "random": "cpp",
+        "source_location": "cpp",
+        "string_view": "cpp",
+        "numbers": "cpp",
+        "semaphore": "cpp",
+        "stdfloat": "cpp",
+        "cinttypes": "cpp",
+        "valarray": "cpp",
+        "*.ipp": "cpp",
+        "*.inc": "cpp"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }

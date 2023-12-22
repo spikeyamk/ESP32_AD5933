@@ -2,11 +2,8 @@
 #include <chrono>
 #include <iostream>
 
-#include "SDL2/SDL_main.h"
-#include "simpleble/SimpleBLE.h"
-
-#include "ble.hpp"
-#include "imgui_sdl.hpp"
+#include "ble_client/ble_client.hpp"
+#include "gui/imgui_sdl.hpp"
 
 void gui_main() {
     std::optional<ESP32_AD5933> esp32_ad5933 { std::nullopt };

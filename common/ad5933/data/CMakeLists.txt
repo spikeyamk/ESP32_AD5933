@@ -4,6 +4,7 @@ if(ESP_PLATFORM)
                        	   INCLUDE_DIRS "include"
 	)
 else()
+	set(ALLOW_DUPLICATE_CUSTOM_TARGETS true)
 	cmake_minimum_required(VERSION 3.13)
 	project(AD5933_data C CXX ASM)
 	set(CMAKE_C_STANDARD 11)

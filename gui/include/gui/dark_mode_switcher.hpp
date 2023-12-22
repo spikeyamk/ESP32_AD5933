@@ -2,14 +2,10 @@
 
 #include <iostream>
 
-#include "SDL2/SDL_video.h"
-#include "SDL2/SDL_syswm.h"
+#include "SDL3/SDL_video.h"
 #include "imgui.h"
 
-//#include <Windows.h>
-//#include <winrt/Windows.UI.ViewManagement.h>
-//#include <winrt/Windows.Foundation.h>
-
+/*
 class DarkModeSwitcher {
 private:
     SDL_Window* window;
@@ -21,3 +17,6 @@ public:
     //static bool isGlobalDarkModeActive();
     //void enable_dynamic_switching();
 };
+*/
+
+void switch_imgui_theme();

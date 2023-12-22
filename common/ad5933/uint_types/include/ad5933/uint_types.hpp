@@ -46,8 +46,6 @@ namespace AD5933 {
             os << num.value;
             return os;
         }
-
-
     };
 
     class uint_incfreq_t : public uint_freq_t<1> {
@@ -223,6 +221,10 @@ namespace AD5933 {
         // Bit 9 value retrieval function
         constexpr std::bitset<8> get_bit_8_MSB() const {
             return std::bitset<8>( (value & 0x01'00u) >> 8 );
+        }
+
+        constexpr uint16_t unwrap() const {
+            return value;
         }
     };
 }

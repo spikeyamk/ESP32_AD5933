@@ -20,7 +20,9 @@ else()
 	)
 
 	set(AD5933_DATA_DIR ${CMAKE_CURRENT_LIST_DIR}/../data)
-	add_subdirectory(${AD5933_DATA_DIR} ${CMAKE_BINARY_DIR}/data)
+	if(NOT TARGET AD5933_data)
+		add_subdirectory(${AD5933_DATA_DIR} ${CMAKE_BINARY_DIR}/data)
+	endif()
 	set(AD5933_CALIBRATION_LINK_LIBS AD5933_data)
 
 	option(AD5933_CALIBRATION_TEST "Enable AD5933::Calibration Tests" OFF)
@@ -54,7 +56,7 @@ else()
 	target_include_directories(AD5933_calibration PUBLIC
 		${CMAKE_CURRENT_LIST_DIR}/include
 	)
-	target_link_libraries(AD5933_calibration PRIVATE
+	target_link_libraries(AD5933_calibration PUBLIC
 		${AD5933_CALIBRATION_LINK_LIBS}
 	)
 endif()

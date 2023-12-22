@@ -33,13 +33,12 @@ namespace AD5933 {
 	};
 
 	class Config {
-	private:
+	public:
 		Register16_t ctrl;
 		Register24_t start_freq;
 		Register24_t inc_freq;
 		Register16_t num_of_inc;
 		Register16_t settling_time_cycles;
-	public:
 		Config() = delete;
 
 		inline constexpr Config(
@@ -231,6 +230,15 @@ namespace AD5933 {
 			const std::bitset<8> set_mask { static_cast<uint8_t>(multiplier) };
 			settling_time_cycles.HB = ((settling_time_cycles.HB & ~Masks::And::SettlingTimeCyclesHB::Multiplier) | set_mask);
 		}
+
+		inline constexpr SysClkFreq get_active_sysclk_freq() const {
+			switch(Masks::Or::Ctrl::LB::SysClkSrc((ctrl.LB & Masks::And::Ctrl::LB::SysClkSrc).to_ulong())) {
+				case Masks::Or::Ctrl::LB::SysClkSrc::External:
+					return SysClkFreq::External;
+				default:
+					return SysClkFreq::Internal;
+			}
+		}
 	private:
 		inline constexpr Register16_t get_ctrl(
 			const Masks::Or::Ctrl::HB::Command command,
@@ -244,15 +252,6 @@ namespace AD5933 {
 				| static_cast<uint8_t>(pga_gain)),
 				std::bitset<8>(static_cast<uint8_t>(sysclk_src))
 			};
-		}
-
-		inline constexpr SysClkFreq get_active_sysclk_freq() const {
-			switch(Masks::Or::Ctrl::LB::SysClkSrc((ctrl.LB & Masks::And::Ctrl::LB::SysClkSrc).to_ulong())) {
-				case Masks::Or::Ctrl::LB::SysClkSrc::External:
-					return SysClkFreq::External;
-				default:
-					return SysClkFreq::Internal;
-			}
 		}
 
 		template<typename T_Freq>

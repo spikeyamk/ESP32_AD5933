@@ -8,7 +8,7 @@
 #include <atomic>
 #include <memory>
 
-#include "ble.hpp"
+#include "ble_client/ble_client.hpp"
 
 #include <simpleble/SimpleBLE.h>
 #include "trielo/trielo.hpp"
@@ -268,9 +268,12 @@ void ESP32_AD5933::disconnect() {
     }
 }
 
-void ESP32_AD5933::send(const SimpleBLE::ByteArray &data) {
+bool ESP32_AD5933::send(const SimpleBLE::ByteArray &data) {
     if(peripheral.is_connected() && body_composistion_service.has_value() && body_composition_feature_chacteristic.has_value()) {
         peripheral.write_request(body_composistion_service.value().uuid(), body_composition_feature_chacteristic.value().uuid(), data);
+        return true;
+    } else {
+        return false;
     }
 }
 
