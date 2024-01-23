@@ -18,7 +18,7 @@ else()
 		lib/packets.cpp
 	)
 
-	target_include_directories(magic PRIVATE
+    target_include_directories(magic PUBLIC
 		${CMAKE_CURRENT_LIST_DIR}/include
 	)
 

@@ -1,7 +1,8 @@
 if(ESP_PLATFORM)
 	idf_component_register(SRCS
-						   "lib/temperature.cpp"
-                       	   INCLUDE_DIRS "include"
+			       "lib/debug_data.cpp"
+                       	   	INCLUDE_DIRS "include"
+				REQUIRES reg_types temperature data masks
 	)
 else()
 	cmake_minimum_required(VERSION 3.13)

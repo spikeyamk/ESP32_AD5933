@@ -102,7 +102,9 @@
         "cinttypes": "cpp",
         "valarray": "cpp",
         "*.ipp": "cpp",
-        "*.inc": "cpp"
+        "*.inc": "cpp",
+        "qtbluetooth": "cpp",
+        "future": "cpp"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }

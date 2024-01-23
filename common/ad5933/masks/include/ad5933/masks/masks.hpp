@@ -51,6 +51,17 @@ namespace AD5933 {
                     Reserved   = 0b0000'0100u,
                     FourTimes  = 0b0000'0110u,
                 };
+
+                constexpr inline float get_multiplier_float(Multiplier multiplier) {
+                    switch(multiplier) {
+                        case AD5933::Masks::Or::SettlingTimeCyclesHB::Multiplier::FourTimes:
+                            return 4.0f;
+                        case AD5933::Masks::Or::SettlingTimeCyclesHB::Multiplier::TwoTimes:
+                            return 2.0f;
+                        default:
+                            return 1.0f;
+                    }
+                }
             } 
 
             enum class Status {

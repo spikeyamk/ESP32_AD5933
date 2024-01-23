@@ -257,10 +257,8 @@ namespace BLE {
                             event->mtu.value);
                 break;
             case BLE_GAP_EVENT_NOTIFY_TX:
-    		    fmt::print(fmt::fg(fmt::color::yellow), "WE HERE: BLE_GAP_EVENT_NOTIFY_TX: {}\n", event->type);
                 break;
             case BLE_GAP_EVENT_NOTIFY_RX:
-    		    fmt::print(fmt::fg(fmt::color::yellow), "WE HERE: BLE_GAP_EVENT_NOTIFY_TX: {}\n", event->type);
                 break;
             default:
     		    fmt::print(fmt::fg(fmt::color::red), "WE HERE: PROBABLY UNKNOWN UNHANDLED GAP EVENT: {}\n", event->type);
@@ -558,12 +556,12 @@ namespace BLE {
                 std::cout << "BLE::Servernotify: failed to ble_hs_mbuf_from_flat\n";
                 return false;
             }
-
-            if(ble_gatts_notify_custom(conn_handle, body_composition_measurement_characteristic_handle, txom) == 0) {
+            int ret;
+            if((ret = ble_gatts_notify_custom(conn_handle, body_composition_measurement_characteristic_handle, txom)) == 0) {
                 return true;
             } else {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ");
-                std::cout << "BLE::Server::notify: failed to ble_gatts_notify_custom\n";
+                std::cout << "BLE::Server::notify: failed to ble_gatts_indicate_custom: " << ret << std::endl;
                 return false;
             }
         }

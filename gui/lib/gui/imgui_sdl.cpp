@@ -11,6 +11,7 @@
 #include <cmath>
 #include <vector>
 #include <numeric>
+#include <list>
 
 #include "trielo/trielo.hpp"
 #include "SDL3/SDL.h"
@@ -20,6 +21,7 @@
 #include "backends/imgui_impl_sdlrenderer2.h"
 #include "implot.h"
 #include "magic/packets.hpp"
+#include "imgui_console/imgui_console.h"
 
 #include "gui/imgui_sdl.hpp"
 #include "ble_client/ble_client.hpp"
@@ -40,12 +42,12 @@
 
 namespace GUI {
     // Related to dbg_registers_window   
-    void send_debug_start_req_thread_cb(std::optional<ESP32_AD5933> &esp32_ad5933) {
-        TRIELO_EQ(esp32_ad5933.value().send(std::string(Magic::Packets::Debug::start.begin(), Magic::Packets::Debug::start.end())), true);
+    bool send_debug_start_req_thread_cb(std::optional<ESP32_AD5933> &esp32_ad5933) {
+        return esp32_ad5933.value().send(std::string(Magic::Packets::Debug::start.begin(), Magic::Packets::Debug::start.end()));
     }
 
-    void send_debug_end_req_thread_cb(std::optional<ESP32_AD5933> &esp32_ad5933) {
-        TRIELO_EQ(esp32_ad5933.value().send(std::string(Magic::Packets::Debug::end.begin(), Magic::Packets::Debug::end.end())), true);
+    bool send_debug_end_req_thread_cb(std::optional<ESP32_AD5933> &esp32_ad5933) {
+        return esp32_ad5933.value().send(std::string(Magic::Packets::Debug::end.begin(), Magic::Packets::Debug::end.end()));
     }
    
     void send_dump_all_registers_req_thread_cb(
@@ -53,9 +55,9 @@ namespace GUI {
         std::atomic<std::shared_ptr<Windows::Captures::HexDebugReadWriteRegisters >> &hex_dbg_rw_captures
     ) {
         esp32_ad5933.value().send(std::string(Magic::Packets::Debug::dump_all_registers.begin(), Magic::Packets::Debug::dump_all_registers.end()));
-        const auto rx_register_info = esp32_ad5933.value().rx_payload.read();
-        esp32_ad5933.value().rx_payload.clean();
-        hex_dbg_rw_captures.load()->update_captures(rx_register_info);
+        //const auto rx_register_info = esp32_ad5933.value().rx_payload.read();
+        //esp32_ad5933.value().rx_payload.clean();
+        //hex_dbg_rw_captures.load()->update_captures(rx_register_info);
     }
 
     void dbg_registers_thread_cb(std::atomic<int> &debug_window_enable) {
@@ -125,8 +127,8 @@ namespace GUI {
         std::optional<ESP32_AD5933> &esp32_ad5933,
         std::atomic<std::shared_ptr<Windows::Captures::HexDebugReadWriteRegisters>> &hex_dbg_rw_captures
     ) {
-        static constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize;
-        ImGui::Begin("Register Debug", NULL, flags);                          // Create a window called "Hello, world!" and append into it.
+        //static constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize;
+        ImGui::Begin("Register Debug", NULL, 0);                          // Create a window called "Hello, world!" and append into it.
         auto tmp_hex_dbg_rw_captures = *(hex_dbg_rw_captures.load());
 
         static bool debug_started = false;
@@ -325,6 +327,7 @@ namespace GUI {
         another_calibration_data.clear();
         another_calibration_data.reserve(wished_size);
 
+        /*
         do {
             const auto rx_payload = esp32_ad5933.value().rx_payload.read();
             esp32_ad5933.value().rx_payload.clean();
@@ -344,6 +347,7 @@ namespace GUI {
 
             progress_bar_fraction.fetch_add(progress_bar_step);
         } while(another_calibration_data.size() != wished_size);
+        */
 
         calibrating = false;
         calibrated = true;
@@ -377,6 +381,7 @@ namespace GUI {
             tmp_measurement_data.reserve(wished_size);
 
             progress_bar_fraction.store(0.0f);
+            /*
             do {
                 const auto rx_payload = esp32_ad5933.value().rx_payload.read();
                 esp32_ad5933.value().rx_payload.clean();
@@ -389,6 +394,7 @@ namespace GUI {
 
                 progress_bar_fraction.fetch_add(progress_bar_step);
             } while(tmp_measurement_data.size() != wished_size);
+            */
 
             raw_measurement_data.clear();
             raw_measurement_data = tmp_raw_measurement_data;
@@ -417,23 +423,7 @@ namespace GUI {
         std::vector<AD5933::Data> &raw_measurement_data,
         std::vector<AD5933::Measurement<float>> &another_measurement_data
     ) {
-        static constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize;
-        ImGui::Begin("Measurement", NULL, flags);                          // Create a window called "Hello, world!" and append into it.
-        if(ImGui::Button("Toggle Register Debug Window") == true) {
-            if(debug_window_enable.load() == false) {
-                measurement_window_size.x /= 2;
-                debug_window_enable.store(1);
-                std::thread dbg_registers_thread(
-                    dbg_registers_thread_cb,
-                    std::ref(debug_window_enable)
-                );
-                dbg_registers_thread.detach();
-            } else {
-                measurement_window_size = ImGui::GetIO().DisplaySize;
-                debug_window_enable.store(0);
-            }
-            debug_window_enable.notify_all();
-        }
+        ImGui::Begin("Measurement", NULL, 0);                          // Create a window called "Hello, world!" and append into it.
 
         auto tmp_measure_captures = *(measure_captures.load());
 
@@ -860,8 +850,8 @@ namespace GUI {
         std::atomic<std::shared_ptr<Windows::Captures::Measurement>> &measure_captures
     ) {
         static ImVec2 measurement_window_size = ImGui::GetIO().DisplaySize;
-        ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
-        ImGui::SetNextWindowSize(measurement_window_size);
+        //ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
+        //ImGui::SetNextWindowSize(measurement_window_size);
         static bool plot_calibration_window_enable = false;
         static bool plot_freq_sweep_window_enable = false;
         static std::vector<AD5933::Calibration<float>> another_calibration_data;
@@ -882,8 +872,8 @@ namespace GUI {
             another_measurement_data
         );
         if(debug_window_enable.load()) {
-            ImGui::SetNextWindowPos(ImVec2(measurement_window_size.x, 0.0f));
-            ImGui::SetNextWindowSize(measurement_window_size);
+            //ImGui::SetNextWindowPos(ImVec2(measurement_window_size.x, 0.0f));
+            //ImGui::SetNextWindowSize(measurement_window_size);
             static std::atomic<std::shared_ptr<Windows::Captures::HexDebugReadWriteRegisters>> hex_dbg_rw_captures { std::make_shared<Windows::Captures::HexDebugReadWriteRegisters>() };
             debug_registers_window(esp32_ad5933, hex_dbg_rw_captures);
         }
@@ -897,7 +887,7 @@ namespace GUI {
 }
 
 namespace GUI {
-    void run(std::optional<ESP32_AD5933> &esp32_ad5933, bool &done) {
+    void run(bool &done) {
         SDL_Window* window;
         SDL_Renderer* renderer;
         {
@@ -908,13 +898,46 @@ namespace GUI {
 
         const ImVec4 clear_color { 0.45f, 0.55f, 0.60f, 1.00f };
 
+        Windows::MenuBarEnables menu_bar_enables;
+        std::vector<SimpleBLE::Peripheral> peripherals;
+        std::vector<Windows::Client> clients;
+        std::optional<SimpleBLE::Adapter> adapter { find_adapter() };
+        int selected = -1;
+
+        Boilerplate::process_events(window, done);
+        Boilerplate::start_new_frame();
+        ImGuiID top_id = Windows::top_with_dock_space(menu_bar_enables);
+        Windows::DockspaceIDs top_ids { Windows::split_left_center(top_id) };
+        Windows::ble_client(adapter, menu_bar_enables.ble_client, top_ids.left, peripherals, selected, clients);
+        Boilerplate::render(renderer, clear_color);
+
+        while(done == false) {
+            Boilerplate::process_events(window, done);
+            Boilerplate::start_new_frame();
+            top_id = Windows::top_with_dock_space(menu_bar_enables);
+
+            Windows::ble_client(adapter, menu_bar_enables.ble_client, top_ids.left, peripherals, selected, clients);
+
+            std::for_each(clients.begin(), clients.end(), [index = 0, &top_ids, &menu_bar_enables](auto &e) mutable {
+                Windows::client1(index, top_ids.center, e, menu_bar_enables);
+                index++;
+            });
+
+            clients.erase(std::remove_if(clients.begin(), clients.end(), [](auto &e) {
+                return e.enable == false;
+            }), clients.end());
+
+            Boilerplate::render(renderer, clear_color);
+        }
+
+        /*
         while(
             (esp32_ad5933.has_value() == false || esp32_ad5933.value().is_connected() == false)
             && done == false
         ) {
             Boilerplate::process_events(window, done);
             Boilerplate::start_new_frame();
-            GUI::Windows::create_connecting();
+            GUI::Windows::ble_client();
             Boilerplate::render(renderer, clear_color);
         }
 
@@ -925,7 +948,7 @@ namespace GUI {
             create_main(esp32_ad5933, measure_captures);
             Boilerplate::render(renderer, clear_color);
         }
-
+        */
         Boilerplate::shutdown(renderer, window);
     }
 }

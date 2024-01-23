@@ -73,25 +73,6 @@ std::ostream& operator<<(std::ostream& os, std::vector<SimpleBLE::Adapter> &adap
     return os;
 }
 
-Payload::Payload(const Payload &other) :
-    read_ready { other.read_ready.load() },
-    content { other.content }
-{}
-
-Payload& Payload::operator=(const Payload &&other) {
-    return *this;
-}
-
-void Payload::clean() {
-    content.clear();
-    read_ready.store(false);
-}
-
-std::string Payload::read() {
-    read_ready.wait(false);
-    return content;
-}
-
 bool is_peripheral_esp32_ad5933(SimpleBLE::Peripheral &peripheral) {
     const auto to_lower = [](const std::string &string) { 
         auto ret = string;
@@ -168,8 +149,7 @@ ESP32_AD5933::ESP32_AD5933(const ESP32_AD5933 &other) :
     body_composition_measurement_chacteristic { other.body_composition_measurement_chacteristic },
     body_composition_feature_chacteristic { other.body_composition_feature_chacteristic },
     is_subscribed_to_body_composition_measurement_chacteristic_indicate { other.is_subscribed_to_body_composition_measurement_chacteristic_indicate },
-    is_subscribed_to_body_composition_measurement_chacteristic_notify { other.is_subscribed_to_body_composition_measurement_chacteristic_notify },
-    rx_payload { other.rx_payload }
+    is_subscribed_to_body_composition_measurement_chacteristic_notify { other.is_subscribed_to_body_composition_measurement_chacteristic_notify }
 {}
 
 ESP32_AD5933& ESP32_AD5933::operator=(const ESP32_AD5933& other) {
@@ -283,33 +263,26 @@ void ESP32_AD5933::subscribe_to_body_composition_measurement_notify() {
             body_composistion_service.value().uuid(),
             body_composition_measurement_chacteristic.value().uuid(),
             [&](SimpleBLE::ByteArray captured_payload) {
-                // Only for debugging
-                //std::cout << "Printing from subscribe_to_body_composition_measurement_notify lambda\n";
-                //for(size_t i = 0; i < captured_payload.size(); i++) {
-                //  std::printf("Byte[%zu]: 0x%02X\n", i, static_cast<uint8_t>(captured_payload[i]));
-                //}
-                while(rx_payload.read_ready.load() == true) {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                }
-                rx_payload.content = captured_payload;
-                rx_payload.read_ready.store(true);
-                rx_payload.read_ready.notify_all();
+                rx_payload.content.push(std::move(captured_payload));
+                rx_payload.cv.notify_one();
             }
         );
     }
 }
 
 ESP32_AD5933::~ESP32_AD5933() {
+    std::cout << "ESP32_AD5933::~ESP32_AD5933\n";
     disconnect();
 }
 
-std::optional<SimpleBLE::Peripheral> find_esp32_ad5933(const bool &done) {
+std::optional<SimpleBLE::Adapter> find_adapter() {
     if(Trielo::trielo<SimpleBLE::Adapter::bluetooth_enabled>(Trielo::OkErrCode(true)) == false) {
         std::cout << "ERROR: BLE: Bleutooth disabled\n";
         return std::nullopt;
     }
 
     auto adapters = Trielo::trielo<SimpleBLE::Adapter::get_adapters>();
+    std::cout << adapters;
     if(adapters.empty()) {
         std::cout << "ERROR: BLE: Could not find a Bluetooth adapter\n";
         return std::nullopt;
@@ -326,38 +299,47 @@ std::optional<SimpleBLE::Peripheral> find_esp32_ad5933(const bool &done) {
         return std::nullopt;
     }
 
-    adapter.set_callback_on_scan_start([]() { std::cout << "BLE: Scan started." << std::endl; });
-    adapter.set_callback_on_scan_stop([]() { std::cout << "BLE: Scan stopped." << std::endl; });
+    return adapter;
+}
+
+std::optional<SimpleBLE::Peripheral> find_esp32_ad5933(const bool &done) {
+    auto adapter{ find_adapter() };
+    if(adapter.has_value() == false) {
+        return std::nullopt;
+    }
+
+    adapter.value().set_callback_on_scan_start([]() { std::cout << "BLE: Scan started." << std::endl; });
+    adapter.value().set_callback_on_scan_stop([]() { std::cout << "BLE: Scan stopped." << std::endl; });
 
     std::optional<SimpleBLE::Peripheral> esp32_ad5933_peripheral = std::nullopt;
-    adapter.set_callback_on_scan_found([&](SimpleBLE::Peripheral peripheral) {
+    adapter.value().set_callback_on_scan_found([&](SimpleBLE::Peripheral peripheral) {
         std::cout << "BLE: Found device\n";
         std::cout << peripheral;
         if(is_peripheral_esp32_ad5933(peripheral)) {
             std::cout << "BLE: Found ESP32 AD5933\n";
             std::cout << peripheral;
             esp32_ad5933_peripheral = peripheral;
-            if(adapter.scan_is_active()) {
-                adapter.scan_stop();
+            if(adapter.value().scan_is_active()) {
+                adapter.value().scan_stop();
             }
         }
     });
 
-    adapter.set_callback_on_scan_updated([&](SimpleBLE::Peripheral peripheral) {
+    adapter.value().set_callback_on_scan_updated([&](SimpleBLE::Peripheral peripheral) {
         std::cout << "BLE: Found device\n";
         std::cout << peripheral;
         if(is_peripheral_esp32_ad5933(peripheral)) {
             std::cout << "BLE: ESP32 AD5933: Updated status\n";
             std::cout << peripheral;
             esp32_ad5933_peripheral = peripheral;
-            if(adapter.scan_is_active()) {
-                adapter.scan_stop();
+            if(adapter.value().scan_is_active()) {
+                adapter.value().scan_stop();
             }
         }
     });
 
-    adapter.scan_start();
-    while(adapter.scan_is_active() && (done == false)) {
+    adapter.value().scan_start();
+    while(adapter.value().scan_is_active() && (done == false)) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 

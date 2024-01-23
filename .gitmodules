@@ -2,13 +2,13 @@
 	path = gui/lib/extern/implot
 	url = https://github.com/epezent/implot
 [submodule "misc/imgui_sdl2/lib/SimpleBLE"]
-	path = gui/lib/extern/SimpleBLE
+	path = gui/common/SimpleBLE
 	url = https://github.com/OpenBluetoothToolbox/SimpleBLE
 [submodule "main/lib/external/trielo_wrapper/trielo"]
 	path = common/trielo_wrapper/trielo
 	url = https://github.com/spikeyamk/trielo.git
 [submodule "main/lib/ble/server/lib/sml_wrapper/sml"]
-	path = fw/main/lib/ble_server/lib/sml_wrapper/sml
+	path = common/sml_wrapper/sml
 	url = https://github.com/boost-ext/sml.git
 [submodule "common/trielo_wrapper/trielo"]
 	path = common/trielo_wrapper/trielo
@@ -19,3 +19,6 @@
 [submodule "gui/lib/imgui"]
 	path = gui/lib/extern/imgui
 	url = https://github.com/ocornut/imgui.git
+[submodule "gui/ble_client/lib/extern/SimpleBLE"]
+	path = gui/ble_client/lib/extern/SimpleBLE
+	url = https://github.com/OpenBluetoothToolbox/SimpleBLE.git
