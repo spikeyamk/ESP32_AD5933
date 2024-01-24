@@ -30,7 +30,11 @@ namespace BLE_Client {
                 connecting, connected, disconnecting,
                 disconnected, error, using_esp32_ad5933
             >;
-            const std::string prefix = "BLE_Client::Discovery::States::";
+            #ifdef _MSC_VER
+                const std::string prefix = "_1_9::aux::get_type_name<struct BLE_Client::Discovery::States::";
+            #else
+                const std::string prefix = "BLE_Client::Discovery::States::";
+            #endif
             extern std::map<std::string, T_State> stupid_sml;
         }
     }

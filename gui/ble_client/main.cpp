@@ -3,6 +3,8 @@
 #include <thread>
 #include <simpleble/SimpleBLE.h>
 #include <functional>
+#include <stdexcept>
+#include <typeinfo>
 
 #include <trielo/trielo.hpp>
 
@@ -12,18 +14,23 @@
 
 std::shared_ptr<BLE_Client::SHM::SHM> init_shm() {
 	constexpr size_t shm_size = 2 << 15;
-	std::shared_ptr<BLE_Client::SHM::SHM> ret = std::make_shared<BLE_Client::SHM::SHM>(shm_size);
-	ret->channel = ret->segment.construct<BLE_Client::SHM::Channel>
-		(BLE_Client::SHM::SHM::channel_name)
-		(0, 0.0f);
-	const BLE_Client::SHM::CMD_DequeAllocator deque_allocator(ret->segment.get_segment_manager());
-	ret->cmd_deque = ret->segment.construct<BLE_Client::SHM::CMD_Deque>(BLE_Client::SHM::SHM::cmd_deque_name)(deque_allocator);
-	const BLE_Client::SHM::NotifyAllocator notify_allocator(ret->segment.get_segment_manager());
-	ret->notify_deque = ret->segment.construct<BLE_Client::SHM::NotifyDeque>(BLE_Client::SHM::SHM::notify_deque_name)(notify_allocator);
-	const BLE_Client::SHM::DiscoveryDevicesAllocator discovery_devices_allocator(ret->segment.get_segment_manager());
-	ret->discovery_devices = ret->segment.construct<BLE_Client::SHM::DiscoveryDevices>(BLE_Client::SHM::SHM::discovery_devices_name)(discovery_devices_allocator);
-	ret->active_state = ret->segment.construct<BLE_Client::Discovery::States::T_State>(BLE_Client::SHM::SHM::active_state_name)(BLE_Client::Discovery::States::off{});
-	return ret;
+	try {
+		std::shared_ptr<BLE_Client::SHM::SHM> ret = std::make_shared<BLE_Client::SHM::SHM>(shm_size);
+		ret->channel = ret->segment.construct<BLE_Client::SHM::Channel>
+			(BLE_Client::SHM::SHM::channel_name)
+			(0, 0.0f);
+		const BLE_Client::SHM::CMD_DequeAllocator deque_allocator(ret->segment.get_segment_manager());
+		ret->cmd_deque = ret->segment.construct<BLE_Client::SHM::CMD_Deque>(BLE_Client::SHM::SHM::cmd_deque_name)(deque_allocator);
+		const BLE_Client::SHM::NotifyAllocator notify_allocator(ret->segment.get_segment_manager());
+		ret->notify_deque = ret->segment.construct<BLE_Client::SHM::NotifyDeque>(BLE_Client::SHM::SHM::notify_deque_name)(notify_allocator);
+		const BLE_Client::SHM::DiscoveryDevicesAllocator discovery_devices_allocator(ret->segment.get_segment_manager());
+		ret->discovery_devices = ret->segment.construct<BLE_Client::SHM::DiscoveryDevices>(BLE_Client::SHM::SHM::discovery_devices_name)(discovery_devices_allocator);
+		ret->active_state = ret->segment.construct<BLE_Client::Discovery::States::T_State>(BLE_Client::SHM::SHM::active_state_name)(BLE_Client::Discovery::States::off{});
+		return ret;
+	} catch(const std::exception& e) {
+		std::cerr << "ERROR: BLE_Client::init_shm(): exception: " << e.what() << std::endl;
+		std::exit(1);
+	}
 }
 
 void listen_to_cmds(std::stop_source stop_source, std::shared_ptr<BLE_Client::SHM::SHM> shm, BLE_Client::Discovery::T_StateMachine& discovery_agent, std::string& connect_address) {
@@ -72,12 +79,18 @@ void checker(std::stop_source stop_source, BLE_Client::Discovery::T_StateMachine
 			}
 		}
 
-		state_machine.visit_current_states([&](auto visited_state) {
+		state_machine.visit_current_states([&](auto&& visited_state) {
 			if((visited_state.c_str() == BLE_Client::Discovery::States::prefix + "alive")
 			|| (visited_state.c_str() == BLE_Client::Discovery::States::prefix + "dead")) {
 				return;
 			}
-			*(shm->active_state) = BLE_Client::Discovery::States::stupid_sml.at(visited_state.c_str());
+			try {
+				*(shm->active_state) = BLE_Client::Discovery::States::stupid_sml.at(visited_state.c_str());
+			} catch(const std::exception& e) {
+				std::cerr << "ERROR: BLE_Client::checker: exception: " << e.what() << std::endl;
+				std::cerr << "ERROR: This compiler gives the visited_state a different prefix\n";
+				std::exit(-1);
+			}
 		});
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
@@ -85,7 +98,6 @@ void checker(std::stop_source stop_source, BLE_Client::Discovery::T_StateMachine
 
 int main(void) {
     std::printf("BLE_Client process started\n");
-
 	BLE_Client::SHM::Remover remover { BLE_Client::SHM::SHM::name, BLE_Client::SHM::SHM::cmd_deque_mutex_name, BLE_Client::SHM::SHM::cmd_deque_condition_name };
     std::shared_ptr<BLE_Client::SHM::SHM> shm { init_shm() };
 

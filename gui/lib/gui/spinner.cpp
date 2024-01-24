@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include "imgui_internal.h"
 
 #include "gui/spinner.hpp"

@@ -8,7 +8,12 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-find_package(Boost COMPONENTS date_time interprocess)
+if(WIN32)
+	# Adding stupid macro definition so that boost doesn't complain about stupid Windows 7
+    add_compile_definitions(_WIN32_WINNT=0x0A00)
+endif()
+
+find_package(Boost COMPONENTS date_time filesystem)
 set(BOOST_SML_DIR ${CMAKE_CURRENT_LIST_DIR}/../../common/sml_wrapper/sml)
 if(NOT TARGET trielo)
     set(TRIELO_DIR ${CMAKE_CURRENT_LIST_DIR}/../../common/trielo_wrapper/trielo)

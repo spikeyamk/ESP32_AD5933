@@ -104,7 +104,12 @@
         "*.ipp": "cpp",
         "*.inc": "cpp",
         "qtbluetooth": "cpp",
-        "future": "cpp"
+        "future": "cpp",
+        "coroutine": "cpp",
+        "csetjmp": "cpp",
+        "execution": "cpp",
+        "expected": "cpp",
+        "regex": "cpp"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }

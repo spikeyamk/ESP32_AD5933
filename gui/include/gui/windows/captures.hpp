@@ -99,7 +99,7 @@ namespace GUI {
                         [this, &stoul_lambda]() {
                             const auto ret = stoul_lambda(std::string(this->num_of_inc.begin(), this->num_of_inc.end()));
                             if(ret.has_value()) {
-                                return AD5933::uint9_t { ret.value() };
+                                return AD5933::uint9_t { static_cast<uint16_t>(ret.value()) };
                             } else {
                                 return this->config.get_num_of_inc();
                             }
@@ -107,7 +107,7 @@ namespace GUI {
                         [this, &stoul_lambda]() {
                             const auto ret = stoul_lambda(std::string(this->settling_time_cycles_num.begin(), this->settling_time_cycles_num.end()));
                             if(ret.has_value()) {
-                                return AD5933::uint9_t { ret.value() };
+                                return AD5933::uint9_t { static_cast<uint16_t>(ret.value()) };
                             } else {
                                 return this->config.get_settling_time_cycles_number();
                             }

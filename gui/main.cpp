@@ -2,7 +2,6 @@
 #include <chrono>
 #include <iostream>
 #include <memory>
-#include <typeinfo>
 
 #include <boost/process.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
@@ -14,6 +13,7 @@
 #include "ble_client/ble_client.hpp"
 #include "gui/imgui_sdl.hpp"
 #include "magic/packets.hpp"
+#include <trielo/trielo.hpp>
 
 void gui() {
     bool done = false;
@@ -105,9 +105,14 @@ void state_reporter(std::shared_ptr<BLE_Client::SHM::SHM> shm, boost::process::c
 }
 
 int main(int argc, char* argv[]) {
-    const boost::filesystem::path client_path { "/home/spikeyamk/Documents/git-repos/ESP32_AD5933/gui/build/ble_client/ble_client" };
+    #ifdef _MSC_VER
+        const boost::filesystem::path client_path { "C:/Users/janco/source/repos/ESP32_AD5933/gui/build/ble_client/Debug/ble_client.exe" };
+    #else
+        const boost::filesystem::path client_path { "/home/spikeyamk/Documents/git-repos/ESP32_AD5933/gui/build/ble_client/ble_client" };
+    #endif
     boost::process::child client { client_path };
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(2'000));
+
     std::shared_ptr<BLE_Client::SHM::SHM> shm { attach_shm() };
     std::jthread reporter_thread(state_reporter, shm, std::ref(client));
 

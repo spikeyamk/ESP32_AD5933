@@ -8,6 +8,11 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+if(WIN32)
+	# Adding stupid macro definition so that boost doesn't complain about stupid Windows 7
+	add_compile_definitions(_WIN32_WINNT=0x0A00)
+endif()
+
 set(TRIELO_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/trielo_wrapper/trielo)
 set(SIMPLEBLE_DIR ${CMAKE_CURRENT_LIST_DIR}/common/SimpleBLE/simpleble)
 set(SDL_STATIC ON)
@@ -29,7 +34,7 @@ set(AD5933_MEASUREMENT_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/ad5933/measuremen
 set(AD5933_TEMPERATURE_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/ad5933/temperature)
 set(AD5933_DEBUG_DATA_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/ad5933/debug_data)
 set(BLE_CLIENT_DIR ${CMAKE_CURRENT_LIST_DIR}/ble_client)
-find_package(Boost COMPONENTS process date_time interprocess)
+find_package(Boost COMPONENTS date_time filesystem)
 
 set(IMGUI_SRCS
 	${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp

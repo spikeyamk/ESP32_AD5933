@@ -61,16 +61,16 @@ namespace BLE_Client {
 
         class SHM {
         public:
-            static constexpr char name[] = "BLE_Client::SHM";
-            static constexpr char channel_name[] = "BLE_Client::SHM::channel";
-            static constexpr char cmd_deque_name[] = "BLE_Client::SHM::cmd_deque";
-            static constexpr char cmd_deque_mutex_name[] = "BLE_Client::SHM::cmd_deque_mutex";
-            static constexpr char cmd_deque_condition_name[] = "BLE_Client::SHM::cmd_deque_condition";
-            static constexpr char discovery_devices_name[] = "BLE_Client::SHM::discovery_devices";
-            static constexpr char active_state_name[] = "BLE_Client::SHM::active_state_name";
-            static constexpr char notify_deque_name[] = "BLE_Client::SHM::notify_deque_name";
-            static constexpr char notify_deque_mutex_name[] = "BLE_Client::SHM::notify_deque_mutex_name";
-            static constexpr char notify_deque_condition_name[] = "BLE_Client::SHM::notify_deque_condition_name";
+            static constexpr char name[] = "BLE_Client.SHM";
+            static constexpr char channel_name[] = "BLE_Client.SHM::channel";
+            static constexpr char cmd_deque_name[] = "BLE_Client.SHM.cmd_deque";
+            static constexpr char cmd_deque_mutex_name[] = "BLE_Client.SHM.cmd_deque_mutex";
+            static constexpr char cmd_deque_condition_name[] = "BLE_Client.SHM.cmd_deque_condition";
+            static constexpr char discovery_devices_name[] = "BLE_Client.SHM.discovery_devices";
+            static constexpr char active_state_name[] = "BLE_Client.SHM.active_state_name";
+            static constexpr char notify_deque_name[] = "BLE_Client.SHM.notify_deque_name";
+            static constexpr char notify_deque_mutex_name[] = "BLE_Client.SHM.notify_deque_mutex_name";
+            static constexpr char notify_deque_condition_name[] = "BLE_Client.SHM.notify_deque_condition_name";
 
             boost::interprocess::managed_shared_memory segment;
             BLE_Client::SHM::Channel* channel = nullptr;

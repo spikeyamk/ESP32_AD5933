@@ -93,14 +93,6 @@ namespace BLE_Client {
 
             bool discovery_available(SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
                 try {
-                    if(adapter.bluetooth_enabled() == false) {
-                        return false;
-                    }
-
-                    if(adapter.scan_is_active()) {
-                        return false;
-                    }
-
                     adapter.set_callback_on_scan_start([shm]() { std::printf("BLE_Client::Scan started\n"); shm->discovery_devices->clear(); });
                     adapter.set_callback_on_scan_stop([]() { std::printf("BLE_Client::Scan stopped\n"); });
                     adapter.set_callback_on_scan_found([shm](SimpleBLE::Peripheral found_peripheral) {
