@@ -11,6 +11,13 @@ endif()
 if(WIN32)
 	# Adding stupid macro definition so that boost doesn't complain about stupid Windows 7
 	add_compile_definitions(_WIN32_WINNT=0x0A00)
+    # Stupid hack this is terrible but it'll do for now
+    # Having to copy libboost*.lib because find_package(Boost) shits itself every time and link.exe fails to find the file even with the full path specified
+    configure_file(
+        ${CMAKE_CURRENT_LIST_DIR}/misc/stupid_windows/libboost_filesystem-vc143-mt-gd-x64-1_84.lib
+        ${CMAKE_BINARY_DIR}/libboost_filesystem-vc143-mt-gd-x64-1_84.lib
+        COPYONLY
+    )
 endif()
 
 set(TRIELO_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/trielo_wrapper/trielo)
@@ -100,3 +107,5 @@ target_link_libraries(gui PRIVATE
 	AD5933_debug_data
     ${Boost_LIBRARIES}
 )
+
+
