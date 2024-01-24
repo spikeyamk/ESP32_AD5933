@@ -10,6 +10,7 @@
 #include <type_traits>
 
 #include <trielo/trielo.hpp>
+#include <boost/thread/thread_time.hpp>
 
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -412,7 +413,7 @@ namespace GUI {
             return dockspace_id;
         }
 
-        void ble_client(bool &enable, ImGuiID left_id, int &selected, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
+        void ble_client(bool &enable, ImGuiID left_id, int &selected, std::shared_ptr<BLE_Client::SHM::SHM> shm, int& client_index) {
             if(enable == false) {
                 return;
             }
@@ -466,15 +467,15 @@ namespace GUI {
                 using T_Decay = std::decay_t<decltype(active_state)>;
                 if constexpr (std::is_same_v<T_Decay, BLE_Client::Discovery::States::off>) {
                     if(ImGui::Button("Find adapter")) {
-                        shm->cmd_deque->push_back(BLE_Client::Discovery::Events::find_default_active_adapter{});
+                        shm->send_cmd(BLE_Client::Discovery::Events::find_default_active_adapter{});
                     }
                 } else if constexpr (std::is_same_v<T_Decay, BLE_Client::Discovery::States::using_adapter>) {
                     if(ImGui::Button("Scan")) {
-                        shm->cmd_deque->push_back(BLE_Client::Discovery::Events::start_discovery{});
+                        shm->send_cmd(BLE_Client::Discovery::Events::start_discovery{});
                     }
                 } else if constexpr (std::is_same_v<T_Decay, BLE_Client::Discovery::States::discovering>) {
                     if(ImGui::Button("Stop Scan")) {
-                        shm->cmd_deque->push_back(BLE_Client::Discovery::Events::stop_discovery{});
+                        shm->send_cmd(BLE_Client::Discovery::Events::stop_discovery{});
                     }
                     ImGui::SameLine();
                     Spinner::Spinner("Scanning", 5.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
@@ -487,21 +488,29 @@ namespace GUI {
                 if constexpr (std::is_same_v<T_Decay, BLE_Client::Discovery::States::discovered>) {
                     if(selected > -1) {
                         if(ImGui::Button("Connect")) {
-                            shm->cmd_deque->push_back(BLE_Client::Discovery::Events::connect{ static_cast<size_t>(selected) });
-                            std::thread([&]() {
+                            shm->send_cmd(BLE_Client::Discovery::Events::connect{ static_cast<size_t>(selected) });
+                            std::thread([](auto shm, int& client_index, const int selected) {
                                 bool its_connected = false;
                                 for(int i = 0; i < 100 && its_connected == false; i++) { 
-                                    shm->cmd_deque->push_back(BLE_Client::Discovery::Events::is_connected{});
+                                    shm->send_cmd(BLE_Client::Discovery::Events::is_connected{});
                                     std::visit([&](auto&& extra_active_state) {
                                         using T_ExtraDecay = std::decay_t<decltype(extra_active_state)>;
                                         if constexpr (std::is_same_v<T_ExtraDecay, BLE_Client::Discovery::States::connected>) {
                                             its_connected = true;
-                                            shm->cmd_deque->push_back(BLE_Client::Discovery::Events::is_esp32_ad5933{});
+                                            shm->send_cmd(BLE_Client::Discovery::Events::is_esp32_ad5933{});
                                         }
                                     }, *shm->active_state);
-                                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                                    std::this_thread::sleep_for(std::chrono::milliseconds(500));
                                 }
-                            }).detach();
+
+                                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                                std::visit([&](auto&& extra_active_state) {
+                                    using T_ExtraDecay = std::decay_t<decltype(extra_active_state)>;
+                                    if constexpr (std::is_same_v<T_ExtraDecay, BLE_Client::Discovery::States::using_esp32_ad5933>) {
+                                        client_index = selected;
+                                    }
+                                }, *shm->active_state);
+                            }, shm, std::ref(client_index), selected).detach();
                         }
                     }
                 }
@@ -557,33 +566,30 @@ namespace GUI {
             console.Draw();
         }
 
-        bool send_packet(std::shared_ptr<ESP32_AD5933> esp32_ad5933, const Magic::Packets::Packet_T &packet) {
-            const std::string footer_string(packet.begin(), packet.end());
-            if(esp32_ad5933->send(footer_string) == false) {
-    		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: send_simple_packet failed: {}\n", footer_string);
-                return false;
-            }
+        bool send_packet(const Magic::Packets::Packet_T &packet, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
+            shm->send_cmd(BLE_Client::Discovery::Events::esp32_ad5933_write{ packet });
             return true;
         }
 
         template<size_t N>
-        bool send_packet_and_footer(std::shared_ptr<ESP32_AD5933> esp32_ad5933, const std::array<uint8_t, N> &raw_array, const Magic::Packets::Packet_T &footer) {
+        bool send_packet_and_footer(const std::array<uint8_t, N> &raw_array, const Magic::Packets::Packet_T &footer, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
             static_assert(N < Magic::Packets::Debug::start.size());
             Magic::Packets::Packet_T buf = footer;
             std::copy(raw_array.begin(), raw_array.end(), buf.begin());
-            return send_packet(esp32_ad5933, buf);
+            return send_packet(buf, shm);
         }
 
-        void send_configure(Client &client) {
-            if(send_packet_and_footer(client.esp32_ad5933, client.configure_captures.config.to_raw_array(), Magic::Packets::FrequencySweep::configure) == false) {
+        void send_configure(Client &client, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
+            if(send_packet_and_footer(client.configure_captures.config.to_raw_array(), Magic::Packets::FrequencySweep::configure, shm) == false) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: configure failed\n");
                 client.configured = false;
             }
             client.configured = true;
         }
 
-        void calibrate(std::stop_token st, Client &client) {
-            std::unique_lock lock(client.esp32_ad5933->rx_payload.mutex);
+        void calibrate(std::stop_token st, Client &client, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
+            using namespace boost::interprocess;
+            scoped_lock boost_lock(shm->cmd_deque_mutex);
             const uint16_t wished_size = client.configure_captures.config.get_num_of_inc().unwrap() + 1;
             const float progress_bar_step = 1.0f / static_cast<float>(wished_size);
             const float timeout_ms = (1.0f / static_cast<float>(client.configure_captures.config.get_start_freq().unwrap())) 
@@ -591,7 +597,7 @@ namespace GUI {
                 * AD5933::Masks::Or::SettlingTimeCyclesHB::get_multiplier_float(client.configure_captures.config.get_settling_time_cycles_multiplier())
                 * 1'000'000.0f
                 * 10.0f;
-            const auto chrono_timeout_ms { std::chrono::milliseconds(static_cast<size_t>(timeout_ms)) };
+            const auto boost_timeout_ms { boost::posix_time::milliseconds(static_cast<size_t>(timeout_ms)) };
 
             std::vector<AD5933::Data> tmp_raw_calibration;
             tmp_raw_calibration.reserve(wished_size);
@@ -600,29 +606,30 @@ namespace GUI {
 
             client.progress_bar_fraction = 0.0f;
 
-            if(send_packet(client.esp32_ad5933, Magic::Packets::FrequencySweep::run) == false) {
+            if(send_packet(Magic::Packets::FrequencySweep::run, shm) == false) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: calibrate: send_packet failed\n");
                 return;
             }
 
             do {
-                client.esp32_ad5933->rx_payload.cv.wait_for(lock, chrono_timeout_ms, [&]() { 
-                    if(client.esp32_ad5933->rx_payload.content.empty() == true) {
-                        return false;
-                    }
+                if(shm->notify_deque_condition.timed_wait(
+                    boost_lock,
+                    boost::get_system_time() + boost_timeout_ms,
+			        [&shm]() {
+                        if(shm->notify_deque->empty() == true) {
+                            return false;
+                        }
 
-                    if(client.esp32_ad5933->rx_payload.content.front().size() < 4) {
-                        return false;
+                        std::array<uint8_t, 20> tmp_raw { 0x00 };
+                        std::copy(shm->notify_deque->front().begin(), shm->notify_deque->front().end(), tmp_raw.begin());
+                        if(Magic::Packets::get_magic_packet_pointer(std::move(tmp_raw)) != Magic::Packets::FrequencySweep::read_data_valid_value) {
+                            return false;
+                        }
+                        return true;
                     }
-
-                    std::array<uint8_t, 20> tmp_raw { 0x00 };
-                    std::copy(client.esp32_ad5933->rx_payload.content.front().begin(), client.esp32_ad5933->rx_payload.content.front().end(), tmp_raw.begin());
-                    if(Magic::Packets::get_magic_packet_pointer(tmp_raw) != Magic::Packets::FrequencySweep::read_data_valid_value) {
-                        return false;
-                    }
-
-                    return true;
-                });
+                ) == false) {
+                    return;
+                }
 
                 if(st.stop_requested()) {
                     client.calibrating = false;
@@ -630,13 +637,13 @@ namespace GUI {
                     return;
                 }
 
-                if(client.esp32_ad5933->rx_payload.content.empty() == true) {
+                if(shm->notify_deque->empty()) {
     		        fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: calibrate: failed: timeout\n");
                     return;
                 }
 
-                const auto rx_payload = client.esp32_ad5933->rx_payload.content.front();
-                client.esp32_ad5933->rx_payload.content.pop();
+                const auto rx_payload = shm->notify_deque->front();
+                shm->notify_deque->pop_front();
 
                 std::array<uint8_t, 4> raw_array;
                 std::copy(rx_payload.begin(), rx_payload.begin() + 4, raw_array.begin());
@@ -652,8 +659,9 @@ namespace GUI {
             client.calibrating = false;
         }
 
-        void sweep(std::stop_token st, Client &client) {
-            std::unique_lock lock(client.esp32_ad5933->rx_payload.mutex);
+        void sweep(std::stop_token st, Client &client, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
+            using namespace boost::interprocess;
+            scoped_lock boost_lock(shm->notify_deque_mutex);
             const uint16_t wished_size = client.configure_captures.config.get_num_of_inc().unwrap() + 1;
             assert(wished_size <= client.calibration.size());
             const float progress_bar_step = 1.0f / static_cast<float>(wished_size);
@@ -662,7 +670,7 @@ namespace GUI {
                 * AD5933::Masks::Or::SettlingTimeCyclesHB::get_multiplier_float(client.configure_captures.config.get_settling_time_cycles_multiplier())
                 * 1'000'000.0f
                 * 10.0f;
-            const auto chrono_timeout_ms { std::chrono::milliseconds(static_cast<size_t>(timeout_ms)) };
+            const auto boost_timeout_ms { boost::posix_time::milliseconds(static_cast<size_t>(timeout_ms)) };
             const std::vector<AD5933::Calibration<float>> tmp_calibration { client.calibration };
             do {
                 std::vector<AD5933::Data> tmp_raw_measurement;
@@ -672,28 +680,30 @@ namespace GUI {
 
                 client.progress_bar_fraction = 0.0f;
 
-                if(send_packet(client.esp32_ad5933, Magic::Packets::FrequencySweep::run) == false) {
+                if(send_packet(Magic::Packets::FrequencySweep::run, shm) == false) {
                     fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: sweep: send_packet: run: failed\n");
                     return;
                 }
                 do {
-                    client.esp32_ad5933->rx_payload.cv.wait_for(lock, chrono_timeout_ms, [&]() { 
-                        if(client.esp32_ad5933->rx_payload.content.empty() == true) {
-                            return false;
-                        }
+                    if(shm->notify_deque_condition.timed_wait(
+                        boost_lock,
+                        boost::get_system_time() + boost_timeout_ms,
+                        [&shm]() {
+                            if(shm->notify_deque->empty() == true) {
+                                return false;
+                            }
 
-                        if(client.esp32_ad5933->rx_payload.content.front().size() < 4) {
-                            return false;
+                            std::array<uint8_t, 20> tmp_raw { 0x00 };
+                            std::copy(shm->notify_deque->front().begin(), shm->notify_deque->front().end(), tmp_raw.begin());
+                            if(Magic::Packets::get_magic_packet_pointer(std::move(tmp_raw)) != Magic::Packets::FrequencySweep::read_data_valid_value) {
+                                return false;
+                            }
+                            return true;
                         }
-
-                        std::array<uint8_t, 20> tmp_raw { 0x00 };
-                        std::copy(client.esp32_ad5933->rx_payload.content.front().begin(), client.esp32_ad5933->rx_payload.content.front().end(), tmp_raw.begin());
-                        if(Magic::Packets::get_magic_packet_pointer(tmp_raw) != Magic::Packets::FrequencySweep::read_data_valid_value) {
-                            return false;
-                        }
-
-                        return true;
-                    });
+                    ) == false) {
+                        fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: sweep: failed: timeout\n");
+                        return;
+                    }
 
                     if(st.stop_requested()) {
                         client.sweeping = false;
@@ -701,13 +711,8 @@ namespace GUI {
                         return;
                     }
 
-                    if(client.esp32_ad5933->rx_payload.content.empty() == true) {
-                        fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: sweep: failed: timeout\n");
-                        return;
-                    }
-
-                    const auto rx_payload = client.esp32_ad5933->rx_payload.content.front();
-                    client.esp32_ad5933->rx_payload.content.pop();
+                    const auto rx_payload = shm->notify_deque->front();
+                    shm->notify_deque->pop_front();
 
                     std::array<uint8_t, 4> raw_array;
                     std::copy(rx_payload.begin(), rx_payload.begin() + 4, raw_array.begin());
@@ -724,7 +729,7 @@ namespace GUI {
             client.sweeping = false;
         }
 
-        void configure(int i, ImGuiID side_id, bool &enable, Client &client) {
+        void configure(int i, ImGuiID side_id, bool &enable, Client &client, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
             static char base[] = "Configure";
             char name[20];
             std::sprintf(name, "%s##%d", base, i);
@@ -822,14 +827,14 @@ namespace GUI {
             }
 
             if(ImGui::Button("Configure")) {
-                std::jthread t1(send_configure, std::ref(client));
+                std::jthread t1(send_configure, std::ref(client), shm);
                 t1.detach();
             }
 
             if(client.configured == true) {
                 ImGui::SameLine();
                 if(ImGui::Button("Freq Sweep End")) {
-                    std::jthread t1([&]() { send_packet(client.esp32_ad5933, Magic::Packets::FrequencySweep::end); client.configured = false; });
+                    std::jthread t1([&]() { send_packet(Magic::Packets::FrequencySweep::end, shm); client.configured = false; });
                     t1.detach();
                 } 
 
@@ -837,7 +842,7 @@ namespace GUI {
                     if(ImGui::Button("Calibrate")) {
                         client.calibrating = true;
                         client.calibrated = false;
-                        std::jthread t1(calibrate, client.ss.get_token(), std::ref(client));
+                        std::jthread t1(calibrate, client.ss.get_token(), std::ref(client), shm);
                         t1.detach();
                     }
                 } else if(client.sweeping == false) {
@@ -852,7 +857,7 @@ namespace GUI {
                         if(ImGui::Button("Start Sweep")) {
                             client.sweeping = true;
                             client.sweeped = false;
-                            std::jthread t1(sweep, client.ss.get_token(), std::ref(client));
+                            std::jthread t1(sweep, client.ss.get_token(), std::ref(client), shm);
                             t1.detach();
                         }
                     } else if(client.calibrating == false) {
@@ -866,63 +871,67 @@ namespace GUI {
             ImGui::End();
         }
 
-        bool dump(Client &client) {
-            std::unique_lock lock(client.esp32_ad5933->rx_payload.mutex);
-            if(send_packet(client.esp32_ad5933, Magic::Packets::Debug::dump_all_registers) == false) {
-                return false;
-            }
-            if(client.esp32_ad5933->rx_payload.cv.wait_for(lock, std::chrono::milliseconds(1000), [&client, packet_footer = Magic::Packets::Debug::dump_all_registers]() {
-                if(client.esp32_ad5933->rx_payload.content.empty()) {
-                    return false;
+        bool dump(Client &client, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
+            using namespace boost::interprocess;
+            scoped_lock boost_lock(shm->notify_deque_mutex);
+            shm->send_cmd(BLE_Client::Discovery::Events::esp32_ad5933_write{ Magic::Packets::Debug::dump_all_registers });
+
+            if(shm->notify_deque_condition.timed_wait(
+                boost_lock,
+                boost::get_system_time() + boost::posix_time::milliseconds(10'000),
+			    [&shm]() {
+                    if(shm->notify_deque->empty() == true) {
+                        return false;
+                    }
+
+                    std::array<uint8_t, 20> tmp_raw { 0x00 };
+                    std::copy(shm->notify_deque->front().begin(), shm->notify_deque->front().end(), tmp_raw.begin());
+                    if(Magic::Packets::get_magic_packet_pointer(std::move(tmp_raw)) != Magic::Packets::Debug::dump_all_registers) {
+                        return false;
+                    }
+
+                    return true;
                 }
-                if(client.esp32_ad5933->rx_payload.content.front().size() < 19) {
-                    return false;
-                }
-                std::array<uint8_t, 20> tmp_raw { 0x00 };
-                std::copy(client.esp32_ad5933->rx_payload.content.front().begin(), client.esp32_ad5933->rx_payload.content.front().end(), tmp_raw.begin());
-                if(Magic::Packets::get_magic_packet_pointer(std::move(tmp_raw)) != packet_footer) {
-                    return false;
-                }
-                return true;
-            }) == false) {
+            ) == false) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: Debug: Dump failed\n");
                 return false;
             }
-            client.debug_captures.update_captures(std::move(client.esp32_ad5933->rx_payload.content.front()));
-            client.esp32_ad5933->rx_payload.content.pop();
+            
+            client.debug_captures.update_captures(std::string(shm->notify_deque->front().begin(), shm->notify_deque->front().end()));
+            shm->notify_deque->pop_front();
             return true;
         }
 
-        bool debug_program(Client &client) {
-            if(send_packet_and_footer(client.esp32_ad5933, client.debug_captures.config.to_raw_array(), Magic::Packets::Debug::program_all_registers) == false) {
+        bool debug_program(Client &client, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
+            if(send_packet_and_footer(client.debug_captures.config.to_raw_array(), Magic::Packets::Debug::program_all_registers, shm) == false) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: debug_program: failed\n");
                 return false;
             }
             return true;
         }
         
-        void program_and_dump(Client &client) {
-            if(debug_program(client) == false) {
+        void program_and_dump(Client &client, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
+            if(debug_program(client, shm) == false) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: program_and_dump: program: failed\n");
                 return;
             }
-            if(dump(client) == false) {
+            if(dump(client, shm) == false) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: program_and_dump: dump: failed\n");
             }
         }
 
-        void command_and_dump(Client &client, AD5933::Masks::Or::Ctrl::HB::Command command) {
+        void command_and_dump(Client &client, AD5933::Masks::Or::Ctrl::HB::Command command, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
             auto buf = Magic::Packets::Debug::control_HB_command;
             buf[0] = static_cast<uint8_t>(command);
-            if(send_packet(client.esp32_ad5933, buf) == false) {
+            if(send_packet(buf, shm) == false) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: command_and_dump: send_packet: {} failed\n", static_cast<uint8_t>(command));
             }
-            if(dump(client) == false) {
+            if(dump(client, shm) == false) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: command_and_dump: dump: {} failed\n", static_cast<uint8_t>(command));
             }
         }
 
-        void debug_registers(int i, ImGuiID side_id, bool &enable, Client &client) {
+        void debug_registers(int i, ImGuiID side_id, bool &enable, Client &client, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
             std::string name = "Debug Registers##" + std::to_string(i);
             static int first = 0;
             if(first == i) {
@@ -938,23 +947,23 @@ namespace GUI {
             if(client.configured == false) {
                 if(client.debug_started == false) {
                     if(ImGui::Button("Start")) {
-                        std::jthread t1([&]() { if(send_packet(client.esp32_ad5933, Magic::Packets::Debug::start) == true) { client.debug_started = true; }} );
-                        t1.detach();
+                        send_packet(Magic::Packets::Debug::start, shm);
+                        client.debug_started = true;
                     }
                 } else {
                     if(ImGui::Button("Dump")) {
-                        std::jthread t1(dump, std::ref(client));
+                        std::jthread t1(dump, std::ref(client), shm);
                         t1.detach();
                     }
                     ImGui::SameLine();
                     if(ImGui::Button("Program")) {
-                        std::jthread t1(program_and_dump, std::ref(client));
+                        std::jthread t1(program_and_dump, std::ref(client), shm);
                         t1.detach();
                     }
                     ImGui::SameLine();
                     if(ImGui::Button("End")) {
-                        std::jthread t1([&]() { send_packet(client.esp32_ad5933, Magic::Packets::Debug::end); client.debug_started = false; });
-                        t1.detach();
+                        send_packet(Magic::Packets::Debug::end, shm);
+                        client.debug_started = false;
                     }
                 }
             }
@@ -1041,37 +1050,37 @@ namespace GUI {
             {
                 ImGui::Text("Send Control Register Command Controls");
                 if(ImGui::Button("Power-down mode")) {
-                    std::jthread t1(command_and_dump, std::ref(client), AD5933::Masks::Or::Ctrl::HB::Command::PowerDownMode);
+                    std::jthread t1(command_and_dump, std::ref(client), AD5933::Masks::Or::Ctrl::HB::Command::PowerDownMode, shm);
                     t1.detach();
                 } ImGui::SameLine();
                     if(ImGui::Button("Standby mode")) {
-                        std::jthread t1(command_and_dump, std::ref(client), AD5933::Masks::Or::Ctrl::HB::Command::StandbyMode);
+                        std::jthread t1(command_and_dump, std::ref(client), AD5933::Masks::Or::Ctrl::HB::Command::StandbyMode, shm);
                         t1.detach();
                     } ImGui::SameLine();
                     if(ImGui::Button("No operation (NOP_0)")) {
-                        std::jthread t1(command_and_dump, std::ref(client), AD5933::Masks::Or::Ctrl::HB::Command::Nop_0);
+                        std::jthread t1(command_and_dump, std::ref(client), AD5933::Masks::Or::Ctrl::HB::Command::Nop_0, shm);
                         t1.detach();
                     }
 
                 if(ImGui::Button("Measure temperature")) {
-                    std::jthread t1(command_and_dump, std::ref(client), AD5933::Masks::Or::Ctrl::HB::Command::MeasureTemp);
+                    std::jthread t1(command_and_dump, std::ref(client), AD5933::Masks::Or::Ctrl::HB::Command::MeasureTemp, shm);
                     t1.detach();
                 }
 
                 if(ImGui::Button("Initialize with start frequency")) {
-                    std::jthread t1(command_and_dump, std::ref(client), AD5933::Masks::Or::Ctrl::HB::Command::InitStartFreq);
+                    std::jthread t1(command_and_dump, std::ref(client), AD5933::Masks::Or::Ctrl::HB::Command::InitStartFreq, shm);
                     t1.detach();
                 } ImGui::SameLine();
                     if(ImGui::Button("Start frequency sweep")) {
-                        std::jthread t1(command_and_dump, std::ref(client), AD5933::Masks::Or::Ctrl::HB::Command::StartFreqSweep);
+                        std::jthread t1(command_and_dump, std::ref(client), AD5933::Masks::Or::Ctrl::HB::Command::StartFreqSweep, shm);
                         t1.detach();
                     } ImGui::SameLine();
                     if(ImGui::Button("Increment frequency")) {
-                        std::jthread t1(command_and_dump, std::ref(client), AD5933::Masks::Or::Ctrl::HB::Command::IncFreq);
+                        std::jthread t1(command_and_dump, std::ref(client), AD5933::Masks::Or::Ctrl::HB::Command::IncFreq, shm);
                         t1.detach();
                     } ImGui::SameLine();
                     if(ImGui::Button("Repeat frequency")) {
-                        std::jthread t1(command_and_dump, std::ref(client), AD5933::Masks::Or::Ctrl::HB::Command::RepeatFreq);
+                        std::jthread t1(command_and_dump, std::ref(client), AD5933::Masks::Or::Ctrl::HB::Command::RepeatFreq, shm);
                         t1.detach();
                     }
                 }
@@ -1341,7 +1350,7 @@ namespace GUI {
             return { dock_id_left, dock_id_center };
         }
 
-        void client1(int i, ImGuiID center_id, Client &client, MenuBarEnables &enables) {
+        void client1(int i, ImGuiID center_id, Client &client, MenuBarEnables &enables, std::shared_ptr<BLE_Client::SHM::SHM> shm, const int client_index) {
             if(client.enable == false) {
                 return;
             }
@@ -1357,7 +1366,7 @@ namespace GUI {
             if(dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
                 window_flags |= ImGuiWindowFlags_NoBackground;
 
-            std::string name = client.esp32_ad5933->peripheral.identifier() + "##" + std::to_string(i);
+            std::string name = shm->discovery_devices->at(static_cast<size_t>(client_index)).identifier + std::string("##") + std::to_string(i);
 
             static int first = 0;
             if(first == i) {
@@ -1371,10 +1380,9 @@ namespace GUI {
                 return;
             }
 
-            // Submit the DockSpace
             ImGuiIO& io = ImGui::GetIO();
             if(io.ConfigFlags & ImGuiConfigFlags_DockingEnable) {
-                std::string dockspace_name = "DockSpace" + client.esp32_ad5933->peripheral.identifier() + "##" + std::to_string(i);
+                std::string dockspace_name = std::string("DockSpace") + shm->discovery_devices->at(static_cast<size_t>(client_index)).identifier + std::string("##") + std::to_string(i);
                 ImGuiID dockspace_id = ImGui::GetID(dockspace_name.c_str());
                 ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
                 if(first == i) {
@@ -1385,8 +1393,8 @@ namespace GUI {
                     ImGuiID right_id = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.2f, nullptr, &dockspace_id);
                     measurement_plots(i, right_id, enables.measurement_plots);
                     calibration_plots(i, right_id, enables.calibration_plots, client);
-                    configure(i, dockspace_id, enables.configure, client);
-                    debug_registers(i, dockspace_id, enables.debug_registers, client);
+                    configure(i, dockspace_id, enables.configure, client, shm);
+                    debug_registers(i, dockspace_id, enables.debug_registers, client, shm);
                     first++;
                     ImGui::DockBuilderFinish(dockspace_id);
                 } else {
@@ -1397,10 +1405,10 @@ namespace GUI {
                         calibration_plots(i, ImGui::GetID(static_cast<void*>(nullptr)), enables.calibration_plots, client);
                     }
                     if(enables.configure) {
-                        configure(i, ImGui::GetID(static_cast<void*>(nullptr)), enables.configure, client);
+                        configure(i, ImGui::GetID(static_cast<void*>(nullptr)), enables.configure, client, shm);
                     }
                     if(enables.debug_registers) {
-                        debug_registers(i, ImGui::GetID(static_cast<void*>(nullptr)), enables.debug_registers, client);
+                        debug_registers(i, ImGui::GetID(static_cast<void*>(nullptr)), enables.debug_registers, client, shm);
                     }
                 }
             }

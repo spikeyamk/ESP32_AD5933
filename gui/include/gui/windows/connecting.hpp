@@ -48,13 +48,13 @@ namespace GUI {
             inline Client(std::shared_ptr<ESP32_AD5933> esp32_ad5933) :
                 esp32_ad5933 {esp32_ad5933}
             {}
+            inline Client() = default;
             bool debug_started = false;
             std::stop_source ss;
         };
-        void ble_client(bool &enable, ImGuiID left_id, int &selected, std::shared_ptr<BLE_Client::SHM::SHM> shm);
-        void ble_client(std::optional<SimpleBLE::Adapter> &adapter, bool &enable, ImGuiID left_id, std::vector<SimpleBLE::Peripheral> &peripherals, int &selected, std::vector<Windows::Client> &clients);
+        void ble_client(bool &enable, ImGuiID left_id, int &selected, std::shared_ptr<BLE_Client::SHM::SHM> shm, int& client_index);
         void console(ImGuiConsole &console);
-        void client1(int i, ImGuiID center_id, Client &client, MenuBarEnables &enables);
+        void client1(int i, ImGuiID center_id, Client &client, MenuBarEnables &enables, std::shared_ptr<BLE_Client::SHM::SHM> shm, const int client_index);
         ImGuiID top_with_dock_space(MenuBarEnables &menu_bar_enables);
         DockspaceIDs split_left_center(ImGuiID dockspace_id);
     }

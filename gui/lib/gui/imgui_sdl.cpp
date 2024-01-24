@@ -12,6 +12,7 @@
 #include <vector>
 #include <numeric>
 #include <list>
+#include <type_traits>
 
 #include <trielo/trielo.hpp>
 
@@ -901,24 +902,36 @@ namespace GUI {
         Windows::DockspaceIDs top_ids { Windows::split_left_center(top_id) };
 
         int selected = -1;
-        Windows::ble_client(menu_bar_enables.ble_client, top_ids.left, selected, shm);
+        int client_index = -1;
+        Windows::ble_client(menu_bar_enables.ble_client, top_ids.left, selected, shm, client_index);
         Boilerplate::render(renderer, clear_color);
+        std::unique_ptr<Windows::Client> empty_client = std::make_unique<Windows::Client>();
 
         while(done == false) {
             Boilerplate::process_events(window, done);
             Boilerplate::start_new_frame();
             top_id = Windows::top_with_dock_space(menu_bar_enables);
 
-            Windows::ble_client(menu_bar_enables.ble_client, top_ids.left, selected, shm);
+            Windows::ble_client(menu_bar_enables.ble_client, top_ids.left, selected, shm, client_index);
 
-            //std::for_each(clients.begin(), clients.end(), [index = 0, &top_ids, &menu_bar_enables](auto &e) mutable {
-                //Windows::client1(index, top_ids.center, e, menu_bar_enables);
-                //index++;
-            //});
-
-            //clients.erase(std::remove_if(clients.begin(), clients.end(), [](auto &e) {
-                //return e.enable == false;
-            //}), clients.end());
+            std::visit([&](auto&& active_state) {
+                using T_Decay = std::decay_t<decltype(active_state)>;
+                if constexpr (std::is_same_v<T_Decay, BLE_Client::Discovery::States::using_esp32_ad5933>) {
+                    if(client_index > -1) {
+                        if(empty_client == nullptr) {
+                            empty_client = std::make_unique<Windows::Client>();
+                        } else {
+                            Windows::client1(0, top_ids.center, *empty_client, menu_bar_enables, shm, client_index);
+                        }
+                        if(empty_client->enable == false) {
+                            shm->cmd_deque->push_back(BLE_Client::Discovery::Events::stop_using_esp32_ad5933{});
+                            shm->cmd_deque->push_back(BLE_Client::Discovery::Events::disconnect{});
+                            client_index = -1;
+                            empty_client.~unique_ptr();
+                        }
+                    }
+                }
+            }, *shm->active_state);
 
             Boilerplate::render(renderer, clear_color);
         }
