@@ -55,13 +55,14 @@ namespace BLE_Client {
                 }
             }
 
-            void disconnect(SimpleBLE::Peripheral& peripheral) {
+            void disconnect(SimpleBLE::Peripheral& peripheral, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
                 try {
                     if(peripheral.is_connected() == false) {
                         return;
                     }
 
                     peripheral.disconnect();
+                    update_connection_status(peripheral, shm);
                 } catch(const std::exception& e) {
                     std::cerr << "ERROR: BLE_Client::Discovery::Actions::disconnect: exception: " << e.what() << std::endl;
                 }
@@ -77,6 +78,21 @@ namespace BLE_Client {
 
             void esp32_ad5933_write(const BLE_Client::Discovery::Events::esp32_ad5933_write& event, ESP32_AD5933& esp32_ad5933) {
                 esp32_ad5933.write(event.packet); 
+            }
+
+            void update_connection_status(SimpleBLE::Peripheral& peripheral, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
+                auto it = std::find_if(shm->discovery_devices->begin(), shm->discovery_devices->end(), [&](BLE_Client::Discovery::Device& device) {
+                    if( (device.address == peripheral.address())
+                    &&  (device.identifier == peripheral.identifier())) {
+                        return true;
+                    } else {
+                        return false;
+                    }
+                });
+
+                if(it != shm->discovery_devices->end()) {
+                    it->connected = peripheral.is_connected();
+                }
             }
         }
 

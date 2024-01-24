@@ -13,7 +13,8 @@
 #include <numeric>
 #include <list>
 
-#include "trielo/trielo.hpp"
+#include <trielo/trielo.hpp>
+
 #include "implot.h"
 #include "magic/packets.hpp"
 #include "imgui_console/imgui_console.h"
@@ -882,7 +883,7 @@ namespace GUI {
 }
 
 namespace GUI {
-    void run(bool &done) {
+    void run(bool &done, boost::process::child& ble_client, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
         SDL_Window* window;
         SDL_Renderer* renderer;
         {
@@ -893,17 +894,14 @@ namespace GUI {
 
         const ImVec4 clear_color { 0.45f, 0.55f, 0.60f, 1.00f };
 
-        Windows::MenuBarEnables menu_bar_enables;
-        std::vector<SimpleBLE::Peripheral> peripherals;
-        std::vector<Windows::Client> clients;
-        std::optional<SimpleBLE::Adapter> adapter { find_adapter() };
-        int selected = -1;
-
         Boilerplate::process_events(window, done);
         Boilerplate::start_new_frame();
+        Windows::MenuBarEnables menu_bar_enables;
         ImGuiID top_id = Windows::top_with_dock_space(menu_bar_enables);
         Windows::DockspaceIDs top_ids { Windows::split_left_center(top_id) };
-        Windows::ble_client(adapter, menu_bar_enables.ble_client, top_ids.left, peripherals, selected, clients);
+
+        int selected = -1;
+        Windows::ble_client(menu_bar_enables.ble_client, top_ids.left, selected, shm);
         Boilerplate::render(renderer, clear_color);
 
         while(done == false) {
@@ -911,39 +909,20 @@ namespace GUI {
             Boilerplate::start_new_frame();
             top_id = Windows::top_with_dock_space(menu_bar_enables);
 
-            Windows::ble_client(adapter, menu_bar_enables.ble_client, top_ids.left, peripherals, selected, clients);
+            Windows::ble_client(menu_bar_enables.ble_client, top_ids.left, selected, shm);
 
-            std::for_each(clients.begin(), clients.end(), [index = 0, &top_ids, &menu_bar_enables](auto &e) mutable {
-                Windows::client1(index, top_ids.center, e, menu_bar_enables);
-                index++;
-            });
+            //std::for_each(clients.begin(), clients.end(), [index = 0, &top_ids, &menu_bar_enables](auto &e) mutable {
+                //Windows::client1(index, top_ids.center, e, menu_bar_enables);
+                //index++;
+            //});
 
-            clients.erase(std::remove_if(clients.begin(), clients.end(), [](auto &e) {
-                return e.enable == false;
-            }), clients.end());
+            //clients.erase(std::remove_if(clients.begin(), clients.end(), [](auto &e) {
+                //return e.enable == false;
+            //}), clients.end());
 
             Boilerplate::render(renderer, clear_color);
         }
 
-        /*
-        while(
-            (esp32_ad5933.has_value() == false || esp32_ad5933.value().is_connected() == false)
-            && done == false
-        ) {
-            Boilerplate::process_events(window, done);
-            Boilerplate::start_new_frame();
-            GUI::Windows::ble_client();
-            Boilerplate::render(renderer, clear_color);
-        }
-
-        std::atomic<std::shared_ptr<Windows::Captures::Measurement>> measure_captures { std::make_shared<Windows::Captures::Measurement>() };
-        while(done == false) {
-            Boilerplate::process_events(window, done);
-            Boilerplate::start_new_frame();
-            create_main(esp32_ad5933, measure_captures);
-            Boilerplate::render(renderer, clear_color);
-        }
-        */
         Boilerplate::shutdown(renderer, window);
     }
 }

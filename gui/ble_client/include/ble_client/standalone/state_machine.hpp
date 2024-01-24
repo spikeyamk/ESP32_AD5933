@@ -24,10 +24,11 @@ namespace BLE_Client {
             void stop_discover(SimpleBLE::Adapter& adapter);
             void kill(std::stop_source stop_source);
             void connect(const BLE_Client::Discovery::Events::connect& event, SimpleBLE::Adapter& adapter, SimpleBLE::Peripheral& peripheral);
-            void disconnect(SimpleBLE::Peripheral& peripheral);
+            void disconnect(SimpleBLE::Peripheral& peripheral, std::shared_ptr<BLE_Client::SHM::SHM> shm);
             void setup_subscriptions(ESP32_AD5933& esp32_ad5933);
             void remove_subscriptions(ESP32_AD5933& esp32_ad5933);
             void esp32_ad5933_write(const BLE_Client::Discovery::Events::esp32_ad5933_write& event, ESP32_AD5933& esp32_ad5933);
+            void update_connection_status(SimpleBLE::Peripheral& peripheral, std::shared_ptr<BLE_Client::SHM::SHM> shm);
         }
 
         namespace Guards {
@@ -92,8 +93,7 @@ namespace BLE_Client {
                     state<States::discovered> + event<Events::connect> / function{Actions::connect} = state<States::connecting>,
                     state<States::discovered> + event<Events::start_discovery> [function{Guards::discovery_available}] / function{Actions::discover} = state<States::discovering>,
 
-                    state<States::connecting> + event<Events::is_connected> [function{Guards::is_connected}] = state<States::connected>,
-                    state<States::connecting> + event<Events::is_connected> [function{Guards::is_not_connected}] = state<States::discovered>,
+                    state<States::connecting> + event<Events::is_connected> [function{Guards::is_connected}] / function{Actions::update_connection_status} = state<States::connected>,
 
                     state<States::connected> + event<Events::disconnect> / function{Actions::disconnect} = state<States::discovered>,
                     state<States::connected> + event<Events::is_esp32_ad5933> [function{Guards::is_esp32_ad5933}] / function{Actions::setup_subscriptions} = state<States::using_esp32_ad5933>,

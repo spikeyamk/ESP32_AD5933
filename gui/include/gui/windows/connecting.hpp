@@ -14,6 +14,7 @@
 #include "gui/windows/captures.hpp"
 
 #include "ble_client/ble_client.hpp"
+#include "ble_client/standalone/shm.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -50,6 +51,7 @@ namespace GUI {
             bool debug_started = false;
             std::stop_source ss;
         };
+        void ble_client(bool &enable, ImGuiID left_id, int &selected, std::shared_ptr<BLE_Client::SHM::SHM> shm);
         void ble_client(std::optional<SimpleBLE::Adapter> &adapter, bool &enable, ImGuiID left_id, std::vector<SimpleBLE::Peripheral> &peripherals, int &selected, std::vector<Windows::Client> &clients);
         void console(ImGuiConsole &console);
         void client1(int i, ImGuiID center_id, Client &client, MenuBarEnables &enables);

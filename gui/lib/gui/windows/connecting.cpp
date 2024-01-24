@@ -4,12 +4,12 @@
 #include <cstring>
 #include <list>
 #include <iterator>
-#include <memory>
 #include <vector>
 #include <cstddef>
 #include <stop_token>
+#include <type_traits>
 
-#include "trielo/trielo.hpp"
+#include <trielo/trielo.hpp>
 
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -412,11 +412,7 @@ namespace GUI {
             return dockspace_id;
         }
 
-        void ble_client(std::optional<SimpleBLE::Adapter> &adapter, bool &enable, ImGuiID left_id, std::vector<SimpleBLE::Peripheral> &peripherals, int &selected, std::vector<Windows::Client> &clients) {
-            if(adapter.has_value() == false) {
-                std::exit(EXIT_FAILURE);
-            }
-
+        void ble_client(bool &enable, ImGuiID left_id, int &selected, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
             if(enable == false) {
                 return;
             }
@@ -432,51 +428,7 @@ namespace GUI {
                 return;
             }
 
-            if(adapter.value().scan_is_active() == false) {
-                if(ImGui::Button("Scan")) {
-                    adapter.value().set_callback_on_scan_start([]() { std::cout << "BLE: callback_on_scan_start: Scan started." << std::endl; });
-                    adapter.value().set_callback_on_scan_stop([]() { std::cout << "BLE: callback_on_scan_stop: Scan stopped." << std::endl; });
-                    adapter.value().set_callback_on_scan_found([&peripherals](SimpleBLE::Peripheral peripheral) {
-                        std::cout << "BLE: callback_on_scan_found." << std::endl;
-                        if(std::find_if(peripherals.begin(), peripherals.end(), [&peripheral](SimpleBLE::Peripheral &e) {
-                            return e.address() == peripheral.address();
-                        }) == peripherals.end()) {
-                            peripherals.push_back(peripheral);
-                        }
-                    });
-                    adapter.value().set_callback_on_scan_updated([&peripherals](SimpleBLE::Peripheral peripheral) {
-                        std::cout << "BLE: callback_on_scan_updated." << std::endl;
-                        if(std::find_if(peripherals.begin(), peripherals.end(), [&peripheral](SimpleBLE::Peripheral &e) {
-                            return e.address() == peripheral.address();
-                        }) == peripherals.end()) {
-                            peripherals.push_back(peripheral);
-                        }
-                    });
-                    adapter.value().scan_start();
-
-                    // Qt
-                    //
-                    //
-                }
-            } else {
-                if(ImGui::Button("Clear")) {
-                    peripherals.clear();
-                }
-                ImGui::SameLine();
-                if(ImGui::Button("Stop")) {
-                    adapter.value().scan_stop();
-                }
-                ImGui::SameLine();
-                Spinner::Spinner("Scanning", 5.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
-            }
-            
-            const auto to_lower = [](const std::string &string) { 
-                auto ret = string;
-                std::transform(ret.begin(), ret.end(), ret.begin(), [](unsigned char c) { return std::tolower(c); });
-                return ret;
-            };
-
-            const auto show_table = [&selected](std::vector<SimpleBLE::Peripheral> &peripherals) {
+            const auto show_table = [&selected, &shm]() {
                 if(ImGui::BeginTable("Scan", 3, ImGuiTableFlags_Resizable | ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_Borders)) {
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
@@ -485,11 +437,11 @@ namespace GUI {
                     ImGui::Text("Address");
                     ImGui::TableNextColumn();
                     ImGui::Text("Status");
-                    std::for_each(peripherals.begin(), peripherals.end(), [index = 0, &selected](SimpleBLE::Peripheral &e) mutable {
+                    std::for_each(shm->discovery_devices->begin(), shm->discovery_devices->end(), [index = 0, &selected](const BLE_Client::Discovery::Device& e) {
                         ImGui::TableNextRow();
                         ImGui::TableNextColumn();
                         ImGui::PushID(index);
-                        if(ImGui::Selectable(e.identifier().c_str(), index == selected, ImGuiSelectableFlags_SpanAllColumns)) {
+                        if(ImGui::Selectable(e.identifier, index == selected, ImGuiSelectableFlags_SpanAllColumns)) {
                             if(selected == index) {
                                 selected = -1;
                             } else {
@@ -498,42 +450,71 @@ namespace GUI {
                         }
                         ImGui::PopID();
                         ImGui::TableNextColumn();
-                        ImGui::Text(e.address().c_str());
+                        ImGui::Text(e.address);
                         ImGui::TableNextColumn();
-                        if(e.is_connected()) {
+                        if(e.connected) {
                             ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Connected");
                         } else {
                             ImGui::Text("Disconnected");
                         }
-                        index++;
                     });
                 }
                 ImGui::EndTable();
             };
 
-            const auto show_connect_button = [&selected, &clients](std::vector<SimpleBLE::Peripheral> &peripherals) {
-                if(selected > -1) {
-                    static bool connecting = false;
-                    if(connecting == false) {
-                        if(peripherals[selected].is_connected() == false) {
-                            ImGui::SameLine();
-                            if(ImGui::Button("Connect")) {
-                                connecting = true;
-                                std::thread([&]() {
-                                    auto esp32_ad5933 = std::make_shared<ESP32_AD5933>(peripherals[selected]);
-                                    selected = -1;
-                                    if(esp32_ad5933->connect()) {
-                                        esp32_ad5933->subscribe_to_body_composition_measurement_notify();
-                                        clients.push_back(std::move(Client { esp32_ad5933 }));
-                                    }
-                                    connecting = false;
-                                }).detach();
-                            }
+            std::visit([&](auto&& active_state) {
+                using T_Decay = std::decay_t<decltype(active_state)>;
+                if constexpr (std::is_same_v<T_Decay, BLE_Client::Discovery::States::off>) {
+                    if(ImGui::Button("Find adapter")) {
+                        shm->cmd_deque->push_back(BLE_Client::Discovery::Events::find_default_active_adapter{});
+                    }
+                } else if constexpr (std::is_same_v<T_Decay, BLE_Client::Discovery::States::using_adapter>) {
+                    if(ImGui::Button("Scan")) {
+                        shm->cmd_deque->push_back(BLE_Client::Discovery::Events::start_discovery{});
+                    }
+                } else if constexpr (std::is_same_v<T_Decay, BLE_Client::Discovery::States::discovering>) {
+                    if(ImGui::Button("Stop Scan")) {
+                        shm->cmd_deque->push_back(BLE_Client::Discovery::Events::stop_discovery{});
+                    }
+                    ImGui::SameLine();
+                    Spinner::Spinner("Scanning", 5.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                }
+                if constexpr (!(std::is_same_v<T_Decay, BLE_Client::Discovery::States::off>
+                || std::is_same_v<T_Decay, BLE_Client::Discovery::States::using_adapter>)) {
+                    show_table();
+                }
+
+                if constexpr (std::is_same_v<T_Decay, BLE_Client::Discovery::States::discovered>) {
+                    if(selected > -1) {
+                        if(ImGui::Button("Connect")) {
+                            shm->cmd_deque->push_back(BLE_Client::Discovery::Events::connect{ static_cast<size_t>(selected) });
+                            std::thread([&]() {
+                                bool its_connected = false;
+                                for(int i = 0; i < 100 && its_connected == false; i++) { 
+                                    shm->cmd_deque->push_back(BLE_Client::Discovery::Events::is_connected{});
+                                    std::visit([&](auto&& extra_active_state) {
+                                        using T_ExtraDecay = std::decay_t<decltype(extra_active_state)>;
+                                        if constexpr (std::is_same_v<T_ExtraDecay, BLE_Client::Discovery::States::connected>) {
+                                            its_connected = true;
+                                            shm->cmd_deque->push_back(BLE_Client::Discovery::Events::is_esp32_ad5933{});
+                                        }
+                                    }, *shm->active_state);
+                                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                                }
+                            }).detach();
                         }
-                    } else {
-                        Spinner::Spinner("ClientSpinner", 5.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                     }
                 }
+                if constexpr (std::is_same_v<T_Decay, BLE_Client::Discovery::States::connecting>) {
+                    Spinner::Spinner("ClientSpinner", 5.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                }
+            }, *shm->active_state);
+
+            /*
+            const auto to_lower = [](const std::string &string) { 
+                auto ret = string;
+                std::transform(ret.begin(), ret.end(), ret.begin(), [](unsigned char c) { return std::tolower(c); });
+                return ret;
             };
 
             static char filter_content[32] = { '\0' };
@@ -557,6 +538,7 @@ namespace GUI {
                 show_connect_button(peripherals);
                 show_table(peripherals);
             }
+            */
 
             ImGui::End();
         }
