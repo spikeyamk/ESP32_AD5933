@@ -13,7 +13,6 @@
 
 void gui() {
     bool done = false;
-    std::jthread gui_thread(GUI::run, std::ref(done));
     GUI::run(done);
 }
 
@@ -23,12 +22,13 @@ int main(int argc, char* argv[]) {
     #else
         const boost::filesystem::path client_path { "/home/spikeyamk/Documents/git-repos/ESP32_AD5933/gui/build/ble_client/ble_client" };
     #endif
-    BLE_Client::SHM::Remover remover { BLE_Client::SHM::SHM::name, BLE_Client::SHM::SHM::cmd_deque_mutex_name, BLE_Client::SHM::SHM::cmd_deque_condition_name, BLE_Client::SHM::SHM::notify_deque_mutex_name, BLE_Client::SHM::SHM::notify_deque_condition_name };
-    std::shared_ptr<BLE_Client::SHM::SHM> shm { BLE_Client::SHM::init_shm() };
-    boost::process::child client { client_path };
+    //BLE_Client::SHM::Remover remover { BLE_Client::SHM::SHM::name, BLE_Client::SHM::SHM::cmd_deque_mutex_name, BLE_Client::SHM::SHM::cmd_deque_condition_name, BLE_Client::SHM::SHM::notify_deque_mutex_name, BLE_Client::SHM::SHM::notify_deque_condition_name };
+    //std::shared_ptr<BLE_Client::SHM::SHM> shm { BLE_Client::SHM::init_shm() };
+    //boost::process::child client { client_path };
 
-    BLE_Client::test(client, shm);
+    //BLE_Client::test(client, shm);
 
-    client.wait();
+    //client.wait();
+    gui();
     return 0;
 }

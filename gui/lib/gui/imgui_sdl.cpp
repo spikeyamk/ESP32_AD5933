@@ -14,11 +14,6 @@
 #include <list>
 
 #include "trielo/trielo.hpp"
-#include "SDL3/SDL.h"
-#include "imgui.h"
-#include "imgui_internal.h"
-#include "backends/imgui_impl_sdl2.h"
-#include "backends/imgui_impl_sdlrenderer2.h"
 #include "implot.h"
 #include "magic/packets.hpp"
 #include "imgui_console/imgui_console.h"
