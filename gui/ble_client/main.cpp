@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <typeinfo>
 #include <cstdlib>
+#include <typeinfo>
 
 #include <boost/thread/thread_time.hpp>
 #include <trielo/trielo.hpp>
@@ -13,6 +14,7 @@
 #include "ble_client/standalone/init.hpp"
 #include "ble_client/standalone/shm.hpp"
 #include "ble_client/standalone/state_machine.hpp"
+#include "ble_client/standalone/shm_state_machine.hpp"
 
 void listen_to_cmds(std::stop_source stop_source, std::shared_ptr<BLE_Client::SHM::SHM> shm, BLE_Client::Discovery::T_StateMachine& discovery_agent) {
 	using namespace boost::interprocess;
@@ -80,8 +82,8 @@ void checker(std::stop_source stop_source, BLE_Client::Discovery::T_StateMachine
 int main(void) {
     std::printf("BLE_Client: process started\n");
 	std::atexit([]() { std::printf("BLE_Client: process finished\n"); });
-
-    std::shared_ptr<BLE_Client::SHM::SHM> shm { BLE_Client::SHM::attach_shm() };
+    std::shared_ptr<BLE_Client::SHM::SHM> shm = std::make_shared<BLE_Client::SHM::SHM>();
+	shm->attach();
 
     SimpleBLE::Adapter adapter;
     BLE_Client::Discovery::my_logger logger;

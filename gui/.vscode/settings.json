@@ -109,7 +109,14 @@
         "csetjmp": "cpp",
         "execution": "cpp",
         "expected": "cpp",
-        "regex": "cpp"
+        "regex": "cpp",
+        "barrier": "cpp",
+        "latch": "cpp",
+        "print": "cpp",
+        "scoped_allocator": "cpp",
+        "spanstream": "cpp",
+        "stacktrace": "cpp",
+        "syncstream": "cpp"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }

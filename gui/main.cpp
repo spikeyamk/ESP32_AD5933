@@ -1,6 +1,7 @@
 #include <thread>
 #include <chrono>
 #include <iostream>
+#include <stop_token>
 
 #include <boost/process.hpp>
 
@@ -17,10 +18,11 @@ int main(int argc, char* argv[]) {
     #else
         const boost::filesystem::path ble_client_path { "/home/spikeyamk/Documents/git-repos/ESP32_AD5933/gui/build/ble_client/ble_client" };
     #endif
-    BLE_Client::SHM::Remover remover { BLE_Client::SHM::SHM::name, BLE_Client::SHM::SHM::cmd_deque_mutex_name, BLE_Client::SHM::SHM::cmd_deque_condition_name, BLE_Client::SHM::SHM::notify_deque_mutex_name, BLE_Client::SHM::SHM::notify_deque_condition_name };
-    std::shared_ptr<BLE_Client::SHM::SHM> shm { BLE_Client::SHM::init_shm() };
+    BLE_Client::SHM::Remover remover {};
+    constexpr size_t shm_size = 2 << 15;
+    std::shared_ptr<BLE_Client::SHM::SHM> shm = std::make_shared<BLE_Client::SHM::SHM>(shm_size);
+    shm->init();
     boost::process::child ble_client { ble_client_path };
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     bool done = false;
     GUI::run(done, ble_client, shm);

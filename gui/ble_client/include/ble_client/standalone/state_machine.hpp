@@ -107,5 +107,13 @@ namespace BLE_Client {
         };
 
         using T_StateMachine = boost::sml::sm<Discover, boost::sml::logger<my_logger>, boost::sml::thread_safe<std::recursive_mutex>, boost::sml::testing>;
+        using T_StateMachineExpanded = boost::ext::sml::v1_1_9::back::sm<
+            boost::ext::sml::v1_1_9::back::sm_policy<
+                BLE_Client::Discovery::Discover,
+                boost::ext::sml::v1_1_9::back::policies::logger<BLE_Client::Discovery::my_logger>,
+                boost::ext::sml::v1_1_9::back::policies::thread_safe<std::recursive_mutex>,
+                boost::ext::sml::v1_1_9::back::policies::testing
+            >
+        >;
     }
 }

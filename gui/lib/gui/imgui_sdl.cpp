@@ -907,7 +907,7 @@ namespace GUI {
         Boilerplate::render(renderer, clear_color);
         std::unique_ptr<Windows::Client> empty_client = std::make_unique<Windows::Client>();
 
-        while(done == false) {
+        while(done == false && ble_client.running()) {
             Boilerplate::process_events(window, done);
             Boilerplate::start_new_frame();
             top_id = Windows::top_with_dock_space(menu_bar_enables);

@@ -1,27 +1,17 @@
 cmake_minimum_required(VERSION 3.13)
-project(gui C CXX ASM)
+set(CURRENT_PROJECT_NAME "gui")
+project(${CURRENT_PROJECT_NAME} C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_BUILD_TYPE Debug)
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	add_compile_options(-Wall -Wextra -Wpedantic)
-endif()
-
-if(WIN32)
-	# Adding stupid macro definition so that boost doesn't complain about stupid Windows 7
-	add_compile_definitions(_WIN32_WINNT=0x0A00)
-    # Stupid hack this is terrible but it'll do for now
-    # Having to copy libboost*.lib because find_package(Boost) shits itself every time and link.exe fails to find the file even with the full path specified
-    configure_file(
-        ${CMAKE_CURRENT_LIST_DIR}/misc/stupid_windows/libboost_filesystem-vc143-mt-gd-x64-1_84.lib
-        ${CMAKE_BINARY_DIR}/libboost_filesystem-vc143-mt-gd-x64-1_84.lib
-        COPYONLY
-    )
 endif()
 
 set(TRIELO_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/trielo_wrapper/trielo)
 set(SIMPLEBLE_DIR ${CMAKE_CURRENT_LIST_DIR}/common/SimpleBLE/simpleble)
+
 set(SDL_STATIC ON)
 set(SDL_SHARED OFF)
 set(SDL_TEST_LIBRARY OFF)
@@ -41,7 +31,13 @@ set(AD5933_MEASUREMENT_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/ad5933/measuremen
 set(AD5933_TEMPERATURE_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/ad5933/temperature)
 set(AD5933_DEBUG_DATA_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/ad5933/debug_data)
 set(BLE_CLIENT_DIR ${CMAKE_CURRENT_LIST_DIR}/ble_client)
-find_package(Boost COMPONENTS date_time filesystem)
+
+set(Boost_USE_MULTITHREADED ON)
+set(Boost_USE_STATIC_LIBS ON)
+find_package(Boost REQUIRED COMPONENTS date_time filesystem)
+
+set(BOOST_SML_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/sml_wrapper/sml)
+add_subdirectory(${BOOST_SML_DIR} ${CMAKE_BINARY_DIR}/sml)
 
 set(IMGUI_SRCS
 	${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp
@@ -73,7 +69,7 @@ add_subdirectory(${AD5933_TEMPERATURE_DIR} ${CMAKE_BINARY_DIR}/AD5933_temperatur
 add_subdirectory(${AD5933_DEBUG_DATA_DIR} ${CMAKE_BINARY_DIR}/AD5933_debug_data)
 add_subdirectory(${BLE_CLIENT_DIR})
 
-add_executable(gui
+add_executable(${CURRENT_PROJECT_NAME}
 	main.cpp
 	lib/ble_client/ble_client.cpp
 	lib/gui/dark_mode_switcher.cpp
@@ -86,7 +82,7 @@ add_executable(gui
 	${IMGUI_CONSOLE_SRCS}
 )
 
-target_include_directories(gui PRIVATE
+target_include_directories(${CURRENT_PROJECT_NAME} PRIVATE
 	${CMAKE_CURRENT_LIST_DIR}/include
 	${CMAKE_CURRENT_LIST_DIR}/ble_client/include
 	${IMGUI_DIR}
@@ -95,7 +91,7 @@ target_include_directories(gui PRIVATE
     ${Boost_INCLUDE_DIRS}
 )
 
-target_link_libraries(gui PRIVATE
+target_link_libraries(${CURRENT_PROJECT_NAME} PRIVATE
 	trielo
 	simpleble::simpleble
 	magic
@@ -106,6 +102,10 @@ target_link_libraries(gui PRIVATE
 	AD5933_temperature
 	AD5933_debug_data
     ${Boost_LIBRARIES}
+	sml
 )
 
+if(WIN32)
+	target_compile_definitions(${CURRENT_PROJECT_NAME} PRIVATE _WIN32_WINNT=0x0A00)
+endif()
 

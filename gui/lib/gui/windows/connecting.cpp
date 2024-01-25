@@ -469,7 +469,7 @@ namespace GUI {
                     if(ImGui::Button("Find adapter")) {
                         shm->send_cmd(BLE_Client::Discovery::Events::find_default_active_adapter{});
                     }
-                } else if constexpr (std::is_same_v<T_Decay, BLE_Client::Discovery::States::using_adapter>) {
+                } else if constexpr (std::is_same_v<T_Decay, BLE_Client::Discovery::States::using_adapter> || std::is_same_v<T_Decay, BLE_Client::Discovery::States::discovered>) {
                     if(ImGui::Button("Scan")) {
                         shm->send_cmd(BLE_Client::Discovery::Events::start_discovery{});
                     }
