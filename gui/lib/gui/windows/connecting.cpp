@@ -438,11 +438,11 @@ namespace GUI {
                     ImGui::Text("Address");
                     ImGui::TableNextColumn();
                     ImGui::Text("Status");
-                    std::for_each(shm->discovery_devices->begin(), shm->discovery_devices->end(), [index = 0, &selected](const BLE_Client::Discovery::Device& e) {
+                    std::for_each(shm->discovery_devices->begin(), shm->discovery_devices->end(), [index = 0, &selected](const BLE_Client::Discovery::Device& e) mutable {
                         ImGui::TableNextRow();
                         ImGui::TableNextColumn();
                         ImGui::PushID(index);
-                        if(ImGui::Selectable(e.identifier, index == selected, ImGuiSelectableFlags_SpanAllColumns)) {
+                        if(ImGui::Selectable(e.identifier.data(), index == selected, ImGuiSelectableFlags_SpanAllColumns)) {
                             if(selected == index) {
                                 selected = -1;
                             } else {
@@ -451,16 +451,17 @@ namespace GUI {
                         }
                         ImGui::PopID();
                         ImGui::TableNextColumn();
-                        ImGui::Text(e.address);
+                        ImGui::Text(e.address.data());
                         ImGui::TableNextColumn();
                         if(e.connected) {
                             ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Connected");
                         } else {
                             ImGui::Text("Disconnected");
                         }
+                        index++;  
                     });
+                    ImGui::EndTable();
                 }
-                ImGui::EndTable();
             };
 
             std::visit([&](auto&& active_state) {
@@ -488,7 +489,7 @@ namespace GUI {
                 if constexpr (std::is_same_v<T_Decay, BLE_Client::Discovery::States::discovered>) {
                     if(selected > -1) {
                         if(ImGui::Button("Connect")) {
-                            shm->send_cmd(BLE_Client::Discovery::Events::connect{ static_cast<size_t>(selected) });
+                            shm->send_cmd(BLE_Client::Discovery::Events::connect{ shm->discovery_devices->at(selected).address });
                             std::thread([](auto shm, int& client_index, const int selected) {
                                 bool its_connected = false;
                                 for(int i = 0; i < 100 && its_connected == false; i++) { 
@@ -508,6 +509,12 @@ namespace GUI {
                                     using T_ExtraDecay = std::decay_t<decltype(extra_active_state)>;
                                     if constexpr (std::is_same_v<T_ExtraDecay, BLE_Client::Discovery::States::using_esp32_ad5933>) {
                                         client_index = selected;
+                                    }
+                                    if constexpr (
+                                        !std::is_same_v<T_ExtraDecay, BLE_Client::Discovery::States::using_esp32_ad5933>
+                                        && std::is_same_v<T_ExtraDecay, BLE_Client::Discovery::States::connected>
+                                    ) {
+                                        shm->send_cmd(BLE_Client::Discovery::Events::disconnect{});
                                     }
                                 }, *shm->active_state);
                             }, shm, std::ref(client_index), selected).detach();
@@ -1366,7 +1373,11 @@ namespace GUI {
             if(dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
                 window_flags |= ImGuiWindowFlags_NoBackground;
 
-            std::string name = shm->discovery_devices->at(static_cast<size_t>(client_index)).identifier + std::string("##") + std::to_string(i);
+            std::string name = 
+                std::string(
+                    shm->discovery_devices->at(static_cast<size_t>(client_index)).identifier.begin(),
+                    shm->discovery_devices->at(static_cast<size_t>(client_index)).identifier.end())
+                + std::string("##") + std::to_string(i);
 
             static int first = 0;
             if(first == i) {
@@ -1382,7 +1393,13 @@ namespace GUI {
 
             ImGuiIO& io = ImGui::GetIO();
             if(io.ConfigFlags & ImGuiConfigFlags_DockingEnable) {
-                std::string dockspace_name = std::string("DockSpace") + shm->discovery_devices->at(static_cast<size_t>(client_index)).identifier + std::string("##") + std::to_string(i);
+                std::string dockspace_name = 
+                    std::string("DockSpace")
+                    + std::string(
+                        shm->discovery_devices->at(static_cast<size_t>(client_index)).identifier.begin(),
+                        shm->discovery_devices->at(static_cast<size_t>(client_index)).identifier.end())
+                    + std::string("##")
+                    + std::to_string(i);
                 ImGuiID dockspace_id = ImGui::GetID(dockspace_name.c_str());
                 ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
                 if(first == i) {

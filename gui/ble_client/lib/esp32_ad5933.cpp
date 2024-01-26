@@ -17,6 +17,18 @@ namespace BLE_Client {
     {}
 
     void ESP32_AD5933::setup_subscriptions() {
+        std::string tmp_address { peripheral.address() };
+        for(auto &e: tmp_address) {
+            if(e == ':') {
+                e = '.';
+            }
+        }
+
+        static const std::string prefix { "BLE_Client.SHM.connection." + tmp_address + "." };
+        const std::string notify_deque_name { prefix + "notify_deque" };
+        const std::string notify_deque_mutex_name { prefix + "notify_mutex" };
+        const std::string notify_deque_condition_name { prefix + "notify_condition" };
+
         peripheral.notify(
             body_composistion_service.uuid(),
             body_composition_measurement_chacteristic.uuid(),

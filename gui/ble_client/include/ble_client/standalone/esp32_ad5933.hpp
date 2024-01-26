@@ -4,6 +4,7 @@
 #include <simpleble/SimpleBLE.h>
 #include <array>
 #include <cstdint>
+#include <string>
 
 #include "ble_client/standalone/shm.hpp"
 

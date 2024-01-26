@@ -35,6 +35,9 @@ add_executable(${CURRENT_PROJECT_NAME}
 	lib/state_machine.cpp
 	lib/states.cpp
 	lib/esp32_ad5933.cpp
+	lib/state_machines/adapter/adapter.cpp
+	lib/state_machines/killer/killer.cpp
+	lib/state_machines/connection/connection.cpp
 )
 
 target_link_libraries(${CURRENT_PROJECT_NAME} PRIVATE

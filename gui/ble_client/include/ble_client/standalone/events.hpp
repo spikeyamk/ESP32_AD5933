@@ -13,7 +13,7 @@ namespace BLE_Client {
             struct stop_discovery{};
             struct kill{};
             struct connect{
-                size_t i;
+                std::array<char, 18> address;
             };
             struct is_connected{};
             struct disconnect{};

@@ -20,12 +20,12 @@ namespace BLE_Client {
             return std::nullopt;
         }
 
-        auto first_adapter = adapters[0];
-        if(first_adapter.bluetooth_enabled() == false) {
-            fmt::print(fmt::fg(fmt::color::yellow), "WARNING: BLE_Client::find_default_active_adapter:: Default adpater has Bluetooth disabled\n");
-            return std::nullopt;
+        for(SimpleBLE::Adapter& e: adapters) {
+            if(e.bluetooth_enabled()) {
+                return e;
+            }
         }
-
-        return first_adapter;
+        fmt::print(fmt::fg(fmt::color::yellow), "WARNING: BLE_Client::find_default_active_adapter:: Could not find an enabled Bluetooth adpater\n");
+        return std::nullopt;
     }
 }

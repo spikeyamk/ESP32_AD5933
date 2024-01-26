@@ -14,6 +14,7 @@
 #include "ble_client/standalone/states.hpp"
 #include "ble_client/standalone/shm.hpp"
 #include "ble_client/standalone/esp32_ad5933.hpp"
+#include "ble_client/standalone/state_machines/logger.hpp"
 
 namespace BLE_Client {
     namespace Discovery {
@@ -23,7 +24,7 @@ namespace BLE_Client {
             void discover(SimpleBLE::Adapter& adapter);
             void stop_discover(SimpleBLE::Adapter& adapter);
             void kill(std::stop_source stop_source);
-            void connect(const BLE_Client::Discovery::Events::connect& event, SimpleBLE::Adapter& adapter, SimpleBLE::Peripheral& peripheral);
+            void connect(const BLE_Client::Discovery::Events::connect& event, SimpleBLE::Adapter& adapter, SimpleBLE::Peripheral& peripheral, std::shared_ptr<BLE_Client::SHM::SHM> shm);
             void disconnect(SimpleBLE::Peripheral& peripheral, std::shared_ptr<BLE_Client::SHM::SHM> shm);
             void setup_subscriptions(ESP32_AD5933& esp32_ad5933);
             void remove_subscriptions(ESP32_AD5933& esp32_ad5933);
@@ -40,44 +41,6 @@ namespace BLE_Client {
             bool is_not_connected(SimpleBLE::Peripheral& peripheral);
             bool is_esp32_ad5933(SimpleBLE::Peripheral& peripheral, ESP32_AD5933& esp32_ad5933, std::shared_ptr<BLE_Client::SHM::SHM> shm);
         }
-
-        struct my_logger {
-            // https://github.com/boost-ext/sml/blob/master/example/logging.cpp
-            template <class SM, class TEvent>
-            void log_process_event(const TEvent&) {
-                std::printf("[%s][process_event] %s\n",
-                    boost::sml::aux::get_type_name<SM>(),
-                    boost::sml::aux::get_type_name<TEvent>()
-                );
-            }
-
-            template <class SM, class TGuard, class TEvent>
-            void log_guard(const TGuard&, const TEvent&, bool result) {
-                std::printf("[%s][guard] %s %s %s\n",
-                    boost::sml::aux::get_type_name<SM>(),
-                    boost::sml::aux::get_type_name<TGuard>(),
-                    boost::sml::aux::get_type_name<TEvent>(), (result ? "[OK]" : "[Reject]")
-                );
-            }
-
-            template <class SM, class TAction, class TEvent>
-            void log_action(const TAction&, const TEvent&) {
-                std::printf("[%s][action] %s %s\n",
-                    boost::sml::aux::get_type_name<SM>(),
-                    boost::sml::aux::get_type_name<TAction>(),
-                    boost::sml::aux::get_type_name<TEvent>()
-                );
-            }
-
-            template <class SM, class TSrcState, class TDstState>
-            void log_state_change(const TSrcState& src, const TDstState& dst) {
-                std::printf("[%s][transition] %s -> %s\n",
-                    boost::sml::aux::get_type_name<SM>(),
-                    src.c_str(),
-                    dst.c_str()
-                );
-            }
-        };
 
         struct Discover {
             auto operator()() const {
@@ -106,11 +69,11 @@ namespace BLE_Client {
             }
         };
 
-        using T_StateMachine = boost::sml::sm<Discover, boost::sml::logger<my_logger>, boost::sml::thread_safe<std::recursive_mutex>, boost::sml::testing>;
+        using T_StateMachine = boost::sml::sm<Discover, boost::sml::logger<BLE_Client::StateMachines::Logger>, boost::sml::thread_safe<std::recursive_mutex>, boost::sml::testing>;
         using T_StateMachineExpanded = boost::ext::sml::v1_1_9::back::sm<
             boost::ext::sml::v1_1_9::back::sm_policy<
                 BLE_Client::Discovery::Discover,
-                boost::ext::sml::v1_1_9::back::policies::logger<BLE_Client::Discovery::my_logger>,
+                boost::ext::sml::v1_1_9::back::policies::logger<BLE_Client::StateMachines::Logger>,
                 boost::ext::sml::v1_1_9::back::policies::thread_safe<std::recursive_mutex>,
                 boost::ext::sml::v1_1_9::back::policies::testing
             >
