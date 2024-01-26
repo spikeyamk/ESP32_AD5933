@@ -7,7 +7,7 @@ namespace BLE_Client {
         SimpleBLE::Service& body_composistion_service,
         SimpleBLE::Characteristic& body_composition_measurement_chacteristic,
         SimpleBLE::Characteristic& body_composition_feature_chacteristic,
-        std::shared_ptr<BLE_Client::SHM::SHM> shm
+        BLE_Client::SHM::SHM* shm
     ) :
         peripheral{ peripheral },
         body_composistion_service{ body_composistion_service },

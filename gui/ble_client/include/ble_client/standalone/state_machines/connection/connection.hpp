@@ -24,7 +24,7 @@ namespace BLE_Client {
             }
 
             namespace Actions {
-                void connect(const BLE_Client::StateMachines::Connection::Events::connect& event, SimpleBLE::Adapter& adapter, SimpleBLE::Peripheral& peripheral, std::shared_ptr<BLE_Client::SHM::SHM> shm);
+                void connect(const BLE_Client::StateMachines::Connection::Events::connect& event, SimpleBLE::Adapter& adapter, SimpleBLE::Peripheral& peripheral, BLE_Client::SHM::SHM* shm);
                 void disconnect(SimpleBLE::Peripheral& peripheral, ESP32_AD5933& esp32_ad5933);
                 void write(const BLE_Client::StateMachines::Connection::Events::write& event, ESP32_AD5933& esp32_ad5933);
                 void setup_subscriptions(ESP32_AD5933& esp32_ad5933);
@@ -33,8 +33,8 @@ namespace BLE_Client {
             namespace Guards {
                 bool is_connected(SimpleBLE::Peripheral& peripheral);
                 bool is_not_connected(SimpleBLE::Peripheral& peripheral);
-                bool is_esp32_ad5933(SimpleBLE::Peripheral& peripheral, ESP32_AD5933& esp32_ad5933, std::shared_ptr<BLE_Client::SHM::SHM> shm);
-                bool is_not_esp32_ad5933(SimpleBLE::Peripheral& peripheral, ESP32_AD5933& esp32_ad5933, std::shared_ptr<BLE_Client::SHM::SHM> shm);
+                bool is_esp32_ad5933(SimpleBLE::Peripheral& peripheral, ESP32_AD5933& esp32_ad5933, BLE_Client::SHM::SHM* shm);
+                bool is_not_esp32_ad5933(SimpleBLE::Peripheral& peripheral, ESP32_AD5933& esp32_ad5933, BLE_Client::SHM::SHM* shm);
             }
 
             struct Connection {

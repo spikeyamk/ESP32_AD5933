@@ -19,7 +19,7 @@ int main(int argc, char* argv[]) {
         const boost::filesystem::path ble_client_path { "/home/spikeyamk/Documents/git-repos/ESP32_AD5933/gui/build/ble_client/ble_client" };
     #endif
     constexpr size_t shm_size = 2 << 15;
-    auto shm { BLE_Client::SHM::init() };
+    std::shared_ptr<BLE_Client::SHM::SHM> shm { BLE_Client::SHM::SHM::init() };
     boost::process::child ble_client { ble_client_path };
 
     /*
@@ -28,20 +28,18 @@ int main(int argc, char* argv[]) {
     */
 
     shm->send_unicmd_adapter(BLE_Client::StateMachines::Adapter::Events::turn_on{});
-    std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10'000));
 
     shm->send_unicmd_adapter(BLE_Client::StateMachines::Adapter::Events::start_discovery{});
-    std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10'000));
 
     shm->send_unicmd_adapter(BLE_Client::StateMachines::Adapter::Events::stop_discovery{});
-    std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10'000));
 
     if(ble_client.running()) {
         shm->send_unicmd_killer(BLE_Client::StateMachines::Killer::Events::kill{});
-        std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
+        std::this_thread::sleep_for(std::chrono::milliseconds(10'000));
     }
-    if(ble_client.wait_for(std::chrono::milliseconds(5'000)) == false) {
-        ble_client.terminate();
-    }
+    ble_client.wait();
     return 0;
 }

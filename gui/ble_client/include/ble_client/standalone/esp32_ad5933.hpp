@@ -10,20 +10,21 @@
 
 namespace BLE_Client {
     class ESP32_AD5933 {
+    public:
+        SimpleBLE::Peripheral peripheral;
     private:
         SimpleBLE::Service body_composistion_service;
         SimpleBLE::Characteristic body_composition_measurement_chacteristic;
         SimpleBLE::Characteristic body_composition_feature_chacteristic;
-        std::shared_ptr<BLE_Client::SHM::SHM> shm = nullptr;
+        BLE_Client::SHM::SHM* shm = nullptr;
     public:
-        SimpleBLE::Peripheral peripheral;
         ESP32_AD5933() = default;
         ESP32_AD5933(
             SimpleBLE::Peripheral& peripheral, 
             SimpleBLE::Service& body_composistion_service,
             SimpleBLE::Characteristic& body_composition_measurement_chacteristic,
             SimpleBLE::Characteristic& body_composition_feature_chacteristic,
-            std::shared_ptr<BLE_Client::SHM::SHM> shm
+            BLE_Client::SHM::SHM* shm
         );
         void setup_subscriptions();
         void remove_subscriptions();

@@ -34,7 +34,7 @@ namespace BLE_Client {
                     return true;
                 }
 
-                bool discovery_available(SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
+                bool discovery_available(SimpleBLE::Adapter& adapter, BLE_Client::SHM::SHM* shm) {
                     try {
                         adapter.set_callback_on_scan_start([shm]() { std::printf("BLE_Client::Scan started\n"); shm->discovery_devices->clear(); });
                         adapter.set_callback_on_scan_stop([]() { std::printf("BLE_Client::Scan stopped\n"); });

@@ -84,7 +84,7 @@ void checker(std::stop_source stop_source, BLE_Client::Discovery::T_StateMachine
 	}
 }
 
-void listen_to_unicmds(std::stop_source stop_source, std::shared_ptr<BLE_Client::SHM::SHM> shm, BLE_Client::StateMachines::Killer::T_StateMachine& killer, BLE_Client::StateMachines::Adapter::T_StateMachine& adapter, std::vector<std::shared_ptr<BLE_Client::StateMachines::Connection::T_StateMachine>>& connections, BLE_Client::StateMachines::Logger& logger, SimpleBLE::Adapter& simpleble_adapter) {
+void listen_to_unicmds(std::stop_source stop_source, BLE_Client::SHM::SHM* shm, BLE_Client::StateMachines::Killer::T_StateMachine& killer, BLE_Client::StateMachines::Adapter::T_StateMachine& adapter, std::vector<std::shared_ptr<BLE_Client::StateMachines::Connection::T_StateMachine>>& connections, SimpleBLE::Adapter& simpleble_adapter) {
 	using namespace boost::interprocess;
 	std::stop_token st { stop_source.get_token() };
 	while(st.stop_requested() == false) {
@@ -96,7 +96,7 @@ void listen_to_unicmds(std::stop_source stop_source, std::shared_ptr<BLE_Client:
 		);
 
 		while(shm->unicmd_deque->empty() == false) {
-			std::visit([&killer, &adapter, &connections, &logger, shm, &simpleble_adapter](auto&& event_variant) {
+			std::visit([&killer, &adapter, &connections, shm, &simpleble_adapter](auto&& event_variant) {
 				using T_EventVariantDecay = std::decay_t<decltype(event_variant)>;
 				if constexpr (std::is_same_v<T_EventVariantDecay, BLE_Client::StateMachines::Killer::Events::T_Variant>) {
 					std::visit([&killer](auto&& event) {
@@ -107,10 +107,11 @@ void listen_to_unicmds(std::stop_source stop_source, std::shared_ptr<BLE_Client:
 						adapter.process_event(event);
 					}, event_variant);
 				} else if constexpr (std::is_same_v<T_EventVariantDecay, BLE_Client::StateMachines::Connection::Events::T_Variant>) {
-					std::visit([&connections, &logger, shm, &adapter, &simpleble_adapter](auto&& event) {
+					std::visit([&connections, shm, &adapter, &simpleble_adapter](auto&& event) {
 						if(connections.size() < event.index) {
 							SimpleBLE::Peripheral peripheral;
 							BLE_Client::ESP32_AD5933 esp32_ad5933;
+							BLE_Client::StateMachines::Logger logger;
 							connections.push_back(std::make_shared<BLE_Client::StateMachines::Connection::T_StateMachine>(logger, shm, simpleble_adapter, peripheral, esp32_ad5933));
 						}
 						connections[event.index]->process_event(event);
@@ -125,17 +126,17 @@ void listen_to_unicmds(std::stop_source stop_source, std::shared_ptr<BLE_Client:
 int main(void) {
     std::printf("BLE_Client: process started\n");
 	std::atexit([]() { std::printf("BLE_Client: process finished\n"); });
-    std::shared_ptr<BLE_Client::SHM::SHM> shm = std::make_shared<BLE_Client::SHM::SHM>();
-	shm->attach();
+    BLE_Client::SHM::SHM* shm { BLE_Client::SHM::SHM::attach() };
 
-	BLE_Client::StateMachines::Logger logger;
 	std::stop_source stop_source;
 	SimpleBLE::Adapter simpleble_adapter;
-	BLE_Client::StateMachines::Killer::T_StateMachine killer { stop_source, logger };
-	BLE_Client::StateMachines::Adapter::T_StateMachine adapter { simpleble_adapter, shm, logger };
+	BLE_Client::StateMachines::Logger killer_logger;
+	BLE_Client::StateMachines::Killer::T_StateMachine killer { stop_source, killer_logger };
+	BLE_Client::StateMachines::Logger adapter_logger;
+	BLE_Client::StateMachines::Adapter::T_StateMachine adapter { simpleble_adapter, shm, adapter_logger };
 	std::vector<std::shared_ptr<BLE_Client::StateMachines::Connection::T_StateMachine>> connections;
 
-	std::jthread listener_thread(listen_to_unicmds, stop_source, shm, std::ref(killer), std::ref(adapter), std::ref(connections), std::ref(logger), std::ref(simpleble_adapter));
+	std::jthread listener_thread(listen_to_unicmds, stop_source, shm, std::ref(killer), std::ref(adapter), std::ref(connections), std::ref(simpleble_adapter));
 
 	/*
 	SimpleBLE::Peripheral peripheral;

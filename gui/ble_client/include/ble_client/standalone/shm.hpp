@@ -46,8 +46,7 @@ namespace BLE_Client {
 
         class SHM {
         private:
-    constexpr size_t shm_size = 2 << 15;
-
+            static constexpr size_t shm_size = 2 << 15;
         public:
             static constexpr char name[] = "BLE_Client.SHM";
             static constexpr char channel_name[] = "BLE_Client.SHM.channel";
@@ -81,13 +80,13 @@ namespace BLE_Client {
             BLE_Client::SHM::NotifyDeque* notify_deque = nullptr;
             boost::interprocess::named_mutex notify_deque_mutex { boost::interprocess::open_or_create, notify_deque_mutex_name };
             boost::interprocess::named_condition notify_deque_condition { boost::interprocess::open_or_create, notify_deque_condition_name };
+        public:
+            inline SHM() :
+                segment{ boost::interprocess::managed_shared_memory(boost::interprocess::open_only, name) }
+            {}
 
             inline SHM(const size_t size) :
                 segment{boost::interprocess::create_only, name, size}
-            {}
-
-            inline SHM() :
-                segment{ boost::interprocess::managed_shared_memory(boost::interprocess::open_only, name) }
             {}
 
             inline ~SHM() {
@@ -138,59 +137,79 @@ namespace BLE_Client {
 
             static inline std::shared_ptr<SHM> init() {
                 try {
-                    auto shm = std::make_shared<BLE_Client::SHM::SHM>(shm_size);
-                    channel = segment.construct<BLE_Client::SHM::Channel>
-                        (BLE_Client::SHM::SHM::channel_name)
+                    static const auto thrower = [](void* ptr, const char* name) {
+                        if(ptr == nullptr) {
+                            throw std::invalid_argument(name + std::string(" was previously used"));
+                        }
+                    };
+
+                    auto shm = std::make_shared<SHM>(shm_size);
+
+                    shm->channel = shm->segment.construct<Channel>
+                        (channel_name)
                         (0, 0.0f);
-                    const BLE_Client::SHM::CMD_DequeAllocator deque_allocator(segment.get_segment_manager());
-                    cmd_deque = segment.construct<BLE_Client::SHM::CMD_Deque>(BLE_Client::SHM::SHM::cmd_deque_name)(deque_allocator);
+                    thrower(reinterpret_cast<void*>(shm->channel), channel_name);
 
-                    const BLE_Client::SHM::UNICMD_DequeAllocator unideque_allocator(segment.get_segment_manager());
-                    unicmd_deque = segment.construct<BLE_Client::SHM::UNICMD_Deque>(BLE_Client::SHM::SHM::unicmd_deque_name)(unideque_allocator);
+                    const CMD_DequeAllocator deque_allocator(shm->segment.get_segment_manager());
+                    shm->cmd_deque = shm->segment.construct<CMD_Deque>(cmd_deque_name)(deque_allocator);
+                    thrower(reinterpret_cast<void*>(shm->cmd_deque), cmd_deque_name);
 
-                    const BLE_Client::SHM::NotifyAllocator notify_allocator(segment.get_segment_manager());
-                    notify_deque = segment.construct<BLE_Client::SHM::NotifyDeque>(BLE_Client::SHM::SHM::notify_deque_name)(notify_allocator);
+                    const UNICMD_DequeAllocator unideque_allocator(shm->segment.get_segment_manager());
+                    shm->unicmd_deque = shm->segment.construct<UNICMD_Deque>(unicmd_deque_name)(unideque_allocator);
+                    thrower(reinterpret_cast<void*>(shm->unicmd_deque), unicmd_deque_name);
 
+                    const NotifyAllocator notify_allocator(shm->segment.get_segment_manager());
+                    shm->notify_deque = shm->segment.construct<NotifyDeque>(notify_deque_name)(notify_allocator);
+                    thrower(reinterpret_cast<void*>(shm->notify_deque), notify_deque_name);
 
-                    const BLE_Client::SHM::DiscoveryDevicesAllocator discovery_devices_allocator(segment.get_segment_manager());
-                    discovery_devices = segment.construct<BLE_Client::SHM::DiscoveryDevices>(BLE_Client::SHM::SHM::discovery_devices_name)(discovery_devices_allocator);
+                    const DiscoveryDevicesAllocator discovery_devices_allocator(shm->segment.get_segment_manager());
+                    shm->discovery_devices = shm->segment.construct<DiscoveryDevices>(discovery_devices_name)(discovery_devices_allocator);
+                    thrower(reinterpret_cast<void*>(shm->discovery_devices), discovery_devices_name);
 
-                    active_state = segment.construct<BLE_Client::Discovery::States::T_State>(BLE_Client::SHM::SHM::active_state_name)(BLE_Client::Discovery::States::off{});
+                    shm->active_state = shm->segment.construct<BLE_Client::Discovery::States::T_State>
+                        (active_state_name)
+                        (BLE_Client::Discovery::States::off{});
+                    thrower(reinterpret_cast<void*>(shm->active_state), active_state_name);
+
                     return shm;
                 } catch(const std::exception& e) {
-                    std::cerr << "ERROR: BLE_Client::init_shm(): exception: " << e.what() << std::endl;
+                    std::cerr << "ERROR: BLE_Client::SHM::SHM::init(): exception: " << e.what() << std::endl;
                     std::exit(1);
                     return nullptr;
                 }
             }
 
-            inline void attach() {
+            static inline SHM* attach() {
                 try {
-                    do {
-                        channel = segment.find<BLE_Client::SHM::Channel>(BLE_Client::SHM::SHM::channel_name).first;
-                    } while(channel == nullptr);
+                    static constexpr auto thrower = [](void* ptr, const char* name) {
+                        if(ptr == nullptr) {
+                            throw std::invalid_argument(name + std::string(" could not attach"));
+                        }
+                    };
 
-                    do {
-                        cmd_deque = segment.find<BLE_Client::SHM::CMD_Deque>(BLE_Client::SHM::SHM::cmd_deque_name).first;
-                    } while(cmd_deque == nullptr);
+                    SHM* shm = new SHM {};
 
-                    do {
-                        unicmd_deque = segment.find<BLE_Client::SHM::UNICMD_Deque>(BLE_Client::SHM::SHM::unicmd_deque_name).first;
-                    } while(cmd_deque == nullptr);
+                    shm->channel = shm->segment.find<Channel>(channel_name).first;
+                    thrower(reinterpret_cast<void*>(shm->channel), channel_name);
 
-                    do {
-                        notify_deque = segment.find<BLE_Client::SHM::NotifyDeque>(BLE_Client::SHM::SHM::notify_deque_name).first;
-                    } while(notify_deque == nullptr);
+                    shm->cmd_deque = shm->segment.find<CMD_Deque>(cmd_deque_name).first;
+                    thrower(reinterpret_cast<void*>(shm->cmd_deque), cmd_deque_name);
 
-                    do {
-                        discovery_devices = segment.find<BLE_Client::SHM::DiscoveryDevices>(BLE_Client::SHM::SHM::discovery_devices_name).first;
-                    } while(discovery_devices == nullptr);
+                    shm->unicmd_deque = shm->segment.find<UNICMD_Deque>(unicmd_deque_name).first;
+                    thrower(reinterpret_cast<void*>(shm->unicmd_deque), unicmd_deque_name);
 
-                    do {
-                        active_state = segment.find<BLE_Client::Discovery::States::T_State>(BLE_Client::SHM::SHM::active_state_name).first;
-                    } while(active_state == nullptr);
+                    shm->notify_deque = shm->segment.find<NotifyDeque>(notify_deque_name).first;
+                    thrower(reinterpret_cast<void*>(shm->notify_deque), notify_deque_name);
+
+                    shm->discovery_devices = shm->segment.find<DiscoveryDevices>(discovery_devices_name).first;
+                    thrower(reinterpret_cast<void*>(shm->discovery_devices), discovery_devices_name);
+
+                    shm->active_state = shm->segment.find<BLE_Client::Discovery::States::T_State>(active_state_name).first;
+                    thrower(reinterpret_cast<void*>(shm->active_state), active_state_name);
+
+                    return shm;
                 } catch(const std::exception& e) {
-                    std::cerr << "ERROR: BLE_Client::SHM::attach_shm: exception: " << e.what() << std::endl;
+                    std::cerr << "ERROR: BLE_Client::SHM::SHM::attach: exception: " << e.what() << std::endl;
                     std::exit(1);
                 } 
             }

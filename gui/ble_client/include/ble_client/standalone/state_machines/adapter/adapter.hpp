@@ -27,7 +27,7 @@ namespace BLE_Client {
             
             namespace Guards {
                 bool bluetooth_active(SimpleBLE::Adapter& adapter);
-                bool discovery_available(SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::SHM> shm);
+                bool discovery_available(SimpleBLE::Adapter& adapter, BLE_Client::SHM::SHM* shm);
             }
 
             struct Adapter {

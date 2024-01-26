@@ -5,12 +5,14 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <thread>
+#include <chrono>
 
 namespace BLE_Client {
     namespace StateMachines {
         namespace Connection {
             namespace Actions {
-                void connect(const BLE_Client::StateMachines::Connection::Events::connect& event, SimpleBLE::Adapter& adapter, SimpleBLE::Peripheral& peripheral, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
+                void connect(const BLE_Client::StateMachines::Connection::Events::connect& event, SimpleBLE::Adapter& adapter, SimpleBLE::Peripheral& peripheral, BLE_Client::SHM::SHM* shm) {
                     try {
                         std::vector<SimpleBLE::Peripheral> scan_results { adapter.scan_get_results() };
                         std::string tmp_address(event.address.begin(), event.address.end() - 1);
@@ -79,7 +81,7 @@ namespace BLE_Client {
                     return !is_connected(peripheral);
                 }
 
-                bool is_esp32_ad5933(SimpleBLE::Peripheral& peripheral, ESP32_AD5933& esp32_ad5933, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
+                bool is_esp32_ad5933(SimpleBLE::Peripheral& peripheral, ESP32_AD5933& esp32_ad5933, BLE_Client::SHM::SHM* shm) {
                     try {
                         const std::string BODY_COMPOSITION_SERVICE_UUID { "0000181b-0000-1000-8000-00805f9b34fb" };
                         const std::string BODY_COMPOSITION_FEATURE_UUID { "00002a9b-0000-1000-8000-00805f9b34fb" };
@@ -137,7 +139,7 @@ namespace BLE_Client {
                     }
                 }
 
-                bool is_not_esp32_ad5933(SimpleBLE::Peripheral& peripheral, ESP32_AD5933& esp32_ad5933, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
+                bool is_not_esp32_ad5933(SimpleBLE::Peripheral& peripheral, ESP32_AD5933& esp32_ad5933, BLE_Client::SHM::SHM* shm) {
                     return !is_esp32_ad5933(peripheral, esp32_ad5933, shm);
                 }
             }
