@@ -493,7 +493,7 @@ namespace GUI {
                                 for(int i = 0; i < 100; i++) {
                                     try{
                                         shm->attach_notify_channel(connect_event);
-                                        client_windows.push_back(Windows::Client{});
+                                        client_windows.push_back(Windows::Client{connect_event.get_address_dots_instead_of_colons(), client_windows.size() });
                                         break;
                                     } catch(...) {
                                         std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -555,21 +555,21 @@ namespace GUI {
             console.Draw();
         }
 
-        bool send_packet(const Magic::Packets::Packet_T &packet, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
-            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write{ static_cast<size_t>(-1), packet });
+        bool send_packet(const size_t index, const Magic::Packets::Packet_T &packet, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
+            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write{ index, packet });
             return true;
         }
 
         template<size_t N>
-        bool send_packet_and_footer(const std::array<uint8_t, N> &raw_array, const Magic::Packets::Packet_T &footer, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
+        bool send_packet_and_footer(const size_t index, const std::array<uint8_t, N> &raw_array, const Magic::Packets::Packet_T &footer, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
             static_assert(N < Magic::Packets::Debug::start.size());
             Magic::Packets::Packet_T buf = footer;
             std::copy(raw_array.begin(), raw_array.end(), buf.begin());
-            return send_packet(buf, shm);
+            return send_packet(index, buf, shm);
         }
 
         void send_configure(Client &client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
-            if(send_packet_and_footer(client.configure_captures.config.to_raw_array(), Magic::Packets::FrequencySweep::configure, shm) == false) {
+            if(send_packet_and_footer(client.index, client.configure_captures.config.to_raw_array(), Magic::Packets::FrequencySweep::configure, shm) == false) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: configure failed\n");
                 client.configured = false;
             }
@@ -593,13 +593,13 @@ namespace GUI {
 
             client.progress_bar_fraction = 0.0f;
 
-            if(send_packet(Magic::Packets::FrequencySweep::run, shm) == false) {
+            if(send_packet(client.index, Magic::Packets::FrequencySweep::run, shm) == false) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: calibrate: send_packet failed\n");
                 return;
             }
 
             do {
-                const auto rx_payload { shm->notify_channels[static_cast<size_t>(-1)]->read_for(boost_timeout_ms) };
+                const auto rx_payload { shm->notify_channels[client.index]->read_for(boost_timeout_ms) };
                 if(rx_payload.has_value() == false) {
                     return;
                 }
@@ -668,7 +668,7 @@ namespace GUI {
 
                 client.progress_bar_fraction = 0.0f;
 
-                if(send_packet(Magic::Packets::FrequencySweep::run, shm) == false) {
+                if(send_packet(client.index, Magic::Packets::FrequencySweep::run, shm) == false) {
                     fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: sweep: send_packet: run: failed\n");
                     return;
                 }
@@ -691,7 +691,7 @@ namespace GUI {
                         }
                     )
                     */
-                    const auto rx_payload { shm->notify_channels[static_cast<size_t>(-1)]->read_for(boost_timeout_ms) };
+                    const auto rx_payload { shm->notify_channels[client.index]->read_for(boost_timeout_ms) };
                     if(rx_payload.has_value() == false) {
                         fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: sweep: failed: timeout\n");
                         return;
@@ -823,7 +823,7 @@ namespace GUI {
             if(client.configured == true) {
                 ImGui::SameLine();
                 if(ImGui::Button("Freq Sweep End")) {
-                    std::jthread t1([&]() { send_packet(Magic::Packets::FrequencySweep::end, shm); client.configured = false; });
+                    std::jthread t1([&]() { send_packet(client.index, Magic::Packets::FrequencySweep::end, shm); client.configured = false; });
                     t1.detach();
                 } 
 
@@ -861,20 +861,20 @@ namespace GUI {
         }
 
         bool dump(Client &client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
-            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write{ static_cast<size_t>(-1), Magic::Packets::Debug::dump_all_registers });
-            const auto rx_payload { shm->notify_channels[static_cast<size_t>(-1)]->read_for(boost::posix_time::milliseconds(1'000)) };
+            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write{ client.index, Magic::Packets::Debug::dump_all_registers });
+            const auto rx_payload { shm->notify_channels[client.index]->read_for(boost::posix_time::milliseconds(1'000)) };
 
             if(rx_payload.has_value() == false) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: Debug: Dump failed\n");
                 return false;
             }
             
-            client.debug_captures.update_captures(std::string(rx_payload.value().begin(), rx_payload.value().begin()));
+            client.debug_captures.update_captures(std::string(rx_payload.value().begin(), rx_payload.value().end()));
             return true;
         }
 
         bool debug_program(Client &client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
-            if(send_packet_and_footer(client.debug_captures.config.to_raw_array(), Magic::Packets::Debug::program_all_registers, shm) == false) {
+            if(send_packet_and_footer(client.index, client.debug_captures.config.to_raw_array(), Magic::Packets::Debug::program_all_registers, shm) == false) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: debug_program: failed\n");
                 return false;
             }
@@ -894,7 +894,7 @@ namespace GUI {
         void command_and_dump(Client &client, AD5933::Masks::Or::Ctrl::HB::Command command, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
             auto buf = Magic::Packets::Debug::control_HB_command;
             buf[0] = static_cast<uint8_t>(command);
-            if(send_packet(buf, shm) == false) {
+            if(send_packet(client.index, buf, shm) == false) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: command_and_dump: send_packet: {} failed\n", static_cast<uint8_t>(command));
             }
             if(dump(client, shm) == false) {
@@ -918,22 +918,20 @@ namespace GUI {
             if(client.configured == false) {
                 if(client.debug_started == false) {
                     if(ImGui::Button("Start")) {
-                        send_packet(Magic::Packets::Debug::start, shm);
+                        send_packet(client.index, Magic::Packets::Debug::start, shm);
                         client.debug_started = true;
                     }
                 } else {
                     if(ImGui::Button("Dump")) {
-                        std::jthread t1(dump, std::ref(client), shm);
-                        t1.detach();
+                        dump(client, shm);
                     }
                     ImGui::SameLine();
                     if(ImGui::Button("Program")) {
-                        std::jthread t1(program_and_dump, std::ref(client), shm);
-                        t1.detach();
+                        program_and_dump(client, shm);
                     }
                     ImGui::SameLine();
                     if(ImGui::Button("End")) {
-                        send_packet(Magic::Packets::Debug::end, shm);
+                        send_packet(client.index, Magic::Packets::Debug::end, shm);
                         client.debug_started = false;
                     }
                 }
@@ -1337,13 +1335,11 @@ namespace GUI {
             if(dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
                 window_flags |= ImGuiWindowFlags_NoBackground;
 
-            std::string name;
-            /*
-                std::string(
-                    shm->discovery_devices->at(static_cast<size_t>(client_index)).identifier.begin(),
-                    shm->discovery_devices->at(static_cast<size_t>(client_index)).identifier.end())
-                + std::string("##") + std::to_string(i);
-            */
+            std::string name {
+                client.name
+                + std::string("##")
+                + std::to_string(i)
+            };
 
             static int first = 0;
             if(first == i) {
@@ -1359,15 +1355,12 @@ namespace GUI {
 
             ImGuiIO& io = ImGui::GetIO();
             if(io.ConfigFlags & ImGuiConfigFlags_DockingEnable) {
-                std::string dockspace_name;
-                /*
+                std::string dockspace_name {
                     std::string("DockSpace")
-                    + std::string(
-                        shm->discovery_devices->at(static_cast<size_t>(client_index)).identifier.begin(),
-                        shm->discovery_devices->at(static_cast<size_t>(client_index)).identifier.end())
+                    + client.name
                     + std::string("##")
-                    + std::to_string(i);
-                */
+                    + std::to_string(i)
+                };
                 ImGuiID dockspace_id = ImGui::GetID(dockspace_name.c_str());
                 ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
                 if(first == i) {

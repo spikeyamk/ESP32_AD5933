@@ -35,6 +35,8 @@ namespace GUI {
             std::vector<AD5933::Calibration<float>> calibration;
             std::vector<AD5933::Data> raw_measurement;
             std::vector<AD5933::Measurement<float>> measurement;
+            std::string name;
+            size_t index;
             bool calibrating = false;
             bool calibrated = false;
             bool sweeping = false;
@@ -43,7 +45,10 @@ namespace GUI {
             bool configured = false;
             float progress_bar_fraction { 0.0f };
             Windows::Captures::HexDebugReadWriteRegisters debug_captures;
-            inline Client() = default;
+            inline Client(const std::string name, const size_t index) :
+                name{ name },
+                index{ index }
+            {}
             bool debug_started = false;
             std::stop_source ss;
         };

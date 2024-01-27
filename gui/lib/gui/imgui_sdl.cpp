@@ -923,18 +923,24 @@ namespace GUI {
                 Windows::client1(i, top_ids.center, client_windows[i], menu_bar_enables, shm);
             }
 
-            size_t index = 0;
-            std::remove_if(client_windows.begin(), client_windows.end(), [&index, &shm](const auto& e) mutable {
-                bool ret = false;
-                if(e.enable == false) {
-                    shm->cmd.send(BLE_Client::StateMachines::Connection::Events::disconnect{ index });
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
-                    shm->notify_channels.erase(shm->notify_channels.begin() + index);
-                    ret = true;
-                }
-                index++;
-                return ret;
-            });
+            const auto remove_it {
+                std::remove_if(client_windows.begin(), client_windows.end(), [&shm](const auto& e) mutable {
+                    bool ret = false;
+                    if(e.enable == false) {
+                        std::thread([](auto shm, auto e) {
+                            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::disconnect{ e.index });
+                            std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
+                            shm->notify_channels.erase(shm->notify_channels.begin() + e.index);
+                        }, shm, e).detach();
+                        ret = true;
+                    }
+                    return ret;
+                })
+            };
+
+            if(remove_it != client_windows.end()) {
+                client_windows.erase(remove_it);
+            }
 
             Boilerplate::render(renderer, clear_color);
         }
