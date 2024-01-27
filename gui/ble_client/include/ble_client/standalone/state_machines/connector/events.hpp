@@ -22,6 +22,16 @@ namespace BLE_Client {
                         const std::string_view ret { p_address.begin(), (len > p_address.size()) ? (p_address.end()) : (p_address.begin() + len) };
                         return ret;
                     }
+
+                    inline const std::string get_address_dots_instead_of_colons() const {
+                        std::string ret { get_address() };
+                        for(auto& e: ret) {
+                            if(e == ':') {
+                                e = '.';
+                            }
+                        }
+                        return ret;
+                    }
                 };
             }
         }

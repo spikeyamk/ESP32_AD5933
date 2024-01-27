@@ -4,6 +4,7 @@
 #include <thread>
 #include <chrono>
 #include <iostream>
+#include <memory>
 
 namespace BLE_Client {
     namespace StateMachines {
@@ -36,10 +37,10 @@ namespace BLE_Client {
                             throw std::runtime_error("not an ESP32_AD5933");
                         }
 
-                        shm->init_notify_channel(get_address_without_semicolons(*it).c_str());
-                        BLE_Client::ESP32_AD5933 tmp_esp32_ad5933 { *it, std::get<0>(ret.value()), std::get<1>(ret.value()), std::get<2>(ret.value()), shm->notify_channels.back() };
-                        tmp_esp32_ad5933.setup_subscriptions();
-                        BLE_Client::StateMachines::Logger logger;
+                        shm->init_notify_channel(Events::connect{ it->address() });
+                        auto tmp_esp32_ad5933 { std::make_shared<BLE_Client::ESP32_AD5933>(*it, std::get<0>(ret.value()), std::get<1>(ret.value()), std::get<2>(ret.value()), shm->notify_channels.back()) };
+                        tmp_esp32_ad5933->setup_subscriptions();
+                        BLE_Client::StateMachines::Logger logger {};
                         connections.push_back(new decltype(BLE_Client::StateMachines::Connection::Dummy<int>::sm){ tmp_esp32_ad5933, logger });
                         return true;
                     } catch(const std::exception& e) {

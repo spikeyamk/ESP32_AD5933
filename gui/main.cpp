@@ -5,7 +5,6 @@
 
 #include <boost/process.hpp>
 
-#include "ble_client/ble_client.hpp"
 #include "gui/imgui_sdl.hpp"
 #include "magic/packets.hpp"
 
@@ -20,6 +19,7 @@ int main(int argc, char* argv[]) {
         "/home/spikeyamk/Documents/git-repos/ESP32_AD5933/gui/build/ble_client/ble_client"
     #endif
     };
+    boost::interprocess::shared_memory_object::remove(BLE_Client::SHM::Names::shm);
     auto shm = std::make_shared<BLE_Client::SHM::ParentSHM>();
     boost::process::child ble_client { ble_client_path };
 

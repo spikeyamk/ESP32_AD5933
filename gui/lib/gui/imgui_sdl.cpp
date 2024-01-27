@@ -21,7 +21,6 @@
 #include "imgui_console/imgui_console.h"
 
 #include "gui/imgui_sdl.hpp"
-#include "ble_client/ble_client.hpp"
 #include "gui/boilerplate.hpp"
 #include "gui/spinner.hpp"
 
@@ -39,6 +38,7 @@
 
 namespace GUI {
     // Related to dbg_registers_window   
+    /*
     bool send_debug_start_req_thread_cb(std::optional<ESP32_AD5933> &esp32_ad5933) {
         return esp32_ad5933.value().send(std::string(Magic::Packets::Debug::start.begin(), Magic::Packets::Debug::start.end()));
     }
@@ -298,9 +298,11 @@ namespace GUI {
         hex_dbg_rw_captures.store(std::make_shared<Windows::Captures::HexDebugReadWriteRegisters>(tmp_hex_dbg_rw_captures));
         ImGui::End();
     }
+    */
 }
 
 namespace GUI {
+    /*
     void calibrate_cb(
         AD5933::uint9_t num_of_inc, 
         float calibration_impedance,
@@ -324,7 +326,6 @@ namespace GUI {
         another_calibration_data.clear();
         another_calibration_data.reserve(wished_size);
 
-        /*
         do {
             const auto rx_payload = esp32_ad5933.value().rx_payload.read();
             esp32_ad5933.value().rx_payload.clean();
@@ -344,7 +345,6 @@ namespace GUI {
 
             progress_bar_fraction.fetch_add(progress_bar_step);
         } while(another_calibration_data.size() != wished_size);
-        */
 
         calibrating = false;
         calibrated = true;
@@ -378,7 +378,6 @@ namespace GUI {
             tmp_measurement_data.reserve(wished_size);
 
             progress_bar_fraction.store(0.0f);
-            /*
             do {
                 const auto rx_payload = esp32_ad5933.value().rx_payload.read();
                 esp32_ad5933.value().rx_payload.clean();
@@ -391,7 +390,6 @@ namespace GUI {
 
                 progress_bar_fraction.fetch_add(progress_bar_step);
             } while(tmp_measurement_data.size() != wished_size);
-            */
 
             raw_measurement_data.clear();
             raw_measurement_data = tmp_raw_measurement_data;
@@ -405,9 +403,11 @@ namespace GUI {
 
         sweeping = false;
     }
+    */
 }
 
 namespace GUI {
+    /*
     inline void measurement_window(
         std::atomic<std::shared_ptr<Windows::Captures::Measurement>> &measure_captures,
         ImVec2 &measurement_window_size,
@@ -587,9 +587,11 @@ namespace GUI {
         tmp_measure_captures.update_config();
         measure_captures.store(std::make_shared<Windows::Captures::Measurement>(tmp_measure_captures));
     }
+    */
 }
 
 namespace GUI {
+    /*
     void calibration_raw_data_plots(
         std::vector<float> &frequency_vector,
         std::vector<AD5933::Data> &raw_calibration_data
@@ -704,9 +706,11 @@ namespace GUI {
 
         ImGui::End();
     }
+    */
 }
 
 namespace GUI {
+    /*
     void freq_sweep_raw_data_plots(
         std::vector<float> &frequency_vector,
         std::vector<AD5933::Data> &raw_measurement_data
@@ -839,9 +843,11 @@ namespace GUI {
 
         ImGui::End();
     }
+    */
 }
 
 namespace GUI {
+    /*
     void create_main(
         std::optional<ESP32_AD5933> &esp32_ad5933,
         std::atomic<std::shared_ptr<Windows::Captures::Measurement>> &measure_captures
@@ -881,6 +887,7 @@ namespace GUI {
             create_freq_sweep_window_enable(measure_captures, plot_freq_sweep_window_enable, raw_measurement_data, another_measurement_data);
         }
     }
+    */
 }
 
 namespace GUI {
@@ -900,40 +907,34 @@ namespace GUI {
         Windows::MenuBarEnables menu_bar_enables;
         ImGuiID top_id = Windows::top_with_dock_space(menu_bar_enables);
         Windows::DockspaceIDs top_ids { Windows::split_left_center(top_id) };
-
+        std::vector<Windows::Client> client_windows;
         int selected = -1;
-        Windows::ble_client(menu_bar_enables.ble_client, top_ids.left, selected, shm);
-        Boilerplate::render(renderer, clear_color);
 
-        //std::unique_ptr<Windows::Client> empty_client = std::make_unique<Windows::Client>();
+        Windows::ble_client(menu_bar_enables.ble_client, top_ids.left, selected, shm, client_windows);
+        Boilerplate::render(renderer, clear_color);
 
         while(done == false && ble_client.running()) {
             Boilerplate::process_events(window, done);
             Boilerplate::start_new_frame();
             top_id = Windows::top_with_dock_space(menu_bar_enables);
 
-            Windows::ble_client(menu_bar_enables.ble_client, top_ids.left, selected, shm);
+            Windows::ble_client(menu_bar_enables.ble_client, top_ids.left, selected, shm, client_windows);
+            for(size_t i = 0; i < client_windows.size(); i++) {
+                Windows::client1(i, top_ids.center, client_windows[i], menu_bar_enables, shm);
+            }
 
-            /*
-            std::visit([&](auto&& active_state) {
-                using T_Decay = std::decay_t<decltype(active_state)>;
-                if constexpr (std::is_same_v<T_Decay, BLE_Client::Discovery::States::using_esp32_ad5933>) {
-                    if(client_index > -1) {
-                        if(empty_client == nullptr) {
-                            empty_client = std::make_unique<Windows::Client>();
-                        } else {
-                            Windows::client1(0, top_ids.center, *empty_client, menu_bar_enables, shm, client_index);
-                        }
-                        if(empty_client->enable == false) {
-                            shm->cmd_deque->push_back(BLE_Client::Discovery::Events::stop_using_esp32_ad5933{});
-                            shm->cmd_deque->push_back(BLE_Client::Discovery::Events::disconnect{});
-                            client_index = -1;
-                            empty_client.~unique_ptr();
-                        }
-                    }
+            size_t index = 0;
+            std::remove_if(client_windows.begin(), client_windows.end(), [&index, &shm](const auto& e) mutable {
+                bool ret = false;
+                if(e.enable == false) {
+                    shm->cmd.send(BLE_Client::StateMachines::Connection::Events::disconnect{ index });
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
+                    shm->notify_channels.erase(shm->notify_channels.begin() + index);
+                    ret = true;
                 }
-            }, *shm->active_state);
-            */
+                index++;
+                return ret;
+            });
 
             Boilerplate::render(renderer, clear_color);
         }

@@ -30,6 +30,16 @@ namespace BLE_Client {
             std::string_view get_address() const {
                 return get_string_view(p_address);
             }
+
+            std::string get_address_with_dots_instead_of_colons() const {
+                std::string ret { get_address() };
+                for(auto& e: ret) {
+                    if(e == ':') {
+                        e = '.';
+                    }
+                }
+                return ret;
+            }
         private:
             template<typename T>
             std::string_view get_string_view(const T& array) const {

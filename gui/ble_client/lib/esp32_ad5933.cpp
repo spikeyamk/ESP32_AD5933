@@ -53,11 +53,7 @@ namespace BLE_Client {
     }
 
     bool ESP32_AD5933::is_connected() {
-        try {
-            return peripheral.is_connected();
-        } catch(...) {
-            return false;
-        }
+        return peripheral.is_connected();
     }
 
     void ESP32_AD5933::disconnect() {

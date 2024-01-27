@@ -413,7 +413,7 @@ namespace GUI {
             return dockspace_id;
         }
 
-        void ble_client(bool &enable, ImGuiID left_id, int &selected, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
+        void ble_client(bool &enable, ImGuiID left_id, int &selected, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm, std::vector<Windows::Client>& client_windows) {
             if(enable == false) {
                 return;
             }
@@ -483,22 +483,28 @@ namespace GUI {
                 }
                 if constexpr (!std::is_same_v<T_Decay, BLE_Client::StateMachines::Adapter::States::off>) {
                     show_table();
-                    if(shm->discovery_devices->empty() == false && selected > -1) {
+                    static bool connecting = false;
+                    if(shm->discovery_devices->empty() == false && selected > -1 && connecting == false) {
                         if(ImGui::Button("Connect")) {
-                            shm->cmd.send(BLE_Client::StateMachines::Connector::Events::connect{ shm->discovery_devices->at(selected).get_address() });
-                            std::thread([](auto shm, const int selected) {
-                                bool its_connected = false;
-                                for(int i = 0; i < 100 && its_connected == false; i++) { 
-                                    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                            connecting = true;
+                            const BLE_Client::StateMachines::Connector::Events::connect connect_event { shm->discovery_devices->at(selected).get_address() };
+                            shm->cmd.send(connect_event);
+                            std::thread([](auto shm, const BLE_Client::StateMachines::Connector::Events::connect connect_event, bool& connecting, std::vector<Windows::Client>& client_windows) {
+                                for(int i = 0; i < 100; i++) {
+                                    try{
+                                        shm->attach_notify_channel(connect_event);
+                                        client_windows.push_back(Windows::Client{});
+                                        break;
+                                    } catch(...) {
+                                        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                                    }
                                 }
-                            }, shm, selected).detach();
+                                connecting = false;
+                            }, shm, connect_event, std::ref(connecting), std::ref(client_windows)).detach();
                         }
-                    }
-                    /*
-                    if constexpr (std::is_same_v<T_Decay, BLE_Client::Discovery::States::connecting>) {
+                    } else if(connecting == true) {
                         Spinner::Spinner("ClientSpinner", 5.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                     }
-                    */
                 }
             }, *shm->active_state);
 
@@ -549,20 +555,20 @@ namespace GUI {
             console.Draw();
         }
 
-        bool send_packet(const Magic::Packets::Packet_T &packet, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
-            shm->send_cmd(BLE_Client::Discovery::Events::esp32_ad5933_write{ packet });
+        bool send_packet(const Magic::Packets::Packet_T &packet, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
+            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write{ static_cast<size_t>(-1), packet });
             return true;
         }
 
         template<size_t N>
-        bool send_packet_and_footer(const std::array<uint8_t, N> &raw_array, const Magic::Packets::Packet_T &footer, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
+        bool send_packet_and_footer(const std::array<uint8_t, N> &raw_array, const Magic::Packets::Packet_T &footer, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
             static_assert(N < Magic::Packets::Debug::start.size());
             Magic::Packets::Packet_T buf = footer;
             std::copy(raw_array.begin(), raw_array.end(), buf.begin());
             return send_packet(buf, shm);
         }
 
-        void send_configure(Client &client, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
+        void send_configure(Client &client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
             if(send_packet_and_footer(client.configure_captures.config.to_raw_array(), Magic::Packets::FrequencySweep::configure, shm) == false) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: configure failed\n");
                 client.configured = false;
@@ -570,9 +576,7 @@ namespace GUI {
             client.configured = true;
         }
 
-        void calibrate(std::stop_token st, Client &client, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
-            using namespace boost::interprocess;
-            scoped_lock boost_lock(shm->cmd_deque_mutex);
+        void calibrate(std::stop_token st, Client &client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
             const uint16_t wished_size = client.configure_captures.config.get_num_of_inc().unwrap() + 1;
             const float progress_bar_step = 1.0f / static_cast<float>(wished_size);
             const float timeout_ms = (1.0f / static_cast<float>(client.configure_captures.config.get_start_freq().unwrap())) 
@@ -595,6 +599,11 @@ namespace GUI {
             }
 
             do {
+                const auto rx_payload { shm->notify_channels[static_cast<size_t>(-1)]->read_for(boost_timeout_ms) };
+                if(rx_payload.has_value() == false) {
+                    return;
+                }
+                /*
                 if(shm->notify_deque_condition.timed_wait(
                     boost_lock,
                     boost::get_system_time() + boost_timeout_ms,
@@ -613,6 +622,12 @@ namespace GUI {
                 ) == false) {
                     return;
                 }
+                */
+
+                if(rx_payload.has_value() == false) {
+                    fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: sweep: calibrate: timeout\n");
+                    return;
+                }
 
                 if(st.stop_requested()) {
                     client.calibrating = false;
@@ -620,16 +635,8 @@ namespace GUI {
                     return;
                 }
 
-                if(shm->notify_deque->empty()) {
-    		        fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: calibrate: failed: timeout\n");
-                    return;
-                }
-
-                const auto rx_payload = shm->notify_deque->front();
-                shm->notify_deque->pop_front();
-
                 std::array<uint8_t, 4> raw_array;
-                std::copy(rx_payload.begin(), rx_payload.begin() + 4, raw_array.begin());
+                std::copy(rx_payload.value().begin(), rx_payload.value().begin() + 4, raw_array.begin());
                 AD5933::Data tmp_data { raw_array };
                 tmp_raw_calibration.push_back(tmp_data);
                 AD5933::Calibration<float> tmp_cal { tmp_data, client.configure_captures.calibration_impedance };
@@ -642,9 +649,7 @@ namespace GUI {
             client.calibrating = false;
         }
 
-        void sweep(std::stop_token st, Client &client, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
-            using namespace boost::interprocess;
-            scoped_lock boost_lock(shm->notify_deque_mutex);
+        void sweep(std::stop_token st, Client &client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
             const uint16_t wished_size = client.configure_captures.config.get_num_of_inc().unwrap() + 1;
             assert(wished_size <= client.calibration.size());
             const float progress_bar_step = 1.0f / static_cast<float>(wished_size);
@@ -668,6 +673,7 @@ namespace GUI {
                     return;
                 }
                 do {
+                    /*
                     if(shm->notify_deque_condition.timed_wait(
                         boost_lock,
                         boost::get_system_time() + boost_timeout_ms,
@@ -683,7 +689,10 @@ namespace GUI {
                             }
                             return true;
                         }
-                    ) == false) {
+                    )
+                    */
+                    const auto rx_payload { shm->notify_channels[static_cast<size_t>(-1)]->read_for(boost_timeout_ms) };
+                    if(rx_payload.has_value() == false) {
                         fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: sweep: failed: timeout\n");
                         return;
                     }
@@ -694,11 +703,8 @@ namespace GUI {
                         return;
                     }
 
-                    const auto rx_payload = shm->notify_deque->front();
-                    shm->notify_deque->pop_front();
-
                     std::array<uint8_t, 4> raw_array;
-                    std::copy(rx_payload.begin(), rx_payload.begin() + 4, raw_array.begin());
+                    std::copy(rx_payload.value().begin(), rx_payload.value().begin() + 4, raw_array.begin());
                     AD5933::Data tmp_data { raw_array };
                     tmp_raw_measurement.push_back(tmp_data);
                     AD5933::Measurement<float> tmp_meas { tmp_data, tmp_calibration[tmp_measurement.size()] };
@@ -712,7 +718,7 @@ namespace GUI {
             client.sweeping = false;
         }
 
-        void configure(int i, ImGuiID side_id, bool &enable, Client &client, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
+        void configure(int i, ImGuiID side_id, bool &enable, Client &client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
             static char base[] = "Configure";
             char name[20];
             std::sprintf(name, "%s##%d", base, i);
@@ -854,38 +860,20 @@ namespace GUI {
             ImGui::End();
         }
 
-        bool dump(Client &client, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
-            using namespace boost::interprocess;
-            scoped_lock boost_lock(shm->notify_deque_mutex);
-            shm->send_cmd(BLE_Client::Discovery::Events::esp32_ad5933_write{ Magic::Packets::Debug::dump_all_registers });
+        bool dump(Client &client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
+            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write{ static_cast<size_t>(-1), Magic::Packets::Debug::dump_all_registers });
+            const auto rx_payload { shm->notify_channels[static_cast<size_t>(-1)]->read_for(boost::posix_time::milliseconds(1'000)) };
 
-            if(shm->notify_deque_condition.timed_wait(
-                boost_lock,
-                boost::get_system_time() + boost::posix_time::milliseconds(10'000),
-			    [&shm]() {
-                    if(shm->notify_deque->empty() == true) {
-                        return false;
-                    }
-
-                    std::array<uint8_t, 20> tmp_raw { 0x00 };
-                    std::copy(shm->notify_deque->front().begin(), shm->notify_deque->front().end(), tmp_raw.begin());
-                    if(Magic::Packets::get_magic_packet_pointer(std::move(tmp_raw)) != Magic::Packets::Debug::dump_all_registers) {
-                        return false;
-                    }
-
-                    return true;
-                }
-            ) == false) {
+            if(rx_payload.has_value() == false) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: Debug: Dump failed\n");
                 return false;
             }
             
-            client.debug_captures.update_captures(std::string(shm->notify_deque->front().begin(), shm->notify_deque->front().end()));
-            shm->notify_deque->pop_front();
+            client.debug_captures.update_captures(std::string(rx_payload.value().begin(), rx_payload.value().begin()));
             return true;
         }
 
-        bool debug_program(Client &client, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
+        bool debug_program(Client &client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
             if(send_packet_and_footer(client.debug_captures.config.to_raw_array(), Magic::Packets::Debug::program_all_registers, shm) == false) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: debug_program: failed\n");
                 return false;
@@ -893,7 +881,7 @@ namespace GUI {
             return true;
         }
         
-        void program_and_dump(Client &client, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
+        void program_and_dump(Client &client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
             if(debug_program(client, shm) == false) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: program_and_dump: program: failed\n");
                 return;
@@ -903,7 +891,7 @@ namespace GUI {
             }
         }
 
-        void command_and_dump(Client &client, AD5933::Masks::Or::Ctrl::HB::Command command, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
+        void command_and_dump(Client &client, AD5933::Masks::Or::Ctrl::HB::Command command, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
             auto buf = Magic::Packets::Debug::control_HB_command;
             buf[0] = static_cast<uint8_t>(command);
             if(send_packet(buf, shm) == false) {
@@ -914,7 +902,7 @@ namespace GUI {
             }
         }
 
-        void debug_registers(int i, ImGuiID side_id, bool &enable, Client &client, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
+        void debug_registers(int i, ImGuiID side_id, bool &enable, Client &client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
             std::string name = "Debug Registers##" + std::to_string(i);
             static int first = 0;
             if(first == i) {
@@ -1333,7 +1321,7 @@ namespace GUI {
             return { dock_id_left, dock_id_center };
         }
 
-        void client1(int i, ImGuiID center_id, Client &client, MenuBarEnables &enables, std::shared_ptr<BLE_Client::SHM::SHM> shm, const int client_index) {
+        void client1(const int i, ImGuiID center_id, Client &client, MenuBarEnables &enables, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
             if(client.enable == false) {
                 return;
             }
@@ -1409,9 +1397,7 @@ namespace GUI {
                     }
                 }
             }
-
             ImGui::End();
         }
-
     }
 }

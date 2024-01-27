@@ -18,9 +18,14 @@ if(NOT TARGET trielo)
     add_subdirectory(${TRIELO_DIR} ${CMAKE_BINARY_DIR}/trielo)
 endif()
 
+if(NOT TARGET magic)
+    set(MAGIC_DIR ${CMAKE_CURRENT_LIST_DIR}/../../common/magic)
+    add_subdirectory(${MAGIC_DIR} ${CMAKE_BINARY_DIR}/magic)
+endif()
+
 if(NOT TARGET simpleble::simpleble)
     set(SIMPLE_BLE_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/SimpleBLE/simpleble)
-    add_subdirectory(${SIMPLE_BLE_DIR})
+    add_subdirectory(${SIMPLE_BLE_DIR} ${CMAKE_BINARY_DIR}/simpleble)
 endif()
 
 if(NOT TARGET sml)
@@ -33,11 +38,13 @@ add_executable(${CURRENT_PROJECT_NAME}
 	lib/init.cpp
 	lib/shm.cpp
 	lib/ostream_overloads.cpp
-	lib/state_machine.cpp
-	lib/states.cpp
 	lib/esp32_ad5933.cpp
+	lib/cmd_listener.cpp
+	lib/worker.cpp
+	lib/test.cpp
 	lib/state_machines/adapter/adapter.cpp
 	lib/state_machines/adapter/states.cpp
+	lib/state_machines/adapter/checker.cpp
 	lib/state_machines/killer/killer.cpp
 	lib/state_machines/connection/connection.cpp
 	lib/state_machines/connector/connector.cpp

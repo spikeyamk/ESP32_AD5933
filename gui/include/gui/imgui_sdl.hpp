@@ -5,7 +5,6 @@
 
 #include <boost/process.hpp>
 
-#include "ble_client/ble_client.hpp"
 #include "ble_client/standalone/shm.hpp"
 
 namespace GUI {
