@@ -19,22 +19,15 @@ namespace BLE_Client {
                 struct off{};
                 struct connected{};
                 struct disconnected{};
-                struct connecting{};
-                struct using_esp32_ad5933{};
             }
 
             namespace Actions {
-                void connect(const BLE_Client::StateMachines::Connection::Events::connect& event, SimpleBLE::Adapter& adapter, SimpleBLE::Peripheral& peripheral, BLE_Client::SHM::SHM* shm);
-                void disconnect(SimpleBLE::Peripheral& peripheral, ESP32_AD5933& esp32_ad5933);
-                void write(const BLE_Client::StateMachines::Connection::Events::write& event, ESP32_AD5933& esp32_ad5933);
-                void setup_subscriptions(ESP32_AD5933& esp32_ad5933);
+                void disconnect(ESP32_AD5933& esp32_ad5933);
             }
             
             namespace Guards {
-                bool is_connected(SimpleBLE::Peripheral& peripheral);
-                bool is_not_connected(SimpleBLE::Peripheral& peripheral);
-                bool is_esp32_ad5933(SimpleBLE::Peripheral& peripheral, ESP32_AD5933& esp32_ad5933, BLE_Client::SHM::SHM* shm);
-                bool is_not_esp32_ad5933(SimpleBLE::Peripheral& peripheral, ESP32_AD5933& esp32_ad5933, BLE_Client::SHM::SHM* shm);
+                bool write_successful(const BLE_Client::StateMachines::Connection::Events::write& event, ESP32_AD5933& esp32_ad5933);
+                bool write_failed(const BLE_Client::StateMachines::Connection::Events::write& event, ESP32_AD5933& esp32_ad5933);
             }
 
             struct Connection {
@@ -42,18 +35,23 @@ namespace BLE_Client {
                     using namespace boost::sml;
                     using namespace std;
                     auto ret = make_transition_table(
-                        *state<States::off> + event<Events::connect> / function{Actions::connect} = state<States::connecting>,
-                        state<States::connecting> [function{Guards::is_connected}] = state<States::connected>,
-                        state<States::connecting> [function{Guards::is_not_connected}] = state<States::disconnected>,
-                        state<States::connected> [function{Guards::is_esp32_ad5933}] / function{Actions::setup_subscriptions} = state<States::using_esp32_ad5933>,
-                        state<States::connected> [function{Guards::is_not_esp32_ad5933}] / function{Actions::disconnect} = state<States::disconnected>,
-                        state<States::using_esp32_ad5933> + event<Events::write> / function{Actions::write} = state<States::using_esp32_ad5933>,
-                        state<States::using_esp32_ad5933> + event<Events::disconnect> / function{Actions::disconnect} = state<States::disconnected>
+                        *state<States::off> = state<States::connected>,
+                        state<States::connected> + event<Events::write> [function{Guards::write_successful}] = state<States::connected>,
+                        state<States::connected> + event<Events::write> [function{Guards::write_failed}] / function{Actions::disconnect} = state<States::disconnected>
                     );
                     return ret;
                 }
             };
             using T_StateMachine = boost::sml::sm<Connection, boost::sml::logger<BLE_Client::StateMachines::Logger>, boost::sml::thread_safe<std::recursive_mutex>, boost::sml::testing>;
+
+            /* Super ugly hack this is stupid, but I can't for the love of god find the full type of the T_StateMachine *
+             * The boost::sml library uses probably some SFINAE or some other complex bullshit I'm too stupid to understand */
+            template<typename T>
+            struct Dummy {
+                BLE_Client::ESP32_AD5933 esp32_ad5933;
+                BLE_Client::StateMachines::Logger logger;
+                T_StateMachine sm { esp32_ad5933, logger };
+            };
         }
     }
 }

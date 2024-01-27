@@ -1,4 +1,3 @@
-
 #include "ble_client/standalone/state_machines/adapter/adapter.hpp"
 #include "ble_client/standalone/init.hpp"
 
@@ -34,13 +33,17 @@ namespace BLE_Client {
                     return true;
                 }
 
-                bool discovery_available(SimpleBLE::Adapter& adapter, BLE_Client::SHM::SHM* shm) {
+                bool discovery_available(SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm) {
                     try {
-                        adapter.set_callback_on_scan_start([shm]() { std::printf("BLE_Client::Scan started\n"); shm->discovery_devices->clear(); });
+                        adapter.set_callback_on_scan_start([shm]() {
+                            std::printf("BLE_Client::Scan started\n");
+                            shm->discovery_devices->clear();
+                        });
                         adapter.set_callback_on_scan_stop([]() { std::printf("BLE_Client::Scan stopped\n"); });
                         adapter.set_callback_on_scan_found([shm](SimpleBLE::Peripheral found_peripheral) {
                             std::printf("BLE_Client::callback_on_scan_found.\n");
                             if(std::find_if(shm->discovery_devices->begin(), shm->discovery_devices->end(), [&found_peripheral](const BLE_Client::Discovery::Device& e) {
+                                std::printf("BLE_Client::callback_on_scan_found: inside std::find_if\n");
                                 return std::string(e.address.begin(), e.address.end() - 1) == found_peripheral.address();
                             }) == shm->discovery_devices->end()) {
                                 shm->discovery_devices->push_back(
@@ -52,7 +55,7 @@ namespace BLE_Client {
                                 );
                             }
                         });
-
+                        
                         adapter.set_callback_on_scan_updated([shm](SimpleBLE::Peripheral found_peripheral) {
                             std::printf("BLE_Client::callback_on_scan_updated.\n");
                             auto it = std::find_if(shm->discovery_devices->begin(), shm->discovery_devices->end(), [&found_peripheral](const BLE_Client::Discovery::Device& e) {
@@ -75,12 +78,11 @@ namespace BLE_Client {
                                 };
                             }
                         });
+                        return true;
                     } catch(const std::exception& e) {
                         std::cerr << "ERROR: BLE_Client::Discovery::Guards::discovery_available: exception: " << e.what() << std::endl;
                         return false;
                     }
-
-                    return true;
                 }
             }
         }

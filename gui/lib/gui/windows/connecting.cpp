@@ -413,7 +413,7 @@ namespace GUI {
             return dockspace_id;
         }
 
-        void ble_client(bool &enable, ImGuiID left_id, int &selected, std::shared_ptr<BLE_Client::SHM::SHM> shm, int& client_index) {
+        void ble_client(bool &enable, ImGuiID left_id, int &selected, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm, int& client_index) {
             if(enable == false) {
                 return;
             }
@@ -489,7 +489,7 @@ namespace GUI {
                 if constexpr (std::is_same_v<T_Decay, BLE_Client::Discovery::States::discovered>) {
                     if(selected > -1) {
                         if(ImGui::Button("Connect")) {
-                            shm->send_cmd(BLE_Client::Discovery::Events::connect{ shm->discovery_devices->at(selected).address });
+                            //shm->send_cmd(BLE_Client::Discovery::Events::connect{ shm->discovery_devices->at(selected).address.data() });
                             std::thread([](auto shm, int& client_index, const int selected) {
                                 bool its_connected = false;
                                 for(int i = 0; i < 100 && its_connected == false; i++) { 

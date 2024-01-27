@@ -9,16 +9,13 @@
 
 #include "ble_client/standalone/state_machines/logger.hpp"
 #include "ble_client/standalone/state_machines/adapter/events.hpp"
+#include "ble_client/standalone/state_machines/adapter/states.hpp"
 #include "ble_client/standalone/shm.hpp"
 
 namespace BLE_Client {
     namespace StateMachines {
         namespace Adapter {
-            namespace States {
-                struct off{};
-                struct on{};
-                struct discovering{};
-            }
+
 
             namespace Actions {
                 void start_discovery(SimpleBLE::Adapter& adapter);
@@ -27,7 +24,7 @@ namespace BLE_Client {
             
             namespace Guards {
                 bool bluetooth_active(SimpleBLE::Adapter& adapter);
-                bool discovery_available(SimpleBLE::Adapter& adapter, BLE_Client::SHM::SHM* shm);
+                bool discovery_available(SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm);
             }
 
             struct Adapter {

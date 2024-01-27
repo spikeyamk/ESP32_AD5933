@@ -15,29 +15,32 @@ find_package(Boost REQUIRED COMPONENTS date_time filesystem)
 
 if(NOT TARGET trielo)
     set(TRIELO_DIR ${CMAKE_CURRENT_LIST_DIR}/../../common/trielo_wrapper/trielo)
-    add_subdirectory(${TRIELO_DIR} ${CMAKE_BINARY_DIR}/ble_client/trielo)
+    add_subdirectory(${TRIELO_DIR} ${CMAKE_BINARY_DIR}/trielo)
 endif()
 
 if(NOT TARGET simpleble::simpleble)
-    set(SIMPLE_BLE_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/SimpleBLE/simpleble)
+    set(SIMPLE_BLE_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/SimpleBLE/simpleble)
     add_subdirectory(${SIMPLE_BLE_DIR})
 endif()
 
 if(NOT TARGET sml)
     set(BOOST_SML_DIR ${CMAKE_CURRENT_LIST_DIR}/../../common/sml_wrapper/sml)
-    add_subdirectory(${BOOST_SML_DIR} ${CMAKE_BINARY_DIR}/ble_client/sml)
+    add_subdirectory(${BOOST_SML_DIR} ${CMAKE_BINARY_DIR}/sml)
 endif()
 
 add_executable(${CURRENT_PROJECT_NAME}
     main.cpp
 	lib/init.cpp
+	lib/shm.cpp
 	lib/ostream_overloads.cpp
 	lib/state_machine.cpp
 	lib/states.cpp
 	lib/esp32_ad5933.cpp
 	lib/state_machines/adapter/adapter.cpp
+	lib/state_machines/adapter/states.cpp
 	lib/state_machines/killer/killer.cpp
 	lib/state_machines/connection/connection.cpp
+	lib/state_machines/connector/connector.cpp
 )
 
 target_link_libraries(${CURRENT_PROJECT_NAME} PRIVATE
@@ -45,6 +48,7 @@ target_link_libraries(${CURRENT_PROJECT_NAME} PRIVATE
     sml
     simpleble::simpleble
     trielo
+	magic	
 )
 
 target_include_directories(${CURRENT_PROJECT_NAME} PRIVATE

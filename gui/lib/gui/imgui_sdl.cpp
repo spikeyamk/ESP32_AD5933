@@ -884,7 +884,7 @@ namespace GUI {
 }
 
 namespace GUI {
-    void run(bool &done, boost::process::child& ble_client, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
+    void run(bool &done, boost::process::child& ble_client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
         SDL_Window* window;
         SDL_Renderer* renderer;
         {
@@ -904,6 +904,7 @@ namespace GUI {
         int selected = -1;
         int client_index = -1;
         Windows::ble_client(menu_bar_enables.ble_client, top_ids.left, selected, shm, client_index);
+        /*
         Boilerplate::render(renderer, clear_color);
         std::unique_ptr<Windows::Client> empty_client = std::make_unique<Windows::Client>();
 
@@ -935,6 +936,7 @@ namespace GUI {
 
             Boilerplate::render(renderer, clear_color);
         }
+        */
 
         Boilerplate::shutdown(renderer, window);
     }

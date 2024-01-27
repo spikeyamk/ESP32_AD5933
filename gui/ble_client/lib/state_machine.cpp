@@ -186,7 +186,7 @@ namespace BLE_Client {
                 return is_connected(peripheral);
             }
 
-            bool is_esp32_ad5933(SimpleBLE::Peripheral& peripheral, ESP32_AD5933& esp32_ad5933, BLE_Client::SHM::SHM* shm) {
+            bool is_esp32_ad5933(SimpleBLE::Peripheral& peripheral, ESP32_AD5933& esp32_ad5933, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm) {
                 const std::string BODY_COMPOSITION_SERVICE_UUID { "0000181b-0000-1000-8000-00805f9b34fb" };
                 const std::string BODY_COMPOSITION_FEATURE_UUID { "00002a9b-0000-1000-8000-00805f9b34fb" };
                 const std::string BODY_COMPOSITION_MEASUREMENT_UUID { "00002a9c-0000-1000-8000-00805f9b34fb" };
@@ -234,8 +234,8 @@ namespace BLE_Client {
                     return false;
                 }
 
-                ESP32_AD5933 tmp_ret { peripheral, *it_service, *it_body_composition_measurement, *it_body_composition_feature, shm };
-                esp32_ad5933 = tmp_ret;
+                //ESP32_AD5933 tmp_ret { peripheral, *it_service, *it_body_composition_measurement, *it_body_composition_feature, shm };
+                //esp32_ad5933 = tmp_ret;
                 return true;
             }
         }

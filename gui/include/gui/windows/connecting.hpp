@@ -52,7 +52,7 @@ namespace GUI {
             bool debug_started = false;
             std::stop_source ss;
         };
-        void ble_client(bool &enable, ImGuiID left_id, int &selected, std::shared_ptr<BLE_Client::SHM::SHM> shm, int& client_index);
+        void ble_client(bool &enable, ImGuiID left_id, int &selected, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm, int& client_index);
         void console(ImGuiConsole &console);
         void client1(int i, ImGuiID center_id, Client &client, MenuBarEnables &enables, std::shared_ptr<BLE_Client::SHM::SHM> shm, const int client_index);
         ImGuiID top_with_dock_space(MenuBarEnables &menu_bar_enables);

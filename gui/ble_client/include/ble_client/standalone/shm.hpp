@@ -1,11 +1,15 @@
 #pragma once
 
 #include <array>
+#include <vector>
 #include <cstdint>
 #include <iostream>
 #include <stdexcept>
 #include <memory>
 #include <cstdlib>
+#include <string_view>
+#include <string>
+#include <optional>
 
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
@@ -15,12 +19,15 @@
 #include <boost/interprocess/sync/scoped_lock.hpp>
 #include <boost/interprocess/sync/named_condition.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/thread/thread_time.hpp>
 
 #include "ble_client/standalone/events.hpp"
 #include "ble_client/standalone/states.hpp"
 #include "ble_client/standalone/device.hpp"
 
 #include "ble_client/standalone/state_machines/events_variant.hpp"
+#include "ble_client/standalone/state_machines/adapter/states.hpp"
+#include "magic/packets.hpp"
 
 namespace BLE_Client {
     namespace SHM {
@@ -33,15 +40,239 @@ namespace BLE_Client {
         typedef boost::interprocess::allocator<BLE_Client::StateMachines::T_EventsVariant, boost::interprocess::managed_shared_memory::segment_manager> UNICMD_DequeAllocator;
         typedef boost::interprocess::deque<BLE_Client::StateMachines::T_EventsVariant, UNICMD_DequeAllocator> UNICMD_Deque;
 
+        template<typename T>
         class Channel {
+        protected:
+            using Allocator = boost::interprocess::allocator<T, boost::interprocess::managed_shared_memory::segment_manager>;
+            using Deque = boost::interprocess::deque<T, Allocator>;
+            Deque* deque;
+            boost::interprocess::named_mutex mutex;
+            boost::interprocess::named_condition condition;
+            static constexpr std::string_view deque_prefix     { "BLE_Client.SHM.Channel.deque." };
+            static constexpr std::string_view mutex_prefix     { "BLE_Client.SHM.Channel.mutex." };
+            static constexpr std::string_view condition_prefix { "BLE_Client.SHM.Channel.condition." };
         public:
-            int x;
-            float y;
-
-            inline Channel(const int x, const float y) :
-                x{x},
-                y{y}
+            Channel(const std::string_view& name, Deque* deque) :
+                deque{ deque },
+                mutex{
+                    boost::interprocess::open_or_create,
+                    std::string(mutex_prefix).append(name).c_str()
+                },
+                condition{
+                    boost::interprocess::open_or_create,
+                    std::string(condition_prefix).append(name).c_str()
+                }
             {}
+        protected:
+            void p_send(const T& message) {
+                deque->push_back(message);
+                condition.notify_one();
+            }   
+
+            T p_read() {
+                boost::interprocess::scoped_lock lock(mutex);
+                condition.wait(lock, [&]() { return !deque->empty(); });
+                const T ret = deque->front();
+                deque->pop_front();
+                return ret;
+            }
+
+            std::optional<T> p_read_for(const boost::posix_time::milliseconds& timeout) {
+                boost::interprocess::scoped_lock lock(mutex);
+                if(condition.timed_wait(lock, boost::get_system_time() + timeout, [&]() { return !deque->empty(); }) == false) {
+                    return std::nullopt;
+                }
+                const T ret = deque->front();
+                deque->pop_front();
+                return ret;
+            }
+        };
+
+        template<typename T>
+        class InitChannel : public Channel<T> {
+        protected:
+            using Allocator = boost::interprocess::allocator<T, boost::interprocess::managed_shared_memory::segment_manager>;
+            using Deque = boost::interprocess::deque<T, Allocator>;
+            Deque* get_init_deque_ptr() {
+                return this->deque;
+            }
+        public:
+            InitChannel(const char* name, boost::interprocess::managed_shared_memory& segment) :
+                Channel<T>{
+                    name,
+                    [&]() {
+                        const auto tmp_name { std::string(Channel<T>::deque_prefix).append(name) };
+                        auto* ret = segment.construct<Deque>(tmp_name.c_str())(segment.get_segment_manager());
+                        if(ret == nullptr) {
+                            throw std::invalid_argument(std::string("BLE_Client::SHM::InitChannel: could not init to: ").append(tmp_name));
+                        }
+                        return ret;
+                    }()
+                }
+            {}
+        };
+
+        template<typename T>
+        class AttachChannel : public Channel<T> {
+        protected:
+            using Allocator = boost::interprocess::allocator<T, boost::interprocess::managed_shared_memory::segment_manager>;
+            using Deque = boost::interprocess::deque<T, Allocator>;
+            Deque* get_attach_deque_ptr() {
+                return this->deque;
+            }
+        public:
+            AttachChannel(const std::string_view& name, boost::interprocess::managed_shared_memory& segment) :
+                Channel<T>{
+                    name,
+                    [&]() {
+                        auto tmp_name { std::string(Channel<T>::deque_prefix).append(name) };
+                        auto* ret = segment.find<Deque>(tmp_name.c_str()).first;
+                        if(ret == nullptr) {
+                            throw std::invalid_argument(std::string("BLE_Client::SHM::AttachChannel: could not attach to: ").append(tmp_name));
+                        }
+                        return ret;
+                    }()
+                }
+            {}
+        };
+
+        template<typename T>
+        class ScopedChannel : public Channel<T> {
+        private:
+            const std::string deque_name;
+            const std::string mutex_name;
+            const std::string condition_name;
+            boost::interprocess::managed_shared_memory& segment;
+        protected:
+            using Allocator = boost::interprocess::allocator<T, boost::interprocess::managed_shared_memory::segment_manager>;
+            using Deque = boost::interprocess::deque<T, Allocator>;
+        public:
+            ScopedChannel(const char* name, boost::interprocess::managed_shared_memory& segment) :
+                Channel<T>{ name, nullptr },
+                deque_name{ std::string(Channel<T>::deque_prefix).append(name) },
+                mutex_name{ std::string(Channel<T>::mutex_prefix).append(name) },
+                condition_name{ std::string(Channel<T>::condition_prefix).append(name) },
+                segment{ segment }
+            {}
+
+            ~ScopedChannel() {
+                segment.destroy<Deque>(deque_name.c_str());
+                boost::interprocess::named_mutex::remove(mutex_name.c_str());
+                boost::interprocess::named_condition::remove(condition_name.c_str());
+            }
+        };
+
+        template<typename T>
+        class TX_Channel : public Channel<T> {
+            using Allocator = boost::interprocess::allocator<T, boost::interprocess::managed_shared_memory::segment_manager>;
+            using Deque = boost::interprocess::deque<T, Allocator>;
+        public:
+            TX_Channel(const std::string_view& name, Deque* deque) :
+                Channel<T>{ name, deque }
+            {}
+
+            void send(const T& message) {
+                this->p_send(message);
+            }
+        };
+
+        template<typename T>
+        class RX_Channel : public Channel<T> {
+            using Allocator = boost::interprocess::allocator<T, boost::interprocess::managed_shared_memory::segment_manager>;
+            using Deque = boost::interprocess::deque<T, Allocator>;
+        public:
+            RX_Channel(const std::string_view& name, Deque* deque) :
+                Channel<T>{ name, deque }
+            {}
+
+            T read() {
+                return read();
+            }
+
+            std::optional<T> read_for(const boost::posix_time::milliseconds& timeout) {
+                return this->p_read_for(timeout);
+            }
+        };
+
+        template<typename T>
+        class ScopedInitChannel : public InitChannel<T>, public ScopedChannel<T> {
+        public:
+            ScopedInitChannel(const char* name, boost::interprocess::managed_shared_memory& segment) :
+                InitChannel<T>{ name, segment },
+                ScopedChannel<T>{ name, segment }
+            {}
+        };
+
+        template<typename T>
+        class ScopedAttachChannel : public AttachChannel<T>, public ScopedChannel<T> {
+        public:
+            ScopedAttachChannel(const char* name, boost::interprocess::managed_shared_memory& segment) :
+                AttachChannel<T>{ name, segment },
+                ScopedChannel<T>{ name, segment }
+            {}
+        };
+
+        class CMD_ChannelTX : public ScopedInitChannel<BLE_Client::StateMachines::T_EventsVariant>, public TX_Channel<BLE_Client::StateMachines::T_EventsVariant> {
+        public:
+            using RelationBase = ScopedInitChannel<BLE_Client::StateMachines::T_EventsVariant>;
+            using DirectionBase = TX_Channel<BLE_Client::StateMachines::T_EventsVariant>;
+            CMD_ChannelTX(const char* name, boost::interprocess::managed_shared_memory& segment);
+            void send_killer(const BLE_Client::StateMachines::Killer::Events::T_Variant& event);
+            void send_adapter(const BLE_Client::StateMachines::Adapter::Events::T_Variant& event);
+        };
+
+        class CMD_ChannelRX : public AttachChannel<BLE_Client::StateMachines::T_EventsVariant>, public RX_Channel<BLE_Client::StateMachines::T_EventsVariant> {
+            using RelationBase = AttachChannel<BLE_Client::StateMachines::T_EventsVariant>;
+            using DirectionBase = RX_Channel<BLE_Client::StateMachines::T_EventsVariant>;
+        public:
+            CMD_ChannelRX(const char* name, boost::interprocess::managed_shared_memory& segment);
+        };
+
+        class NotifyChannelRX : public ScopedAttachChannel<Magic::Packets::Packet_T>, public RX_Channel<Magic::Packets::Packet_T> {
+            using RelationBase = ScopedAttachChannel<Magic::Packets::Packet_T>;
+            using DirectionBase = RX_Channel<Magic::Packets::Packet_T>;
+        public:
+            NotifyChannelRX(const char* name, boost::interprocess::managed_shared_memory& segment);
+        };
+
+        class NotifyChannelTX: public InitChannel<Magic::Packets::Packet_T>, public TX_Channel<Magic::Packets::Packet_T> {
+            using RelationBase = InitChannel<Magic::Packets::Packet_T>;
+            using DirectionBase = TX_Channel<Magic::Packets::Packet_T>;
+        public:
+            NotifyChannelTX(const char* name, boost::interprocess::managed_shared_memory& segment);
+        };
+
+        namespace Names {
+            constexpr char shm[] { "BLE_Client.shm" };
+            constexpr char cmd_postfix[] { "cmd" };
+            constexpr char discovery_devices[] { "BLE_Client.shm.discovery_devices" };
+            constexpr char adapter_active_state[] = "BLE_Client.SHM.adapter_active_state";
+        }
+
+        class ParentSHM {
+        private:
+            static constexpr size_t size = 2 << 15;
+            boost::interprocess::managed_shared_memory segment;
+        public:
+            CMD_ChannelTX cmd;
+            DiscoveryDevices* discovery_devices;
+            std::vector<std::shared_ptr<NotifyChannelRX>> notify_channels;
+            BLE_Client::StateMachines::Adapter::States::T_Variant* active_state;
+            ParentSHM();
+            ~ParentSHM();
+            void attach_notify_channel(const char* name);
+        };
+
+        class ChildSHM {
+        private:
+            boost::interprocess::managed_shared_memory segment;
+        public: 
+            CMD_ChannelRX cmd;
+            DiscoveryDevices* discovery_devices;
+            std::vector<std::shared_ptr<NotifyChannelTX>> notify_channels;
+            BLE_Client::StateMachines::Adapter::States::T_Variant* active_state;
+            ChildSHM();
+            void init_notify_channel(const char* name);
         };
 
         class SHM {
@@ -49,7 +280,6 @@ namespace BLE_Client {
             static constexpr size_t shm_size = 2 << 15;
         public:
             static constexpr char name[] = "BLE_Client.SHM";
-            static constexpr char channel_name[] = "BLE_Client.SHM.channel";
             static constexpr char cmd_deque_name[] = "BLE_Client.SHM.cmd_deque";
             static constexpr char cmd_deque_mutex_name[] = "BLE_Client.SHM.cmd_deque_mutex";
             static constexpr char cmd_deque_condition_name[] = "BLE_Client.SHM.cmd_deque_condition";
@@ -63,7 +293,6 @@ namespace BLE_Client {
             static constexpr char notify_deque_condition_name[] = "BLE_Client.SHM.notify_deque_condition_name";
 
             boost::interprocess::managed_shared_memory segment;
-            BLE_Client::SHM::Channel* channel = nullptr;
 
             BLE_Client::SHM::CMD_Deque* cmd_deque = nullptr;
             boost::interprocess::named_mutex cmd_deque_mutex { boost::interprocess::open_or_create, cmd_deque_mutex_name };
@@ -88,24 +317,6 @@ namespace BLE_Client {
             inline SHM(const size_t size) :
                 segment{boost::interprocess::create_only, name, size}
             {}
-
-            inline ~SHM() {
-                segment.destroy<Channel>(channel_name);
-
-                segment.destroy<CMD_Deque>(cmd_deque_name);
-                boost::interprocess::named_mutex::remove(cmd_deque_mutex_name);
-                boost::interprocess::named_condition::remove(cmd_deque_condition_name);
-
-                segment.destroy<UNICMD_Deque>(unicmd_deque_name);
-                boost::interprocess::named_mutex::remove(unicmd_deque_mutex_name);
-                boost::interprocess::named_condition::remove(unicmd_deque_condition_name);
-
-                segment.destroy<NotifyDeque>(notify_deque_name);
-                boost::interprocess::named_mutex::remove(notify_deque_mutex_name);
-                boost::interprocess::named_condition::remove(notify_deque_condition_name);
-
-                boost::interprocess::shared_memory_object::remove(name);
-            }
 
             inline void send_cmd(BLE_Client::Discovery::Events::T_Variant&& event) {
                 cmd_deque->push_back(event);
@@ -138,17 +349,10 @@ namespace BLE_Client {
             static inline std::shared_ptr<SHM> init() {
                 try {
                     static const auto thrower = [](void* ptr, const char* name) {
-                        if(ptr == nullptr) {
-                            throw std::invalid_argument(name + std::string(" was previously used"));
-                        }
+
                     };
 
                     auto shm = std::make_shared<SHM>(shm_size);
-
-                    shm->channel = shm->segment.construct<Channel>
-                        (channel_name)
-                        (0, 0.0f);
-                    thrower(reinterpret_cast<void*>(shm->channel), channel_name);
 
                     const CMD_DequeAllocator deque_allocator(shm->segment.get_segment_manager());
                     shm->cmd_deque = shm->segment.construct<CMD_Deque>(cmd_deque_name)(deque_allocator);
@@ -179,7 +383,7 @@ namespace BLE_Client {
                 }
             }
 
-            static inline SHM* attach() {
+            static inline std::shared_ptr<SHM> attach() {
                 try {
                     static constexpr auto thrower = [](void* ptr, const char* name) {
                         if(ptr == nullptr) {
@@ -187,10 +391,7 @@ namespace BLE_Client {
                         }
                     };
 
-                    SHM* shm = new SHM {};
-
-                    shm->channel = shm->segment.find<Channel>(channel_name).first;
-                    thrower(reinterpret_cast<void*>(shm->channel), channel_name);
+                    auto shm = std::make_shared<SHM>();
 
                     shm->cmd_deque = shm->segment.find<CMD_Deque>(cmd_deque_name).first;
                     thrower(reinterpret_cast<void*>(shm->cmd_deque), cmd_deque_name);
@@ -212,6 +413,22 @@ namespace BLE_Client {
                     std::cerr << "ERROR: BLE_Client::SHM::SHM::attach: exception: " << e.what() << std::endl;
                     std::exit(1);
                 } 
+            }
+
+            inline void free() {
+                segment.destroy<CMD_Deque>(cmd_deque_name);
+                boost::interprocess::named_mutex::remove(cmd_deque_mutex_name);
+                boost::interprocess::named_condition::remove(cmd_deque_condition_name);
+
+                segment.destroy<UNICMD_Deque>(unicmd_deque_name);
+                boost::interprocess::named_mutex::remove(unicmd_deque_mutex_name);
+                boost::interprocess::named_condition::remove(unicmd_deque_condition_name);
+
+                segment.destroy<NotifyDeque>(notify_deque_name);
+                boost::interprocess::named_mutex::remove(notify_deque_mutex_name);
+                boost::interprocess::named_condition::remove(notify_deque_condition_name);
+
+                boost::interprocess::shared_memory_object::remove(name);
             }
         };
 

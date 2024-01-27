@@ -9,5 +9,5 @@
 #include "ble_client/standalone/shm.hpp"
 
 namespace GUI {
-    void run(bool &done, boost::process::child& ble_client, std::shared_ptr<BLE_Client::SHM::SHM> shm);
+    void run(bool &done, boost::process::child& ble_client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm);
 }

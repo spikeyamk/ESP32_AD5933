@@ -19,6 +19,3 @@
 [submodule "gui/lib/imgui"]
 	path = gui/lib/extern/imgui
 	url = https://github.com/ocornut/imgui.git
-[submodule "gui/ble_client/lib/extern/SimpleBLE"]
-	path = gui/ble_client/lib/extern/SimpleBLE
-	url = https://github.com/OpenBluetoothToolbox/SimpleBLE.git

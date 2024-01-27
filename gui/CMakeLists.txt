@@ -71,6 +71,7 @@ add_subdirectory(${BLE_CLIENT_DIR})
 
 add_executable(${CURRENT_PROJECT_NAME}
 	main.cpp
+	ble_client/lib/shm.cpp
 	lib/ble_client/ble_client.cpp
 	lib/gui/dark_mode_switcher.cpp
 	lib/gui/imgui_sdl.cpp
