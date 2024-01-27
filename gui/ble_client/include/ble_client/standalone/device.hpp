@@ -12,17 +12,30 @@ namespace BLE_Client {
             std::array<char, 50> p_identifier { 0 };
             std::array<char, 18> p_address { 0 };
         public:
-            std::string_view identifier { p_identifier.begin(), p_identifier.end() - 1 };
-            std::string_view address { p_address.begin(), p_address.end() - 1 };
             bool connected = false;
 
             Device() = default;
 
-            inline Device(std::string in_identifier, std::string in_address, bool connected) :
+            inline Device(const std::string& in_identifier, const std::string& in_address, bool connected) :
                 connected{ connected }
             {
                 std::copy(in_identifier.begin(), in_identifier.end(), p_identifier.begin());
                 std::copy(in_address.begin(), in_address.end(), p_address.begin());
+            }
+
+            std::string_view get_identifier() const {
+                return get_string_view(p_identifier);
+            }
+
+            std::string_view get_address() const {
+                return get_string_view(p_address);
+            }
+        private:
+            template<typename T>
+            std::string_view get_string_view(const T& array) const {
+                const size_t len = std::strlen(array.data());
+                const std::string_view ret { array.begin(), (len > array.size()) ? (array.end()) : (array.begin() + len) };
+                return ret;
             }
         };
     }

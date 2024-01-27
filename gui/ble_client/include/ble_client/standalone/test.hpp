@@ -20,9 +20,11 @@ namespace BLE_Client {
                 shm->send_cmd(BLE_Client::Discovery::Events::stop_discovery{});
                 std::this_thread::sleep_for(std::chrono::milliseconds(2'000));
 
+                /*
                 std::for_each(shm->discovery_devices->begin(), shm->discovery_devices->end(), [&shm] (const auto& e) {
                     std::cout << "Found device: identifier: " << e.identifier.data() << ", address: " << e.address.data() << ", connected?: " << e.connected << std::endl;
                 });
+                */
 
                 //shm->send_cmd(BLE_Client::Discovery::Events::connect{ shm->discovery_devices->begin()->address });
                 std::this_thread::sleep_for(std::chrono::milliseconds(2'000));

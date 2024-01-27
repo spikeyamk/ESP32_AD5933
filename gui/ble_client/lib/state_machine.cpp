@@ -87,12 +87,15 @@ namespace BLE_Client {
 
             void update_connection_status(SimpleBLE::Peripheral& peripheral, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
                 auto it = std::find_if(shm->discovery_devices->begin(), shm->discovery_devices->end(), [&](BLE_Client::Discovery::Device& device) {
+                    return true;
+                    /*
                     if( (std::string(device.address.begin(), device.address.end()) == peripheral.address())
                     &&  (std::string(device.identifier.begin(), device.identifier.end()) == peripheral.identifier())) {
                         return true;
                     } else {
                         return false;
                     }
+                    */
                 });
 
                 if(it != shm->discovery_devices->end()) {
@@ -114,6 +117,7 @@ namespace BLE_Client {
 
             bool discovery_available(SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
                 try {
+                    /*
                     adapter.set_callback_on_scan_start([shm]() { std::printf("BLE_Client::Scan started\n"); shm->discovery_devices->clear(); });
                     adapter.set_callback_on_scan_stop([]() { std::printf("BLE_Client::Scan stopped\n"); });
                     adapter.set_callback_on_scan_found([shm](SimpleBLE::Peripheral found_peripheral) {
@@ -153,6 +157,7 @@ namespace BLE_Client {
                             };
                         }
                     });
+                    */
                 } catch(const std::exception& e) {
                     std::cerr << "ERROR: BLE_Client::Discovery::Guards::discovery_available: exception: " << e.what() << std::endl;
                     return false;

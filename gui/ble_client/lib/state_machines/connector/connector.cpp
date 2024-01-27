@@ -13,7 +13,7 @@ namespace BLE_Client {
                     try {
                         std::vector<SimpleBLE::Peripheral> scan_results { adapter.scan_get_results() };
                         auto it = std::find_if(scan_results.begin(), scan_results.end(), [&](SimpleBLE::Peripheral& e) {
-                            return event.address == e.address();
+                            return event.get_address() == e.address();
                         });
 
                         if(it == scan_results.end()) {

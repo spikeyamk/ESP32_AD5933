@@ -902,19 +902,19 @@ namespace GUI {
         Windows::DockspaceIDs top_ids { Windows::split_left_center(top_id) };
 
         int selected = -1;
-        int client_index = -1;
-        Windows::ble_client(menu_bar_enables.ble_client, top_ids.left, selected, shm, client_index);
-        /*
+        Windows::ble_client(menu_bar_enables.ble_client, top_ids.left, selected, shm);
         Boilerplate::render(renderer, clear_color);
-        std::unique_ptr<Windows::Client> empty_client = std::make_unique<Windows::Client>();
+
+        //std::unique_ptr<Windows::Client> empty_client = std::make_unique<Windows::Client>();
 
         while(done == false && ble_client.running()) {
             Boilerplate::process_events(window, done);
             Boilerplate::start_new_frame();
             top_id = Windows::top_with_dock_space(menu_bar_enables);
 
-            Windows::ble_client(menu_bar_enables.ble_client, top_ids.left, selected, shm, client_index);
+            Windows::ble_client(menu_bar_enables.ble_client, top_ids.left, selected, shm);
 
+            /*
             std::visit([&](auto&& active_state) {
                 using T_Decay = std::decay_t<decltype(active_state)>;
                 if constexpr (std::is_same_v<T_Decay, BLE_Client::Discovery::States::using_esp32_ad5933>) {
@@ -933,10 +933,10 @@ namespace GUI {
                     }
                 }
             }, *shm->active_state);
+            */
 
             Boilerplate::render(renderer, clear_color);
         }
-        */
 
         Boilerplate::shutdown(renderer, window);
     }

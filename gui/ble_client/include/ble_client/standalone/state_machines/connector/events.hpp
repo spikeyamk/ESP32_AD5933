@@ -2,6 +2,8 @@
 
 #include <array>
 #include <string_view>
+#include <algorithm>
+#include <cstring>
 
 namespace BLE_Client {
     namespace StateMachines {
@@ -9,14 +11,17 @@ namespace BLE_Client {
             namespace Events {
                 struct connect {
                 private:
-                    std::array<char, 17> p_address;
+                    std::array<char, 18> p_address { 0 };
                 public:
-                    std::string_view address { p_address.begin(), p_address.end() };
-                    /*
-                    inline connect(std::array<char, 17> address) :
-                        p_address{ address }
-                    {}
-                    */
+                    inline connect(const std::string_view& in_address) {
+                        std::copy(in_address.begin(), in_address.end(), p_address.begin());
+                    }
+
+                    inline const std::string_view get_address() const {
+                        const size_t len = std::strlen(p_address.data());
+                        const std::string_view ret { p_address.begin(), (len > p_address.size()) ? (p_address.end()) : (p_address.begin() + len) };
+                        return ret;
+                    }
                 };
             }
         }

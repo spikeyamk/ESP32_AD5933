@@ -44,7 +44,7 @@ namespace BLE_Client {
                             std::printf("BLE_Client::callback_on_scan_found.\n");
                             if(std::find_if(shm->discovery_devices->begin(), shm->discovery_devices->end(), [&found_peripheral](const BLE_Client::Discovery::Device& e) {
                                 std::printf("BLE_Client::callback_on_scan_found: inside std::find_if\n");
-                                return std::string(e.address.begin(), e.address.end() - 1) == found_peripheral.address();
+                                return e.get_address() == found_peripheral.address();
                             }) == shm->discovery_devices->end()) {
                                 shm->discovery_devices->push_back(
                                     BLE_Client::Discovery::Device{
@@ -59,7 +59,7 @@ namespace BLE_Client {
                         adapter.set_callback_on_scan_updated([shm](SimpleBLE::Peripheral found_peripheral) {
                             std::printf("BLE_Client::callback_on_scan_updated.\n");
                             auto it = std::find_if(shm->discovery_devices->begin(), shm->discovery_devices->end(), [&found_peripheral](const BLE_Client::Discovery::Device& e) {
-                                return std::string(e.address.begin(), e.address.end() - 1) == found_peripheral.address();
+                                return e.get_address() == found_peripheral.address();
                             });
 
                             if(it == shm->discovery_devices->end()) {

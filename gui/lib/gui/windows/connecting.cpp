@@ -413,7 +413,7 @@ namespace GUI {
             return dockspace_id;
         }
 
-        void ble_client(bool &enable, ImGuiID left_id, int &selected, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm, int& client_index) {
+        void ble_client(bool &enable, ImGuiID left_id, int &selected, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
             if(enable == false) {
                 return;
             }
@@ -442,7 +442,7 @@ namespace GUI {
                         ImGui::TableNextRow();
                         ImGui::TableNextColumn();
                         ImGui::PushID(index);
-                        if(ImGui::Selectable(e.identifier.data(), index == selected, ImGuiSelectableFlags_SpanAllColumns)) {
+                        if(ImGui::Selectable(e.get_identifier().data(), index == selected, ImGuiSelectableFlags_SpanAllColumns)) {
                             if(selected == index) {
                                 selected = -1;
                             } else {
@@ -451,7 +451,7 @@ namespace GUI {
                         }
                         ImGui::PopID();
                         ImGui::TableNextColumn();
-                        ImGui::Text(e.address.data());
+                        ImGui::Text(e.get_address().data());
                         ImGui::TableNextColumn();
                         if(e.connected) {
                             ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Connected");
@@ -466,63 +466,39 @@ namespace GUI {
 
             std::visit([&](auto&& active_state) {
                 using T_Decay = std::decay_t<decltype(active_state)>;
-                if constexpr (std::is_same_v<T_Decay, BLE_Client::Discovery::States::off>) {
+                if constexpr (std::is_same_v<T_Decay, BLE_Client::StateMachines::Adapter::States::off>) {
                     if(ImGui::Button("Find adapter")) {
-                        shm->send_cmd(BLE_Client::Discovery::Events::find_default_active_adapter{});
+                        shm->cmd.send_adapter(BLE_Client::StateMachines::Adapter::Events::turn_on{});
                     }
-                } else if constexpr (std::is_same_v<T_Decay, BLE_Client::Discovery::States::using_adapter> || std::is_same_v<T_Decay, BLE_Client::Discovery::States::discovered>) {
+                } else if constexpr (std::is_same_v<T_Decay, BLE_Client::StateMachines::Adapter::States::on>) {
                     if(ImGui::Button("Scan")) {
-                        shm->send_cmd(BLE_Client::Discovery::Events::start_discovery{});
+                        shm->cmd.send_adapter(BLE_Client::StateMachines::Adapter::Events::start_discovery{});
                     }
-                } else if constexpr (std::is_same_v<T_Decay, BLE_Client::Discovery::States::discovering>) {
+                } else if constexpr (std::is_same_v<T_Decay, BLE_Client::StateMachines::Adapter::States::discovering>) {
                     if(ImGui::Button("Stop Scan")) {
-                        shm->send_cmd(BLE_Client::Discovery::Events::stop_discovery{});
+                        shm->cmd.send_adapter(BLE_Client::StateMachines::Adapter::Events::stop_discovery{});
                     }
                     ImGui::SameLine();
                     Spinner::Spinner("Scanning", 5.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                 }
-                if constexpr (!(std::is_same_v<T_Decay, BLE_Client::Discovery::States::off>
-                || std::is_same_v<T_Decay, BLE_Client::Discovery::States::using_adapter>)) {
+                if constexpr (!std::is_same_v<T_Decay, BLE_Client::StateMachines::Adapter::States::off>) {
                     show_table();
-                }
-
-                if constexpr (std::is_same_v<T_Decay, BLE_Client::Discovery::States::discovered>) {
-                    if(selected > -1) {
+                    if(shm->discovery_devices->empty() == false && selected > -1) {
                         if(ImGui::Button("Connect")) {
-                            //shm->send_cmd(BLE_Client::Discovery::Events::connect{ shm->discovery_devices->at(selected).address.data() });
-                            std::thread([](auto shm, int& client_index, const int selected) {
+                            shm->cmd.send(BLE_Client::StateMachines::Connector::Events::connect{ shm->discovery_devices->at(selected).get_address() });
+                            std::thread([](auto shm, const int selected) {
                                 bool its_connected = false;
                                 for(int i = 0; i < 100 && its_connected == false; i++) { 
-                                    shm->send_cmd(BLE_Client::Discovery::Events::is_connected{});
-                                    std::visit([&](auto&& extra_active_state) {
-                                        using T_ExtraDecay = std::decay_t<decltype(extra_active_state)>;
-                                        if constexpr (std::is_same_v<T_ExtraDecay, BLE_Client::Discovery::States::connected>) {
-                                            its_connected = true;
-                                            shm->send_cmd(BLE_Client::Discovery::Events::is_esp32_ad5933{});
-                                        }
-                                    }, *shm->active_state);
                                     std::this_thread::sleep_for(std::chrono::milliseconds(500));
                                 }
-
-                                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                                std::visit([&](auto&& extra_active_state) {
-                                    using T_ExtraDecay = std::decay_t<decltype(extra_active_state)>;
-                                    if constexpr (std::is_same_v<T_ExtraDecay, BLE_Client::Discovery::States::using_esp32_ad5933>) {
-                                        client_index = selected;
-                                    }
-                                    if constexpr (
-                                        !std::is_same_v<T_ExtraDecay, BLE_Client::Discovery::States::using_esp32_ad5933>
-                                        && std::is_same_v<T_ExtraDecay, BLE_Client::Discovery::States::connected>
-                                    ) {
-                                        shm->send_cmd(BLE_Client::Discovery::Events::disconnect{});
-                                    }
-                                }, *shm->active_state);
-                            }, shm, std::ref(client_index), selected).detach();
+                            }, shm, selected).detach();
                         }
                     }
-                }
-                if constexpr (std::is_same_v<T_Decay, BLE_Client::Discovery::States::connecting>) {
-                    Spinner::Spinner("ClientSpinner", 5.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                    /*
+                    if constexpr (std::is_same_v<T_Decay, BLE_Client::Discovery::States::connecting>) {
+                        Spinner::Spinner("ClientSpinner", 5.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                    }
+                    */
                 }
             }, *shm->active_state);
 
@@ -1373,11 +1349,13 @@ namespace GUI {
             if(dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
                 window_flags |= ImGuiWindowFlags_NoBackground;
 
-            std::string name = 
+            std::string name;
+            /*
                 std::string(
                     shm->discovery_devices->at(static_cast<size_t>(client_index)).identifier.begin(),
                     shm->discovery_devices->at(static_cast<size_t>(client_index)).identifier.end())
                 + std::string("##") + std::to_string(i);
+            */
 
             static int first = 0;
             if(first == i) {
@@ -1393,13 +1371,15 @@ namespace GUI {
 
             ImGuiIO& io = ImGui::GetIO();
             if(io.ConfigFlags & ImGuiConfigFlags_DockingEnable) {
-                std::string dockspace_name = 
+                std::string dockspace_name;
+                /*
                     std::string("DockSpace")
                     + std::string(
                         shm->discovery_devices->at(static_cast<size_t>(client_index)).identifier.begin(),
                         shm->discovery_devices->at(static_cast<size_t>(client_index)).identifier.end())
                     + std::string("##")
                     + std::to_string(i);
+                */
                 ImGuiID dockspace_id = ImGui::GetID(dockspace_name.c_str());
                 ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
                 if(first == i) {

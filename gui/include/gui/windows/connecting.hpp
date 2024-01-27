@@ -31,7 +31,6 @@ namespace GUI {
         };
         struct Client {
             bool enable = true;
-            std::shared_ptr<ESP32_AD5933> esp32_ad5933;
             Windows::Captures::Measurement configure_captures;
             std::vector<AD5933::Data> raw_calibration;
             std::vector<AD5933::Calibration<float>> calibration;
@@ -45,14 +44,11 @@ namespace GUI {
             bool configured = false;
             float progress_bar_fraction { 0.0f };
             Windows::Captures::HexDebugReadWriteRegisters debug_captures;
-            inline Client(std::shared_ptr<ESP32_AD5933> esp32_ad5933) :
-                esp32_ad5933 {esp32_ad5933}
-            {}
             inline Client() = default;
             bool debug_started = false;
             std::stop_source ss;
         };
-        void ble_client(bool &enable, ImGuiID left_id, int &selected, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm, int& client_index);
+        void ble_client(bool &enable, ImGuiID left_id, int &selected, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm);
         void console(ImGuiConsole &console);
         void client1(int i, ImGuiID center_id, Client &client, MenuBarEnables &enables, std::shared_ptr<BLE_Client::SHM::SHM> shm, const int client_index);
         ImGuiID top_with_dock_space(MenuBarEnables &menu_bar_enables);

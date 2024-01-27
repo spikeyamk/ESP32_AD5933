@@ -15,8 +15,6 @@
 namespace BLE_Client {
     namespace StateMachines {
         namespace Adapter {
-
-
             namespace Actions {
                 void start_discovery(SimpleBLE::Adapter& adapter);
                 void stop_discovery(SimpleBLE::Adapter& adapter);
