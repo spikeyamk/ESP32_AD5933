@@ -9,8 +9,7 @@ namespace GUI {
     namespace Windows {
         void console(
             bool &enable,
-            ImGuiID bottom_id,
-            std::shared_ptr<BLE_Client::SHM::ParentSHM> shm
+            ImGuiID bottom_id
         );
     }
 }
