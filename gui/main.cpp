@@ -19,7 +19,7 @@ int main(int argc, char* argv[]) {
         "/home/spikeyamk/Documents/git-repos/ESP32_AD5933/gui/build/ble_client/ble_client"
     #endif
     };
-    boost::interprocess::shared_memory_object::remove(BLE_Client::SHM::Names::shm);
+    //boost::interprocess::shared_memory_object::remove(BLE_Client::SHM::Names::shm);
     auto shm = std::make_shared<BLE_Client::SHM::ParentSHM>();
     boost::process::child ble_client { ble_client_path };
 
@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
     GUI::run(done, ble_client, shm);
 
     shm->cmd.send_killer(BLE_Client::StateMachines::Killer::Events::kill{});
-    std::this_thread::sleep_for(std::chrono::milliseconds(5'000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10'000));
     if(ble_client.running()) {
         ble_client.terminate();
     }

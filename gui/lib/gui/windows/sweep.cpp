@@ -215,7 +215,10 @@ namespace GUI {
             if(client.configured == true) {
                 ImGui::SameLine();
                 if(ImGui::Button("Freq Sweep End")) {
-                    std::jthread t1([&]() { shm->send_packet(client.index, Magic::Packets::FrequencySweep::end); client.configured = false; });
+                    std::jthread t1([](Client& client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
+                        shm->send_packet(client.index, Magic::Packets::FrequencySweep::end);
+                        client.configured = false;
+                    }, std::ref(client), shm);
                     t1.detach();
                 } 
 

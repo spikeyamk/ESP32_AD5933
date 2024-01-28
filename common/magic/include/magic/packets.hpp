@@ -169,6 +169,15 @@ namespace Magic {
 		constexpr std::span<uint8_t> get_raw_packet_data(Packet_T &in_raw_packet, const size_t footer_start_index) {
 			return std::span<uint8_t>(in_raw_packet.begin(), footer_start_index);
 		}
+
+		constexpr bool check_packet_against_footer(const Packet_T& in_raw_packet, const Packet_T& footer_to_check_against) {
+			const auto found_footer { get_magic_packet_pointer(in_raw_packet) };
+			if(found_footer.has_value() == false) {
+				return false;
+			}
+
+			return found_footer.value() == footer_to_check_against;
+		}
 	}
 }
 

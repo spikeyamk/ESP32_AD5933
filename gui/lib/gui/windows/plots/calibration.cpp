@@ -4,7 +4,7 @@
 #include "gui/windows/plots/calibration.hpp"
 
 namespace GUI {
-    namespace Windows {
+     namespace Windows {
         void calibration_plots(int i, ImGuiID side_id, bool &enable, Client &client) {
             std::string name = "Calibration Plots##" + std::to_string(i);
             static int first = 0;
