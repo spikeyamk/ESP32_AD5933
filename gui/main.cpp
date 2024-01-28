@@ -26,9 +26,9 @@ int main(int argc, char* argv[]) {
     bool done = false;
     GUI::run(done, ble_client, shm);
 
+    shm->cmd.send_killer(BLE_Client::StateMachines::Killer::Events::kill{});
+    std::this_thread::sleep_for(std::chrono::milliseconds(5'000));
     if(ble_client.running()) {
-        shm->cmd.send_killer(BLE_Client::StateMachines::Killer::Events::kill{});
-        std::this_thread::sleep_for(std::chrono::milliseconds(5'000));
         ble_client.terminate();
     }
     return 0;

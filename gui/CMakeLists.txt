@@ -72,11 +72,17 @@ add_subdirectory(${BLE_CLIENT_DIR})
 add_executable(${CURRENT_PROJECT_NAME}
 	main.cpp
 	ble_client/lib/shm.cpp
-	lib/gui/dark_mode_switcher.cpp
 	lib/gui/imgui_sdl.cpp
 	lib/gui/boilerplate.cpp
 	lib/gui/spinner.cpp
 	lib/gui/windows/connecting.cpp
+	lib/gui/windows/console.cpp
+	lib/gui/windows/ble_client.cpp
+	lib/gui/windows/client.cpp
+	lib/gui/windows/debug_registers.cpp
+	lib/gui/windows/sweep.cpp
+	lib/gui/windows/plots/measurement.cpp
+	lib/gui/windows/plots/calibration.cpp
 	${IMGUI_SRCS}
 	${IMPLOT_SRCS}
 	${IMGUI_CONSOLE_SRCS}

@@ -253,6 +253,15 @@ namespace BLE_Client {
             ParentSHM();
             ~ParentSHM();
             void attach_notify_channel(const BLE_Client::StateMachines::Connector::Events::connect& connect_event);
+            void send_packet(const size_t index, const Magic::Packets::Packet_T &packet);
+
+            template<size_t N>
+            void send_packet_and_footer(const size_t index, const std::array<uint8_t, N> &raw_array, const Magic::Packets::Packet_T &footer) {
+                static_assert(N < Magic::Packets::Debug::start.size());
+                Magic::Packets::Packet_T buf = footer;
+                std::copy(raw_array.begin(), raw_array.end(), buf.begin());
+                send_packet(index, buf);
+            }
         };
 
         class ChildSHM {

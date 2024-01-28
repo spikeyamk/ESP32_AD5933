@@ -40,7 +40,7 @@ namespace GUI {
                 int voltage_range_combo = 0;
                 int pga_gain_combo = 0;
                 int sysclk_src_combo = 0;
-                float calibration_impedance = 0.0f;
+                float calibration_impedance = 1000.0f;
 
                 std::array<char, 9> sysclk_freq { sysclk_freq_array_init_lambda(config) };
 

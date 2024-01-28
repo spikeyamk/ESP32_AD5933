@@ -1,11 +1,10 @@
 #include <trielo/trielo.hpp>
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_video.h>
 #include "imgui.h"
 #include "imgui_internal.h"
 #include "backends/imgui_impl_sdl3.h"
 #include "backends/imgui_impl_sdlrenderer3.h"
-
-#include "gui/dark_mode_switcher.hpp"
 
 #include "gui/boilerplate.hpp"
 
@@ -15,6 +14,17 @@ namespace GUI {
         static const auto sdl_error_lambda = []() {
             std::cout << SDL_GetError() << std::endl;
         };
+
+        void switch_imgui_theme() {
+            switch(SDL_GetSystemTheme()) {
+                case SDL_SYSTEM_THEME_DARK:
+                    ImGui::StyleColorsDark();
+                    break;
+                default:
+                    ImGui::StyleColorsLight();
+                    break;
+            }
+        }
 
         std::tuple<SDL_Window*, SDL_Renderer*> init() {
             Trielo::trieloxit_lambda<SDL_Init>(Trielo::OkErrCode(0), sdl_error_lambda, SDL_INIT_VIDEO);

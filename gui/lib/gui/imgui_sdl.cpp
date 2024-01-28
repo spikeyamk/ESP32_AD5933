@@ -16,6 +16,7 @@
 
 #include <trielo/trielo.hpp>
 
+#include "imgui_internal.h"
 #include "implot.h"
 #include "magic/packets.hpp"
 #include "imgui_console/imgui_console.h"
@@ -23,6 +24,7 @@
 #include "gui/imgui_sdl.hpp"
 #include "gui/boilerplate.hpp"
 #include "gui/spinner.hpp"
+#include "gui/windows/console.hpp"
 
 #include "ad5933/masks/maps.hpp"
 #include "ad5933/config/config.hpp"
@@ -891,6 +893,70 @@ namespace GUI {
 }
 
 namespace GUI {
+    ImGuiID top_with_dock_space(MenuBarEnables &menu_bar_enables) {
+        // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
+        // because it would be confusing to have two docking targets within each others.
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(viewport->Pos);
+        ImGui::SetNextWindowSize(viewport->Size);
+        ImGui::SetNextWindowViewport(viewport->ID);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+
+        ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+        window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+        window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground;
+
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        ImGui::Begin("TopWindow", nullptr, window_flags);
+        ImGui::PopStyleVar();
+        ImGui::PopStyleVar(2);
+
+        // DockSpace
+        ImGuiIO& io = ImGui::GetIO();
+        ImGuiID dockspace_id = ImGui::GetID("TopDockSpace");
+        if(io.ConfigFlags & ImGuiConfigFlags_DockingEnable) {
+            ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
+            if(ImGui::BeginMenuBar()) {
+                if(ImGui::BeginMenu("File")) {
+                    ImGui::EndMenu();
+                }
+                if(ImGui::BeginMenu("Edit")) {
+                    ImGui::EndMenu();
+                }
+                if(ImGui::BeginMenu("View")) {
+                    ImGui::MenuItem("BLE Client", nullptr, &menu_bar_enables.ble_client);
+                    ImGui::MenuItem("Console", nullptr, &menu_bar_enables.console);
+                    ImGui::MenuItem("Configure", nullptr, &menu_bar_enables.configure);
+                    ImGui::MenuItem("Debug Registers", nullptr, &menu_bar_enables.debug_registers);
+                    ImGui::MenuItem("Measurement Plots", nullptr, &menu_bar_enables.measurement_plots);
+                    ImGui::MenuItem("Calibration Plots", nullptr, &menu_bar_enables.calibration_plots);
+                    ImGui::EndMenu();
+                }
+                if(ImGui::BeginMenu("Help")) {
+                    ImGui::MenuItem("About");
+                    ImGui::EndMenu();
+                }
+                ImGui::EndMenuBar();
+            }
+            ImGui::End();
+        }
+
+        return dockspace_id;
+    }
+
+    DockspaceIDs split_left_center(ImGuiID dockspace_id) {
+        const ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_DockSpace;
+        ImGui::DockBuilderRemoveNode(dockspace_id);
+        ImGui::DockBuilderAddNode(dockspace_id, dockspace_flags);
+        ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->Size);
+        ImGuiID dock_id_center;
+        ImGuiID dock_id_left = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.2f, nullptr, &dock_id_center);
+        return { dock_id_left, dock_id_center };
+    }
+}
+
+namespace GUI {
     void run(bool &done, boost::process::child& ble_client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
         SDL_Window* window;
         SDL_Renderer* renderer;
@@ -904,21 +970,23 @@ namespace GUI {
 
         Boilerplate::process_events(window, done);
         Boilerplate::start_new_frame();
-        Windows::MenuBarEnables menu_bar_enables;
-        ImGuiID top_id = Windows::top_with_dock_space(menu_bar_enables);
-        Windows::DockspaceIDs top_ids { Windows::split_left_center(top_id) };
+        MenuBarEnables menu_bar_enables;
+        ImGuiID top_id = top_with_dock_space(menu_bar_enables);
+        DockspaceIDs top_ids { split_left_center(top_id) };
         std::vector<Windows::Client> client_windows;
         int selected = -1;
 
         Windows::ble_client(menu_bar_enables.ble_client, top_ids.left, selected, shm, client_windows);
+        Windows::console(menu_bar_enables.console, 0, shm);
         Boilerplate::render(renderer, clear_color);
 
         while(done == false && ble_client.running()) {
             Boilerplate::process_events(window, done);
             Boilerplate::start_new_frame();
-            top_id = Windows::top_with_dock_space(menu_bar_enables);
+            top_id = top_with_dock_space(menu_bar_enables);
 
             Windows::ble_client(menu_bar_enables.ble_client, top_ids.left, selected, shm, client_windows);
+            Windows::console(menu_bar_enables.console, 0, shm);
             for(size_t i = 0; i < client_windows.size(); i++) {
                 Windows::client1(i, top_ids.center, client_windows[i], menu_bar_enables, shm);
             }
@@ -946,5 +1014,10 @@ namespace GUI {
         }
 
         Boilerplate::shutdown(renderer, window);
+
+        for(size_t i = 0; i < shm->notify_channels.size(); i++) {
+            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::disconnect{i});
+            std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
+        }
     }
 }
