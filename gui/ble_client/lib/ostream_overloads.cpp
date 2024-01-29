@@ -1,9 +1,5 @@
 #include "ble_client/standalone/ostream_overloads.hpp"
 
-namespace BLE_Client {
-
-}
-
 std::ostream& operator<<(std::ostream& os, SimpleBLE::Peripheral& peripheral) {
     os << "SimpleBLE: Peripheral Information:" << std::endl;
     os << "\tInitialized: " << peripheral.initialized() << std::endl;
@@ -20,8 +16,8 @@ std::ostream& operator<<(std::ostream& os, SimpleBLE::Peripheral& peripheral) {
 
 std::ostream& operator<<(std::ostream& os, SimpleBLE::Adapter& adapter) {
     os << "SimpleBLE: Adapter Information:" << std::endl;
-    os << "\tAdapter Address: " << adapter.address();
-    os << "\tAdapter Identifier: " << adapter.identifier();
+    os << "\tAdapter Address: " << adapter.address() << std::endl;
+    os << "\tAdapter Identifier: " << adapter.identifier() << std::endl;
     return os;
 }
 
@@ -44,7 +40,7 @@ std::ostream& operator<<(std::ostream& os, SimpleBLE::Characteristic& characteri
 }
 
 std::ostream& operator<<(std::ostream& os, SimpleBLE::Descriptor& descriptor) {
-    os << "SimpleBLE: Descriptor Information: Descriptor UUID: " << descriptor.uuid();
+    os << "SimpleBLE: Descriptor Information: Descriptor UUID: " << descriptor.uuid() << std::endl;
     return os;
 }
 

@@ -7,7 +7,6 @@
 #include <stop_token>
 
 #include "imgui.h"
-#include "imgui_console/imgui_console.h"
 #include "ad5933/data/data.hpp"
 #include "ad5933/calibration/calibration.hpp"
 #include "ad5933/measurement/measurement.hpp"

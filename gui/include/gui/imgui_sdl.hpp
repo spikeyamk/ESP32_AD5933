@@ -23,5 +23,11 @@ namespace GUI {
         bool console = true;
     };
 
-    void run(bool &done, boost::process::child& ble_client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm);
+    void run(
+        bool &done,
+        boost::process::child& ble_client,
+        std::shared_ptr<BLE_Client::SHM::ParentSHM> shm,
+        boost::process::ipstream& stdout_stream,
+        boost::process::ipstream& stderr_stream
+    );
 }

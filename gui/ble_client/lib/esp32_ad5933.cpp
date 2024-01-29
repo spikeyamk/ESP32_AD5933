@@ -33,7 +33,7 @@ namespace BLE_Client {
             body_composistion_service.uuid(),
             body_composition_measurement_chacteristic.uuid(),
             [&](SimpleBLE::ByteArray captured_payload) {
-                fmt::print(fmt::fg(fmt::color::red), "BLE_Client::SimpleBLE::Peripheral::notify_callback: we got a notify packet\n");
+                std::printf("BLE_Client::SimpleBLE::Peripheral::notify_callback\n");
                 std::array<uint8_t, 20> raw_bytes;
                 std::copy(captured_payload.begin(), captured_payload.end(), raw_bytes.begin());
                 channel->send(raw_bytes);

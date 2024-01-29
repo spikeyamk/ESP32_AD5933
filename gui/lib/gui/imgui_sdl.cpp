@@ -19,7 +19,6 @@
 #include "imgui_internal.h"
 #include "implot.h"
 #include "magic/packets.hpp"
-#include "imgui_console/imgui_console.h"
 
 #include "gui/imgui_sdl.hpp"
 #include "gui/boilerplate.hpp"
@@ -103,7 +102,13 @@ namespace GUI {
 }
 
 namespace GUI {
-    void run(bool &done, boost::process::child& ble_client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
+    void run(
+        bool &done,
+        boost::process::child& ble_client,
+        std::shared_ptr<BLE_Client::SHM::ParentSHM> shm,
+        boost::process::ipstream& stdout_stream,
+        boost::process::ipstream& stderr_stream
+    ) {
         SDL_Window* window;
         SDL_Renderer* renderer;
         {
@@ -123,7 +128,10 @@ namespace GUI {
         int selected = -1;
 
         Windows::ble_client(menu_bar_enables.ble_client, top_ids.left, selected, shm, client_windows);
-        Windows::console(menu_bar_enables.console, 0);
+        Console console { menu_bar_enables.console, stdout_stream, stderr_stream };
+        std::jthread stderr_reader([](Console& console, boost::process::child& ble_client) { while(ble_client.running()) { console.read_stderr(); } }, std::ref(console), std::ref(ble_client));
+        std::jthread stdout_reader([](Console& console, boost::process::child& ble_client) { while(ble_client.running()) { console.read_stdout(); } }, std::ref(console), std::ref(ble_client));
+        console.draw();
         Boilerplate::render(renderer, clear_color);
 
         while(done == false && ble_client.running()) {
@@ -132,7 +140,7 @@ namespace GUI {
             top_id = top_with_dock_space(menu_bar_enables);
 
             Windows::ble_client(menu_bar_enables.ble_client, top_ids.left, selected, shm, client_windows);
-            Windows::console(menu_bar_enables.console, 0);
+            console.draw();
             for(size_t i = 0; i < client_windows.size(); i++) {
                 Windows::client1(i, top_ids.center, client_windows[i], menu_bar_enables, shm);
             }
@@ -164,6 +172,12 @@ namespace GUI {
         for(size_t i = 0; i < shm->notify_channels.size(); i++) {
             shm->cmd.send(BLE_Client::StateMachines::Connection::Events::disconnect{i});
             std::this_thread::sleep_for(std::chrono::milliseconds(10'000));
+        }
+
+        shm->cmd.send_killer(BLE_Client::StateMachines::Killer::Events::kill{});
+        std::this_thread::sleep_for(std::chrono::milliseconds(10'000));
+        if(ble_client.running()) {
+            ble_client.terminate();
         }
     }
 }

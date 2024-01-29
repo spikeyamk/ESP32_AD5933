@@ -29,12 +29,23 @@ namespace BLE_Client {
             RelationBase{ name, segment },
             DirectionBase{ name, get_init_deque_ptr() }
         {}
+
+        LogChannelRX::LogChannelRX(const char* name, boost::interprocess::managed_shared_memory& segment) :
+            RelationBase{ name, segment },
+            DirectionBase{ name, get_init_deque_ptr() }
+        {}
+
+        LogChannelTX::LogChannelTX(const char* name, boost::interprocess::managed_shared_memory& segment) :
+            RelationBase{ name, segment },
+            DirectionBase{ name, get_attach_deque_ptr() }
+        {}
     }
 
     namespace SHM {
         ParentSHM::ParentSHM() :
             segment{boost::interprocess::create_only, Names::shm, size},
             cmd{ Names::cmd_postfix, segment },
+            log{ Names::log_postfix, segment },
             discovery_devices{ segment.construct<DiscoveryDevices>(Names::discovery_devices)(segment.get_segment_manager()) },
             active_state{ [&]() {
                 auto* tmp { segment.construct<BLE_Client::StateMachines::Adapter::States::T_Variant>
@@ -69,6 +80,7 @@ namespace BLE_Client {
         ChildSHM::ChildSHM() :
             segment{ boost::interprocess::managed_shared_memory(boost::interprocess::open_only, Names::shm) },
             cmd{ Names::cmd_postfix, segment },
+            log{ Names::log_postfix, segment },
             discovery_devices{ segment.find<DiscoveryDevices>(Names::discovery_devices).first },
             active_state{ [&]() {
                 auto* tmp = segment.find<BLE_Client::StateMachines::Adapter::States::T_Variant>(Names::adapter_active_state).first;

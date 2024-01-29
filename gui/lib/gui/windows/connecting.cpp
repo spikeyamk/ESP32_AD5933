@@ -369,21 +369,3 @@ struct ExampleAppConsole {
         return 0;
     }
 };
-
-namespace GUI {
-    namespace Windows {
-        void console(int i, ImGuiConsole &console, ImGuiID side_id) {
-            static bool drawn = false;
-            if(drawn == false) {
-                std::thread([&console]() {
-                    while(1) {
-                        console.System().Log(csys::ItemType::LOG_TYPE_INFO) << "Welcome to the imgui-console example!" << csys::endl;
-                        std::this_thread::sleep_for(std::chrono::seconds(1));
-                    }
-                }).detach();;
-                drawn = true;
-            }
-            console.Draw();
-        }
-    }
-}

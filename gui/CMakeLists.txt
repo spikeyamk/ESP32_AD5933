@@ -47,16 +47,13 @@ set(IMGUI_SRCS
 	${IMGUI_DIR}/imgui_draw.cpp
 	${IMGUI_DIR}/imgui_tables.cpp
 	${IMGUI_DIR}/imgui_widgets.cpp
+	${IMGUI_DIR}/misc/cpp/imgui_stdlib.cpp
 )
 
 set(IMPLOT_SRCS
 	${IMPLOT_DIR}/implot.cpp
 	${IMPLOT_DIR}/implot_items.cpp
 	${IMPLOT_DIR}/implot_demo.cpp
-)
-
-set(IMGUI_CONSOLE_SRCS
-	${IMGUI_CONSOLE_DIR}/src/imgui_console.cpp
 )
 
 add_subdirectory(${TRIELO_DIR} ${CMAKE_BINARY_DIR}/trielo)
@@ -85,7 +82,6 @@ add_executable(${CURRENT_PROJECT_NAME}
 	lib/gui/windows/plots/calibration.cpp
 	${IMGUI_SRCS}
 	${IMPLOT_SRCS}
-	${IMGUI_CONSOLE_SRCS}
 )
 
 target_include_directories(${CURRENT_PROJECT_NAME} PRIVATE
@@ -93,7 +89,6 @@ target_include_directories(${CURRENT_PROJECT_NAME} PRIVATE
 	${CMAKE_CURRENT_LIST_DIR}/ble_client/include
 	${IMGUI_DIR}
 	${IMPLOT_DIR}
-	${IMGUI_CONSOLE_DIR}/include
     ${Boost_INCLUDE_DIRS}
 )
 
