@@ -9,11 +9,13 @@
 #include <chrono>
 #include <string_view>
 
+#include "magic/packets/outcoming.hpp"
+
 namespace BLE_Client {
     namespace StateMachines {
         namespace Connection {
             namespace Actions {
-                void disconnect(std::shared_ptr<ESP32_AD5933> esp32_ad5933) {
+                void disconnect(std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm) {
                     try {
                         if(esp32_ad5933->is_connected() == false) {
                             return;
@@ -21,23 +23,28 @@ namespace BLE_Client {
                         esp32_ad5933->remove_subscriptions();
                         esp32_ad5933->disconnect();
                     } catch(const SimpleBLE::Exception::BaseException& e) {
-                        std::cerr << "ERROR: BLE_Client::StateMachines::Connection::Actions::disconnect: exception: " << e.what() << std::endl;
+                        shm->console.log(std::string("ERROR: BLE_Client::StateMachines::Connection::Actions::disconnect: exception: ") + e.what() + "\n");
                     }
                 }
             }
 
             namespace Guards {
-                bool write_successful(const BLE_Client::StateMachines::Connection::Events::write& event, std::shared_ptr<ESP32_AD5933> esp32_ad5933) {
+                bool write_event_successful(const BLE_Client::StateMachines::Connection::Events::write_event& event, std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm) {
                     try{
-                        esp32_ad5933->write(event.packet);
+                        std::visit([esp32_ad5933](auto&& event) {
+                            using T_Decay = std::decay_t<decltype(event)>;
+                            const Magic::OutComingPacket<T_Decay> data_outcoming_packet { event };
+                            esp32_ad5933->write(data_outcoming_packet.get_raw_data());
+                        }, event.event_variant);
                         return true;
                     } catch(const std::exception& e) {
-                        std::cerr << "ERROR: BLE_Client::StateMachines::Connection::Actions::write: exception: " << e.what() << std::endl;
+                        shm->console.log(std::string("ERROR: BLE_Client::StateMachines::Connection::Actions::write_event: exception: ") + e.what() + "\n");
                         return false;
                     }
                 }
-                bool write_failed(const BLE_Client::StateMachines::Connection::Events::write& event, std::shared_ptr<ESP32_AD5933> esp32_ad5933) {
-                    return write_successful(event, esp32_ad5933);
+
+                bool write_event_failed(const BLE_Client::StateMachines::Connection::Events::write_event& event, std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm) {
+                    return !write_event_successful(event, esp32_ad5933, shm);
                 }
             }
         }

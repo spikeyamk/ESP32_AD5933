@@ -1,6 +1,7 @@
 #include <trielo/trielo.hpp>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_video.h>
+#include <nfd.hpp>
 #include "imgui.h"
 #include "imgui_internal.h"
 #include "backends/imgui_impl_sdl3.h"
@@ -10,7 +11,6 @@
 
 namespace GUI {
     namespace Boilerplate {
-        // ImGuiSDL utility boilerplate functions
         static const auto sdl_error_lambda = []() {
             std::cout << SDL_GetError() << std::endl;
         };
@@ -29,6 +29,7 @@ namespace GUI {
         std::tuple<SDL_Window*, SDL_Renderer*> init() {
             Trielo::trieloxit_lambda<SDL_Init>(Trielo::OkErrCode(0), sdl_error_lambda, SDL_INIT_VIDEO);
             Trielo::trielo_lambda<SDL_SetHint>(Trielo::OkErrCode(SDL_bool{SDL_TRUE}), sdl_error_lambda, SDL_HINT_IME_SHOW_UI, "1");
+            Trielo::trielo<NFD::Init>(Trielo::OkErrCode(NFD_OKAY));
 
             static constexpr Uint32 window_flags = (
                 SDL_WINDOW_RESIZABLE
@@ -87,20 +88,12 @@ namespace GUI {
             ImGui_ImplSDLRenderer3_Init(renderer);
 
             switch_imgui_theme();
-            //DarkModeSwitcher dark_mode_switcher { window };
-            //if(DarkModeSwitcher::isGlobalDarkModeActive()) {
-            //    ImGui::StyleColorsDark();
-            //} else {
-            //    ImGui::StyleColorsLight();
-            //}
-            //Commented out because of a bug in a lambda capture of this and segfault on when darkModeRevoker is fired
-            //dark_mode_switcher.enable_dynamic_switching();
 
             Trielo::trielo_lambda<SDL_ShowWindow>(Trielo::OkErrCode(0), sdl_error_lambda, window);
             return std::tuple { window, renderer };
         } 
 
-        void process_events(SDL_Window* window, bool &done) {
+        void process_events(bool &done) {
             SDL_Event event;
             while(SDL_PollEvent(&event)) {
                 ImGui_ImplSDL3_ProcessEvent(&event);
@@ -149,6 +142,7 @@ namespace GUI {
             ImGui::DestroyContext();
             SDL_DestroyRenderer(renderer);
             SDL_DestroyWindow(window);
+            NFD::Quit();
             SDL_Quit();
         }
     }

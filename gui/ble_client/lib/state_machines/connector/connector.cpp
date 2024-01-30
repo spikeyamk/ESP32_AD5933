@@ -18,7 +18,7 @@ namespace BLE_Client {
                         });
 
                         if(it == scan_results.end()) {
-                            std::cerr << "ERROR: BLE_Client::Discovery::Actions::connect: didn't find the device with the address in the scan_results\n";
+                            shm->console.log("ERROR: BLE_Client::Discovery::Actions::connect: didn't find the device with the address in the scan_results\n");
                             return false;
                         }
 
@@ -31,20 +31,21 @@ namespace BLE_Client {
                             }
                         }
                         
-                        auto ret { find_services_characteristics(*it) };
+                        auto ret { find_services_characteristics(*it, shm) };
                         if(ret.has_value() == false) {
                             it->disconnect();
                             throw std::runtime_error("not an ESP32_AD5933");
                         }
 
                         shm->init_notify_channel(Events::connect{ it->address() });
-                        auto tmp_esp32_ad5933 { std::make_shared<BLE_Client::ESP32_AD5933>(*it, std::get<0>(ret.value()), std::get<1>(ret.value()), std::get<2>(ret.value()), shm->notify_channels.back()) };
+                        auto tmp_esp32_ad5933 { std::make_shared<BLE_Client::ESP32_AD5933>(*it, std::get<0>(ret.value()), std::get<1>(ret.value()), std::get<2>(ret.value()), shm->notify_channels.back(), shm) };
                         tmp_esp32_ad5933->setup_subscriptions();
                         BLE_Client::StateMachines::Logger logger {};
-                        connections.push_back(new decltype(BLE_Client::StateMachines::Connection::Dummy<int>::sm){ tmp_esp32_ad5933, logger });
+                        connections.push_back(new decltype(BLE_Client::StateMachines::Connection::Dummy<int>::sm){ tmp_esp32_ad5933, logger, shm });
                         return true;
                     } catch(const std::exception& e) {
-                        std::cerr << "ERROR: BLE_Client::StateMachines::Connector::Actions::connect: exception: " << e.what() << std::endl;
+                        shm->console.log(std::string("ERROR: BLE_Client::StateMachines::Connector::Actions::connect: exception: ") + e.what() + "\n");
+                        shm->console.log("ERROR: BLE_Client::Discovery::Actions::connect: didn't find the device with the address in the scan_results\n");
                         return false;
                     }
                 }

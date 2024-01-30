@@ -31,6 +31,8 @@ set(AD5933_MEASUREMENT_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/ad5933/measuremen
 set(AD5933_TEMPERATURE_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/ad5933/temperature)
 set(AD5933_DEBUG_DATA_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/ad5933/debug_data)
 set(BLE_CLIENT_DIR ${CMAKE_CURRENT_LIST_DIR}/ble_client)
+set(JSON_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/json)
+set(NATIVE_FILE_DIALOG_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/nativefiledialog-extended)
 
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_LIBS ON)
@@ -64,7 +66,10 @@ add_subdirectory(${AD5933_CONFIG_DIR} ${CMAKE_BINARY_DIR}/AD5933_config)
 add_subdirectory(${AD5933_MEASUREMENT_DIR} ${CMAKE_BINARY_DIR}/AD5933_measurement)
 add_subdirectory(${AD5933_TEMPERATURE_DIR} ${CMAKE_BINARY_DIR}/AD5933_temperature)
 add_subdirectory(${AD5933_DEBUG_DATA_DIR} ${CMAKE_BINARY_DIR}/AD5933_debug_data)
+set(BLE_CLIENT_TEST ON)
 add_subdirectory(${BLE_CLIENT_DIR})
+add_subdirectory(${JSON_DIR})
+add_subdirectory(${NATIVE_FILE_DIALOG_DIR})
 
 add_executable(${CURRENT_PROJECT_NAME}
 	main.cpp
@@ -72,14 +77,17 @@ add_executable(${CURRENT_PROJECT_NAME}
 	lib/gui/imgui_sdl.cpp
 	lib/gui/boilerplate.cpp
 	lib/gui/spinner.cpp
-	lib/gui/windows/connecting.cpp
 	lib/gui/windows/console.cpp
+	lib/gui/windows/calibrate.cpp
+	lib/gui/windows/measure.cpp
 	lib/gui/windows/ble_client.cpp
+	lib/gui/windows/file_manager.cpp
 	lib/gui/windows/client.cpp
 	lib/gui/windows/debug_registers.cpp
 	lib/gui/windows/sweep.cpp
 	lib/gui/windows/plots/measurement.cpp
 	lib/gui/windows/plots/calibration.cpp
+	lib/json/conversion.cpp
 	${IMGUI_SRCS}
 	${IMPLOT_SRCS}
 )
@@ -104,6 +112,8 @@ target_link_libraries(${CURRENT_PROJECT_NAME} PRIVATE
 	AD5933_debug_data
     ${Boost_LIBRARIES}
 	sml
+	nfd
+	nlohmann_json 
 )
 
 if(WIN32)

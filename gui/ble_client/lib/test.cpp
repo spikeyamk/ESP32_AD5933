@@ -7,12 +7,14 @@
 #include <type_traits>
 #include <vector>
 #include <future>
+#include <csignal>
 
 #include <boost/process.hpp>
 #include <boost/thread/thread_time.hpp>
 #include <trielo/trielo.hpp>
 
-#include "magic/packets.hpp"
+#include "magic/packets/outcoming.hpp"
+#include "magic/events/commands.hpp"
 #include "ble_client/standalone/shm.hpp"
 #include "ble_client/standalone/worker.hpp"
 #include "ble_client/standalone/cmd_listener.hpp"
@@ -98,13 +100,35 @@ namespace BLE_Client {
                 return -2 - (10 * i);
             }
 
-            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write{ 0, Magic::Packets::Debug::start });
-            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write{ 0, Magic::Packets::Debug::dump_all_registers });
-            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write{ 0, Magic::Packets::Debug::end });
+            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_event{ 0, Magic::Events::Commands::Debug::Start{} });
+            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_event{ 0, Magic::Events::Commands::Debug::Dump{} });
+            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_event{ 0, Magic::Events::Commands::Debug::End{} });
+
             std::this_thread::sleep_for(std::chrono::milliseconds(5'000));
             const auto dump_all_registers { parent_shm->notify_channels[0]->read_for(boost::posix_time::milliseconds(5'000)) };
             if(dump_all_registers.has_value() == false) {
                 return -3 - (10 * i);
+            }
+
+            bool is_dump_all_registers = false;
+            std::visit([&is_dump_all_registers](auto&& event) {
+                using T_Decay = std::decay_t<decltype(event)>;
+                if constexpr (std::is_same_v<T_Decay, Magic::Events::Results::Debug::Dump>) {
+                    std::printf("BLE_Client::test: dump_all_registers:");
+                    std::for_each(event.registers_data.begin(), event.registers_data.end(), [index = 0](const auto e) mutable {
+                        if(index % 8 == 0) {
+                            std::printf("\n    ");
+                        }
+                        std::printf("0x%02X, ", e);
+                        index++;
+                    });
+                    std::printf("\n");
+                    is_dump_all_registers = true;
+                }
+            }, dump_all_registers.value());
+
+            if(is_dump_all_registers == false) {
+                return -4 - (10 * i);
             }
 
             parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::disconnect{ 0 });
@@ -112,7 +136,7 @@ namespace BLE_Client {
             try {
                 parent_shm->notify_channels.erase(parent_shm->notify_channels.begin());
             } catch(...) {
-                return -4 - (10 * i);
+                return -5 - (10 * i);
             }
         }
         

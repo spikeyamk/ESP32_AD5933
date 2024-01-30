@@ -19,3 +19,9 @@
 [submodule "gui/lib/imgui"]
 	path = gui/lib/extern/imgui
 	url = https://github.com/ocornut/imgui.git
+[submodule "gui/lib/extern/nativefiledialog-extended"]
+	path = gui/lib/extern/nativefiledialog-extended
+	url = https://github.com/btzy/nativefiledialog-extended.git
+[submodule "gui/lib/extern/json"]
+	path = gui/lib/extern/json
+	url = https://github.com/nlohmann/json.git

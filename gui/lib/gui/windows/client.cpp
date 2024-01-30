@@ -2,6 +2,9 @@
 
 #include "gui/windows/debug_registers.hpp"
 #include "gui/windows/sweep.hpp"
+#include "gui/windows/calibrate.hpp"
+#include "gui/windows/measure.hpp"
+#include "gui/windows/file_manager.hpp"
 #include "gui/windows/plots/measurement.hpp"
 #include "gui/windows/plots/calibration.hpp"
 
@@ -63,6 +66,9 @@ namespace GUI {
                     calibration_plots(i, right_id, enables.calibration_plots, client);
                     sweep(i, dockspace_id, enables.configure, client, shm);
                     debug_registers(i, dockspace_id, enables.debug_registers, client, shm);
+                    calibrate(i, dockspace_id, enables.calibrate, client, shm);
+                    measure(i, dockspace_id, enables.measure, client, shm);
+                    file_manager(i, dockspace_id, enables.file_manager, client, shm);
                     first++;
                     ImGui::DockBuilderFinish(dockspace_id);
                 } else {
@@ -77,6 +83,15 @@ namespace GUI {
                     }
                     if(enables.debug_registers) {
                         debug_registers(i, ImGui::GetID(static_cast<void*>(nullptr)), enables.debug_registers, client, shm);
+                    }
+                    if(enables.calibrate) {
+                        calibrate(i, ImGui::GetID(static_cast<void*>(nullptr)), enables.calibrate, client, shm);
+                    }
+                    if(enables.measure) {
+                        measure(i, ImGui::GetID(static_cast<void*>(nullptr)), enables.measure, client, shm);
+                    }
+                    if(enables.file_manager) {
+                        file_manager(i, ImGui::GetID(static_cast<void*>(nullptr)), enables.file_manager, client, shm);
                     }
                 }
             }

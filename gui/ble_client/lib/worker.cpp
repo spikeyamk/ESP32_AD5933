@@ -1,3 +1,5 @@
+#include <csignal>
+
 #include <boost/thread/thread_time.hpp>
 #include <trielo/trielo.hpp>
 #include <simpleble/SimpleBLE.h>
@@ -18,10 +20,14 @@
 
 namespace BLE_Client {
     void worker() {
+        std::cout << "BLE_Client: process started" << std::endl;
+        std::atexit([]() { std::cout << "BLE_Client: process finished" << std::endl; });
+
         auto child_shm { std::make_shared<BLE_Client::SHM::ChildSHM>() };
+        std::stop_source stop_source;
+
         SimpleBLE::Adapter simpleble_adapter;
         BLE_Client::StateMachines::Logger killer_logger;
-        std::stop_source stop_source;
         BLE_Client::StateMachines::Killer::T_StateMachine killer { stop_source, killer_logger };
         BLE_Client::StateMachines::Logger adapter_logger;
         BLE_Client::StateMachines::Adapter::T_StateMachine adapter_sm { simpleble_adapter, child_shm, adapter_logger };

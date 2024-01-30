@@ -21,9 +21,10 @@
 
 #include "util.hpp"
 #include "i2c/bus.hpp"
-#include "ble/server/sender.hpp"
 
 #include "sd_card.hpp"
+
+#include "ble/server/server.hpp"
 
 extern "C" void app_main() {
 	TRIELO_VOID(Util::restart_button());

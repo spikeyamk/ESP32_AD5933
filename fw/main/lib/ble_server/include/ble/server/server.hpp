@@ -1,9 +1,6 @@
 #pragma once
 
 #include <cstdint>
-
-#include "magic/packets.hpp"
-
 #include <iostream>
 #include <queue>
 #include <mutex>
@@ -12,12 +9,15 @@
 #include <chrono>
 #include <array>
 #include <atomic>
+#include <span>
 
 #include <boost/sml.hpp>
 #include "driver/i2c_master.h"
 
 #include "ad5933/extension/extension.hpp"
 #include "ad5933/masks/masks.hpp"
+#include "magic/events/commands.hpp"
+#include "magic/packets/outcoming.hpp"
 
 namespace BLE {
     namespace Server {
@@ -25,7 +25,7 @@ namespace BLE {
         void inject(const i2c_master_dev_handle_t handle);
         void advertise();
         void stop();
-        bool notify(const Magic::Packets::Packet_T &message);
+        bool notify(const std::span<uint8_t, std::dynamic_extent>& message);
     }
 
     namespace Server {
@@ -34,16 +34,10 @@ namespace BLE {
             std::mutex mutex;
             Sender() = default;
 
-            inline bool notify(const std::array<uint8_t, Magic::Packets::Debug::start.size()> &message) const {
-                return BLE::Server::notify(message);
-            }
-
-            template<size_t n_bytes>
-            inline bool notify_with_footer(const std::array<uint8_t, n_bytes> &message, const Magic::Packets::Packet_T &footer) const {
-                static_assert(n_bytes <= Magic::Packets::Debug::start.size(), "n_bytes must be less than or equal to sizeof(Packet_T)");
-                auto send_buf = footer;
-                std::copy(message.begin(), message.end(), send_buf.begin());
-                return BLE::Server::notify(send_buf);
+			template<typename T_OutComingPacket>
+            inline bool notify(const T_OutComingPacket& event) const {
+				auto tmp_array { event.get_raw_data() };
+                return BLE::Server::notify(std::span(tmp_array.begin(), tmp_array.end()));
             }
         };
     }
@@ -103,7 +97,7 @@ namespace BLE {
 		void turn_on();
 		void advertise();
 		void advertising();
-		void connect();
+		void set_connected_blink_time();
 		void disconnect();
 		void unexpected();
 		void sleep();
@@ -112,13 +106,13 @@ namespace BLE {
 			void start();
 			void end();
 			void dump(Server::Sender &sender, AD5933::Extension &ad5933);
-			void program(AD5933::Extension &ad5933, const Events::Debug::program &program_event);
-			void command(AD5933::Extension &ad5933, const Events::Debug::command &command_event);
+			void program(AD5933::Extension &ad5933, const Magic::Events::Commands::Debug::Program& program_event);
+			void command(AD5933::Extension &ad5933, const Magic::Events::Commands::Debug::CtrlHB &ctrl_HB_event);
 		}
 
 		namespace FreqSweep {
 			//static void configure(bool &processing, AD5933::Extension &ad5933, const Events::FreqSweep::configure &configure_event, boost::sml::back::process<Events::FreqSweep::Private::configure_complete> process_event) {
-			void configure(std::atomic<bool> &processing, AD5933::Extension &ad5933, const Events::FreqSweep::configure &configure_event);
+			void configure(std::atomic<bool> &processing, AD5933::Extension &ad5933, const Magic::Events::Commands::Sweep::Configure &configure_event);
 			//static void run(Sender &sender, AD5933::Extension &ad5933, boost::sml::back::process<Events::FreqSweep::Private::sweep_complete> process_event) {
 			void run(std::atomic<bool> &processing, Server::Sender &sender, AD5933::Extension &ad5933);
 			void end();
@@ -173,35 +167,37 @@ namespace BLE {
 			using namespace boost::sml;
 			using namespace std;
 			auto ret = make_transition_table(
-				*state<States::off>        + event<Events::turn_on>      	     / function{Actions::turn_on}      		   = state<States::on>,
-				state<States::on>          + event<Events::advertise>													   = state<States::advertise>,
-				state<States::advertise>										 / function{Actions::advertise}    		   = state<States::advertising>,
-				state<States::advertising> + event<Events::advertise>			 / function{Actions::advertising}    	   = state<States::advertise>,
-				state<States::advertising> + event<Events::disconnect>			 / function{Actions::disconnect}    	   = state<States::advertise>,
-		       	state<States::advertising> + event<Events::connect>      		 / function{Actions::connect}      		   = state<States::connected>,
-		       	state<States::advertising> + event<Events::sleep>      		     / function{Actions::sleep}      		   = state<States::sleeping>,
+				*state<States::off>        + event<Events::turn_on>      	     / function{Actions::turn_on}      		       = state<States::on>,
+				state<States::on>          + event<Events::advertise>													       = state<States::advertise>,
+				state<States::advertise>										 / function{Actions::advertise}    		       = state<States::advertising>,
+				state<States::advertising> + event<Events::advertise>			 / function{Actions::advertising}    	       = state<States::advertise>,
+				state<States::advertising> + event<Events::disconnect>			 / function{Actions::disconnect}    	       = state<States::advertise>,
+		       	state<States::advertising> + event<Events::connect>      		 / function{Actions::set_connected_blink_time} = state<States::connected>,
+		       	state<States::advertising> + event<Events::sleep>      		     / function{Actions::sleep}					   = state<States::sleeping>,
+
 		       	//state<States::sleeping>    + event<Events::wakeup>      		 / function{Actions::wakeup}      		   = state<States::advertise>,
-				state<States::connected>   + event<Events::disconnect>   		 / function{Actions::disconnect}   		   = state<States::advertise>,
-				state<States::connected>   + event<Events::Debug::start> 		 / function{Actions::Debug::start} 		   = state<States::debug>,
-				state<States::connected>   + event<Events::FreqSweep::configure> / function{Actions::FreqSweep::configure} = state<States::FreqSweep::configuring>,
+
+				state<States::connected>   + event<Events::disconnect>   		 / function{Actions::disconnect}   		   	   = state<States::advertise>,
+				state<States::connected>   + event<Magic::Events::Commands::Debug::Start> / function{Actions::Debug::start}    = state<States::debug>,
+				state<States::connected>   + event<Magic::Events::Commands::Sweep::Configure> / function{Actions::FreqSweep::configure} = state<States::FreqSweep::configuring>,
 
 				state<States::debug> + event<Events::disconnect>     / function{Actions::disconnect}     = state<States::advertise>,
 				state<States::debug> + event<Events::Debug::end>     / function{Actions::Debug::end}     = state<States::connected>,
-				state<States::debug> + event<Events::Debug::dump>    / function{Actions::Debug::dump}    = state<States::debug>,
-				state<States::debug> + event<Events::Debug::program> / function{Actions::Debug::program} = state<States::debug>,
-				state<States::debug> + event<Events::Debug::command> / function{Actions::Debug::command} = state<States::debug>,
+				state<States::debug> + event<Magic::Events::Commands::Debug::Dump> / function{Actions::Debug::dump}    = state<States::debug>,
+				state<States::debug> + event<Magic::Events::Commands::Debug::Program> / function{Actions::Debug::program} = state<States::debug>,
+				state<States::debug> + event<Magic::Events::Commands::Debug::CtrlHB> / function{Actions::Debug::command} = state<States::debug>,
 
 				state<States::FreqSweep::configuring> + event<Events::disconnect>     									 / function{Actions::disconnect}     = state<States::advertise>,
-				state<States::FreqSweep::configuring> + event<Events::FreqSweep::end> 									 / function{Actions::FreqSweep::end} = state<States::connected>,
-				state<States::FreqSweep::configuring> + event<Events::FreqSweep::run> [function{Guards::processing}]     / function{Actions::FreqSweep::run} = state<States::FreqSweep::running>,
-				state<States::FreqSweep::configuring> + event<Events::FreqSweep::run> [function{Guards::neg_processing}] / function{Actions::unexpected}     = state<States::error>,
+				state<States::FreqSweep::configuring> + event<Magic::Events::Commands::Sweep::End> 						 / function{Actions::FreqSweep::end} = state<States::connected>,
+				state<States::FreqSweep::configuring> + event<Magic::Events::Commands::Sweep::Run> [function{Guards::processing}]     / function{Actions::FreqSweep::run} = state<States::FreqSweep::running>,
+				state<States::FreqSweep::configuring> + event<Magic::Events::Commands::Sweep::Run> [function{Guards::neg_processing}] / function{Actions::unexpected}     = state<States::error>,
 
-				state<States::FreqSweep::running> + event<Events::disconnect>     									       / function{Actions::disconnect}           = state<States::advertise>,
-				state<States::FreqSweep::running> + event<Events::FreqSweep::end> 										   / function{Actions::FreqSweep::end}       = state<States::connected>,
-				state<States::FreqSweep::running> + event<Events::FreqSweep::run>       [function{Guards::processing}] 	   / function{Actions::FreqSweep::run}       = state<States::FreqSweep::running>,
-				state<States::FreqSweep::running> + event<Events::FreqSweep::configure> [function{Guards::processing}] 	   / function{Actions::FreqSweep::configure} = state<States::FreqSweep::configuring>,
-				state<States::FreqSweep::running> + event<Events::FreqSweep::configure> [function{Guards::neg_processing}] / function{Actions::unexpected}  		 = state<States::error>,
-				state<States::FreqSweep::running> + event<Events::FreqSweep::run>       [function{Guards::neg_processing}] / function{Actions::unexpected} 			 = state<States::error>
+				state<States::FreqSweep::running> + event<Events::disconnect>     									       / function{Actions::disconnect}           				 = state<States::advertise>,
+				state<States::FreqSweep::running> + event<Magic::Events::Commands::Sweep::End> 							   / function{Actions::FreqSweep::end}       				 = state<States::connected>,
+				state<States::FreqSweep::running> + event<Magic::Events::Commands::Sweep::Run>       [function{Guards::processing}] 	   / function{Actions::FreqSweep::run}       = state<States::FreqSweep::running>,
+				state<States::FreqSweep::running> + event<Magic::Events::Commands::Sweep::Configure> [function{Guards::processing}] 	   / function{Actions::FreqSweep::configure} = state<States::FreqSweep::configuring>,
+				state<States::FreqSweep::running> + event<Magic::Events::Commands::Sweep::Configure> [function{Guards::neg_processing}] / function{Actions::unexpected} 			 = state<States::error>,
+				state<States::FreqSweep::running> + event<Magic::Events::Commands::Sweep::Run>       [function{Guards::neg_processing}] / function{Actions::unexpected} 			 = state<States::error>
 			);
 			return ret;
 		}

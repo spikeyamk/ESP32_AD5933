@@ -23,11 +23,10 @@
 #include "trielo/trielo.hpp"
 
 #include "ble/server/server.hpp"
-#include "magic/packets.hpp"
+#include "magic/packets/incoming.hpp"
 
 #include "ad5933/driver/driver.hpp"
 #include "ad5933/extension/extension.hpp"
-#include "ble/server/sender.hpp"
 #include "ble/server/server.hpp"
 
 namespace BLE {
@@ -63,59 +62,6 @@ namespace BLE {
         my_logger logger {};
         T_StateMachine dummy_state_machine { logger, sender, dummy_extension, processing };
     }
-
-    class Decoder {
-    private:
-        using T_Variant = std::variant<
-            Events::disconnect,
-            Events::Debug::start,
-            Events::Debug::end,
-            Events::Debug::program,
-            Events::Debug::command,
-            Events::Debug::dump,
-            Events::FreqSweep::configure,
-            Events::FreqSweep::end,
-            Events::FreqSweep::run
-        >;
- 
-        using T_RefPair = std::pair<std::reference_wrapper<const Magic::Packets::Packet_T>, T_Variant>;
-        static constexpr std::array<T_RefPair, 8> ref_jump_info {
-            T_RefPair{ Magic::Packets::Debug::start, Events::Debug::start{} },
-            T_RefPair{ Magic::Packets::Debug::end, Events::Debug::end{} },
-            T_RefPair{ Magic::Packets::Debug::dump_all_registers, Events::Debug::dump{} },
-            T_RefPair{ Magic::Packets::Debug::program_all_registers, Events::Debug::program{} },
-            T_RefPair{ Magic::Packets::Debug::control_HB_command, Events::Debug::command{} },
-
-            T_RefPair{ Magic::Packets::FrequencySweep::configure, Events::FreqSweep::configure{} },
-            T_RefPair{ Magic::Packets::FrequencySweep::end, Events::FreqSweep::end{} },
-            T_RefPair{ Magic::Packets::FrequencySweep::run, Events::FreqSweep::run{} },
-        };
-    public:
-        static T_Variant find_event(const Magic::Packets::Packet_T &packet) {
-            size_t i = 0;
-            const auto footer_index { Magic::Packets::find_footer_start_index(packet) };
-            if(footer_index.has_value()) {
-                const auto packet_footer { Magic::Packets::get_raw_packet_footer(packet, footer_index.value()) };
-                for(const auto &j: ref_jump_info) {
-                    if(j.first.get() == packet_footer) {
-                        std::printf("BLE::Decoder::find_event: found something: i: %zu\n", i);
-                        return j.second;
-                    }
-                    i++;
-                }
-            } else {
-                for(const auto &j: ref_jump_info) {
-                    if(j.first.get() == packet) {
-                        std::printf("BLE::Decoder::find_event: found something: i: %zu\n", i);
-                        return j.second;
-                    }
-                    i++;
-                }
-            }
-            std::printf("BLE::Decoder::find_event: found nothing: i: %zu\n", i);
-            return Events::disconnect{};
-        }
-    };
 
     namespace Server {
         void stop() {//! Call this function to stop BLE 
@@ -293,13 +239,13 @@ namespace BLE {
         ) {
             std::printf("BLE::Server::body_composition_feature_characteristic_access_cb\n");
             int rc;
-            Magic::Packets::Packet_T received_packet { 0x00 };
+            Magic::T_MaxPacket received_packet { 0x00 };
             switch(ctxt->op) {
             case BLE_GATT_ACCESS_OP_WRITE_CHR: //!! In case user accessed this characterstic to write, bellow lines will executed.
                 rc = gatt_svr_chr_write(ctxt->om, 1, 700, &characteristic_received_value, NULL); //!! Function "gatt_svr_chr_write" will fire.
                 std::printf("Received= rc: %d\n", rc);  // Print the received value
                 []() {
-                    for(size_t i = 0; i < Magic::Packets::Debug::start.size(); i++) {
+                    for(size_t i = 0; i < Magic::MTU; i++) {
                         if(i % 8 == 0) {;
                             std::printf("\n");
                         }
@@ -309,20 +255,13 @@ namespace BLE {
                 }();
                 std::memcpy(received_packet.data(), reinterpret_cast<uint8_t*>(characteristic_received_value), received_packet.size()); 
                 std::memset(characteristic_received_value, 0, sizeof(characteristic_received_value));
-                std::visit([&received_packet](auto &&arg) {
-                    using T_Decay = std::decay_t<decltype(arg)>;
-                    if constexpr (std::is_same_v<T_Decay, Events::Debug::program> || std::is_same_v<T_Decay, Events::FreqSweep::configure>) {
-                        std::copy(received_packet.begin(), received_packet.begin() + arg.raw_config.size(), arg.raw_config.begin());
+                Magic::InComingPacket<Magic::Events::Commands::Variant, Magic::Events::Commands::Map> incoming_packet { received_packet };
+                auto event_variant { incoming_packet.to_event_variant() };
+                if(event_variant.has_value()) {
+                    std::visit([](auto &&arg) {
                         dummy_state_machine.process_event(arg);
-                    }  else if constexpr (std::is_same_v<T_Decay, Events::FreqSweep::run>) {
-                        std::thread([](Events::FreqSweep::run &&arg) { dummy_state_machine.process_event(arg); }, arg).detach();
-                    }  else if constexpr (std::is_same_v<T_Decay, Events::Debug::command>) {
-                        arg.mask = received_packet[0];
-                        dummy_state_machine.process_event(arg);
-                    } else {
-                        dummy_state_machine.process_event(arg);
-                    }
-                }, Decoder::find_event(received_packet));
+                    }, incoming_packet.to_event_variant().value());
+                }
                 return rc;
             }
             return BLE_ATT_ERR_UNLIKELY;
@@ -549,7 +488,8 @@ namespace BLE {
     }
 
     namespace Server {
-        bool notify(const Magic::Packets::Packet_T &message) {
+        bool notify(const std::span<uint8_t, std::dynamic_extent>& message) {
+            assert(message.size() <= Magic::MTU);
             struct os_mbuf *txom = ble_hs_mbuf_from_flat(message.data(), message.size());
             if(txom == nullptr) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ");

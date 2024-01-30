@@ -5,11 +5,13 @@
 #include "imgui_internal.h"
 
 #include "gui/windows/client.hpp"
+#include "magic/events/commands.hpp"
+#include "magic/events/results.hpp"
 
 namespace GUI {
     namespace Windows {
         bool dump(Client &client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
-            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write{ client.index, Magic::Packets::Debug::dump_all_registers });
+            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_event{ client.index, Magic::Events::Commands::Debug::Dump{} });
             const auto rx_payload { shm->notify_channels[client.index]->read_for(boost::posix_time::milliseconds(1'000)) };
 
             if(rx_payload.has_value() == false) {
@@ -17,17 +19,32 @@ namespace GUI {
                 return false;
             }
 
-            if(Magic::Packets::check_packet_against_footer(rx_payload.value(), Magic::Packets::Debug::dump_all_registers) == false) {
+            bool is_dump_all_registers = false;
+            std::visit([&is_dump_all_registers, &client](auto&& event_result) {
+                using T_Decay = std::decay_t<decltype(event_result)>;
+                if constexpr(std::is_same_v<T_Decay, Magic::Events::Results::Debug::Dump>) {
+                    is_dump_all_registers = true;
+                    client.debug_captures.update_captures(std::string(event_result.registers_data.begin(), event_result.registers_data.end()));
+                }
+            }, rx_payload.value());
+
+            if(is_dump_all_registers == false) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: Debug: Dump failed: Didn't get the right packet\n");
                 return false;
             }
 
-            client.debug_captures.update_captures(std::string(rx_payload.value().begin(), rx_payload.value().end()));
             return true;
         }
 
         void debug_program(Client &client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
-            shm->send_packet_and_footer(client.index, client.debug_captures.config.to_raw_array(), Magic::Packets::Debug::program_all_registers);
+            shm->cmd.send(
+                BLE_Client::StateMachines::Connection::Events::write_event{
+                    client.index,
+                    Magic::Events::Commands::Debug::Program{
+                        client.debug_captures.config.to_raw_array()
+                    }
+                }
+            );
         }
         
         void program_and_dump(Client &client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
@@ -38,9 +55,14 @@ namespace GUI {
         }
 
         void command_and_dump(Client &client, AD5933::Masks::Or::Ctrl::HB::Command command, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
-            auto buf = Magic::Packets::Debug::control_HB_command;
-            buf[0] = static_cast<uint8_t>(command);
-            shm->send_packet(client.index, buf);
+            shm->cmd.send(
+                BLE_Client::StateMachines::Connection::Events::write_event{
+                    client.index,
+                    Magic::Events::Commands::Debug::CtrlHB{
+                        static_cast<uint8_t>(command)
+                    }
+                }
+            );
             if(dump(client, shm) == false) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: command_and_dump: dump: {} failed\n", static_cast<uint8_t>(command));
             }
@@ -64,7 +86,12 @@ namespace GUI {
             if(client.configured == false) {
                 if(client.debug_started == false) {
                     if(ImGui::Button("Start")) {
-                        shm->send_packet(client.index, Magic::Packets::Debug::start);
+                        shm->cmd.send(
+                            BLE_Client::StateMachines::Connection::Events::write_event{
+                                client.index,
+                                Magic::Events::Commands::Debug::Start{}
+                            }
+                        );
                         client.debug_started = true;
                     }
                 } else {
@@ -77,7 +104,12 @@ namespace GUI {
                     }
                     ImGui::SameLine();
                     if(ImGui::Button("End")) {
-                        shm->send_packet(client.index, Magic::Packets::Debug::end);
+                        shm->cmd.send(
+                            BLE_Client::StateMachines::Connection::Events::write_event{
+                                client.index,
+                                Magic::Events::Commands::Debug::End{}
+                            }
+                        );
                         client.debug_started = false;
                     }
                 }

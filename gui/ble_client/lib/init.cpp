@@ -8,15 +8,15 @@
 #include "ble_client/standalone/init.hpp"
 
 namespace BLE_Client {
-    std::optional<SimpleBLE::Adapter> find_default_active_adapter() {
+    std::optional<SimpleBLE::Adapter> find_default_active_adapter(std::shared_ptr<BLE_Client::SHM::ChildSHM> shm) {
         if(SimpleBLE::Adapter::bluetooth_enabled() == false) {
-            std::printf("WARNING: BLE_Client::find_default_active_adapter:: Bleutooth disabled\n");
+            shm->console.log("WARNING: BLE_Client::find_default_active_adapter:: Bleutooth disabled.\n");
             return std::nullopt;
         }
 
         auto adapters = SimpleBLE::Adapter::get_adapters();
         if(adapters.empty()) {
-            std::printf("WARNING: BLE_Client::find_default_active_adapter:: Could not find any adapter: SimpleBLE::Adapter::get_adapters: returns empty\n");
+            shm->console.log("WARNING: BLE_Client::find_default_active_adapter:: Could not find any adapter: SimpleBLE::Adapter::get_adapters: returns empty.\n");
             return std::nullopt;
         }
 
@@ -25,7 +25,7 @@ namespace BLE_Client {
                 return e;
             }
         }
-        std::printf("WARNING: BLE_Client::find_default_active_adapter:: Could not find an enabled Bluetooth adpater\n");
+        shm->console.log("WARNING: BLE_Client::find_default_active_adapter:: Could not find an enabled Bluetooth adpater.\n");
         return std::nullopt;
     }
 }

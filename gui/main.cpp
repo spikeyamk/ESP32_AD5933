@@ -6,10 +6,12 @@
 #include <boost/process.hpp>
 
 #include "gui/imgui_sdl.hpp"
-#include "magic/packets.hpp"
 
 #include "ble_client/standalone/shm.hpp"
 #include "ble_client/standalone/test.hpp"
+
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 int main(int argc, char* argv[]) {
     const boost::filesystem::path ble_client_path {

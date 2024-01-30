@@ -2,9 +2,9 @@
 
 namespace BLE_Client {
     namespace SHM {
-        CMD_ChannelTX::CMD_ChannelTX(const char* name, boost::interprocess::managed_shared_memory& segment) :
+        CMD_ChannelTX::CMD_ChannelTX(const std::string_view& name, boost::interprocess::managed_shared_memory& segment) :
             RelationBase{ name, segment },
-            DirectionBase{ name, get_init_deque_ptr() }
+            DirectionBase{ name, get_init_ptr() }
         {}
 
         void CMD_ChannelTX::send_killer(const BLE_Client::StateMachines::Killer::Events::T_Variant& event) {
@@ -15,37 +15,58 @@ namespace BLE_Client {
             send( BLE_Client::StateMachines::T_EventsVariant{ event } );
         }
         
-        CMD_ChannelRX::CMD_ChannelRX(const char* name, boost::interprocess::managed_shared_memory& segment) :
+        CMD_ChannelRX::CMD_ChannelRX(const std::string_view& name, boost::interprocess::managed_shared_memory& segment) :
             RelationBase{ name, segment },
-            DirectionBase{ name, get_attach_deque_ptr() }
+            DirectionBase{ name, get_attach_ptr() }
         {}
 
-        NotifyChannelRX::NotifyChannelRX(const char* name, boost::interprocess::managed_shared_memory& segment) :
+        NotifyChannelRX::NotifyChannelRX(const std::string_view& name, boost::interprocess::managed_shared_memory& segment) :
             RelationBase{ name, segment },
-            DirectionBase{ name, get_attach_deque_ptr() }
+            DirectionBase{ name, get_attach_ptr() }
         {}
 
-        NotifyChannelTX::NotifyChannelTX(const char* name, boost::interprocess::managed_shared_memory& segment) :
+        NotifyChannelTX::NotifyChannelTX(const std::string_view& name, boost::interprocess::managed_shared_memory& segment) :
             RelationBase{ name, segment },
-            DirectionBase{ name, get_init_deque_ptr() }
+            DirectionBase{ name, get_init_ptr() }
         {}
 
-        LogChannelRX::LogChannelRX(const char* name, boost::interprocess::managed_shared_memory& segment) :
-            RelationBase{ name, segment },
-            DirectionBase{ name, get_init_deque_ptr() }
+        ConsoleChannelRX_Interface::ConsoleChannelRX_Interface(const std::string_view& name, boost::interprocess::managed_shared_memory& segment) :
+            Base{ name, segment }
         {}
 
-        LogChannelTX::LogChannelTX(const char* name, boost::interprocess::managed_shared_memory& segment) :
-            RelationBase{ name, segment },
-            DirectionBase{ name, get_attach_deque_ptr() }
+        std::optional<std::string> ConsoleChannelRX_Interface::read_for(const boost::posix_time::milliseconds& timeout_ms) {
+            boost::interprocess::scoped_lock lock(this->mutex);
+            if(this->condition.timed_wait(lock, boost::get_system_time() + timeout_ms, [self = this]() {
+                return self->data->size() != 0;
+            }) == false) {
+                return std::nullopt;
+            }
+            const std::string ret { *this->data };
+            this->data->clear();
+            return ret;
+        }
+
+        ConsoleChannelRX::ConsoleChannelRX(const std::string_view& name, boost::interprocess::managed_shared_memory& segment) :
+            DirectionBase{ name, segment },
+            RelationBase{ name, segment }
         {}
+
+        ConsoleChannelTX::ConsoleChannelTX(const std::string_view& name, boost::interprocess::managed_shared_memory& segment) :
+            Base{ name, segment }
+        {}
+
+        void ConsoleChannelTX::log(const std::string& message) {
+            this->data->append(message);
+            this->condition.notify_one();
+            std::cout << message;
+        }
     }
 
     namespace SHM {
         ParentSHM::ParentSHM() :
             segment{boost::interprocess::create_only, Names::shm, size},
             cmd{ Names::cmd_postfix, segment },
-            log{ Names::log_postfix, segment },
+            console{ Names::log_postfix, segment },
             discovery_devices{ segment.construct<DiscoveryDevices>(Names::discovery_devices)(segment.get_segment_manager()) },
             active_state{ [&]() {
                 auto* tmp { segment.construct<BLE_Client::StateMachines::Adapter::States::T_Variant>
@@ -71,16 +92,13 @@ namespace BLE_Client {
             notify_channels.push_back(std::make_shared<NotifyChannelRX>(connect_event.get_address_dots_instead_of_colons().c_str(), segment));
         }
 
-        void ParentSHM::send_packet(const size_t index, const Magic::Packets::Packet_T &packet) {
-            cmd.send(BLE_Client::StateMachines::Connection::Events::write{ index, packet });
-        }
     }
 
     namespace SHM {
         ChildSHM::ChildSHM() :
             segment{ boost::interprocess::managed_shared_memory(boost::interprocess::open_only, Names::shm) },
             cmd{ Names::cmd_postfix, segment },
-            log{ Names::log_postfix, segment },
+            console{ Names::log_postfix, segment },
             discovery_devices{ segment.find<DiscoveryDevices>(Names::discovery_devices).first },
             active_state{ [&]() {
                 auto* tmp = segment.find<BLE_Client::StateMachines::Adapter::States::T_Variant>(Names::adapter_active_state).first;

@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "ble_client/standalone/shm.hpp"
-#include "gui/windows/connecting.hpp"
 #include "gui/windows/client.hpp"
 
 namespace GUI {

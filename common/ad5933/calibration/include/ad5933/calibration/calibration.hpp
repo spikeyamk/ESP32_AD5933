@@ -20,6 +20,11 @@ namespace AD5933 {
             gain_factor {init_gain_factor(raw_data.get_raw_magnitude<T_Floating>(), calibration_impedance)},
             system_phase {raw_data.get_raw_phase<T_Floating>()}
         {}
+
+        constexpr inline Calibration(T_Floating gain_factor, T_Floating system_phase) :
+            gain_factor { gain_factor },
+            system_phase { system_phase }
+        {}
     public:
         constexpr inline T_Floating get_gain_factor() const {
             return gain_factor;

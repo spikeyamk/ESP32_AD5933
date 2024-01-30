@@ -18,7 +18,7 @@ namespace BLE_Client {
                                 adapter_sm.set_current_states(state<BLE_Client::StateMachines::Adapter::States::off>);
                             }
                         } catch(const std::exception& e) {
-                            std::cerr << "ERROR: BLE_Client::checker: exception: " << e.what() << std::endl;
+                            shm->console.log(std::string("ERROR: BLE_Client::checker: exception: ") + e.what() + "\n");
                             adapter_sm.set_current_states(state<BLE_Client::StateMachines::Adapter::States::off>);
                         }
                     }
@@ -27,8 +27,8 @@ namespace BLE_Client {
                         try {
                             *(shm->active_state) = BLE_Client::StateMachines::Adapter::States::stupid_sml.at(visited_state.c_str());
                         } catch(const std::exception& e) {
-                            std::cerr << "ERROR: BLE_Client::checker: exception: " << e.what() << std::endl;
-                            std::cerr << "ERROR: This compiler gives the visited_state a different prefix\n";
+                            shm->console.log(std::string("ERROR: BLE_Client::checker: exception: ") + e.what() + "\n");
+                            shm->console.log("ERROR: This compiler gives the visited_state a different prefix\n");
                             std::exit(-1);
                         }
                     });

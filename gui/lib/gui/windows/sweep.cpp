@@ -1,15 +1,50 @@
 #include <thread>
+#include <fstream>
+#include <iostream>
+#include <algorithm>
+#include <array>
 #include <fmt/core.h>
 #include <fmt/color.h>
+#include <nfd.hpp>
+#include <trielo/trielo.hpp>
 
 #include "gui/spinner.hpp"
+#include "gui/boilerplate.hpp"
+#include "ad5933/uint_types.hpp"
+#include "ad5933/config/config.hpp"
+#include "json/conversion.hpp"
+#include "magic/events/commands.hpp"
+#include "magic/events/results.hpp"
 
 #include "gui/windows/sweep.hpp"
 
 namespace GUI {
     namespace Windows {
+        void save_calibration_to_file(AD5933::Config config, std::vector<AD5933::Calibration<float>> calibration) {
+            nfdchar_t *outPath;
+            const std::array<nfdfilteritem_t, 1> filterItem { { "Calibration", "cal" } };
+            nfdresult_t result = NFD::SaveDialog(outPath, filterItem.data(), filterItem.size());
+            if(result == NFD_OKAY) {
+                std::ofstream(outPath) << std::setw(4) << ns::CalibrationFile(config, calibration).to_json();
+                NFD::FreePath(outPath);
+            } else if(result == NFD_CANCEL) {
+                std::printf("User pressed cancel!\n");
+                return;
+            } else {
+                std::printf("Error: %s\n", NFD::GetError());
+                return;
+            }
+        }
+
         void send_configure(Client &client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
-            shm->send_packet_and_footer(client.index, client.configure_captures.config.to_raw_array(), Magic::Packets::FrequencySweep::configure);
+            shm->cmd.send(
+                BLE_Client::StateMachines::Connection::Events::write_event{
+                    client.index,
+                    Magic::Events::Commands::Sweep::Configure{
+                        client.configure_captures.config.to_raw_array()
+                    }
+                }
+            );
             client.configured = true;
         }
 
@@ -30,8 +65,12 @@ namespace GUI {
 
             client.progress_bar_fraction = 0.0f;
 
-            shm->send_packet(client.index, Magic::Packets::FrequencySweep::run);
-
+            shm->cmd.send(
+                BLE_Client::StateMachines::Connection::Events::write_event{
+                    client.index,
+                    Magic::Events::Commands::Sweep::Run{}
+                }
+            );
             do {
                 const auto rx_payload { shm->notify_channels[client.index]->read_for(boost_timeout_ms) };
                 if(rx_payload.has_value() == false) {
@@ -45,12 +84,29 @@ namespace GUI {
                     return;
                 }
 
-                std::array<uint8_t, 4> raw_array;
-                std::copy(rx_payload.value().begin(), rx_payload.value().begin() + 4, raw_array.begin());
-                AD5933::Data tmp_data { raw_array };
-                tmp_raw_calibration.push_back(tmp_data);
-                AD5933::Calibration<float> tmp_cal { tmp_data, client.configure_captures.calibration_impedance };
-                tmp_calibration.push_back(tmp_cal);
+                bool is_valid_data = false;
+                std::visit([&is_valid_data, &tmp_raw_calibration, &tmp_calibration, &client](auto&& event) {
+                    using T_Decay = std::decay_t<decltype(event)>;
+                    if constexpr(std::is_same_v<T_Decay, Magic::Events::Results::Sweep::ValidData>) {
+                        std::array<uint8_t, 4> raw_array;
+                        std::copy(event.real_imag_registers_data.begin(), event.real_imag_registers_data.end(), raw_array.begin());
+
+                        const AD5933::Data tmp_data { raw_array };
+                        tmp_raw_calibration.push_back(tmp_data);
+
+                        const AD5933::Calibration<float> tmp_cal { tmp_data, client.configure_captures.calibration_impedance };
+                        tmp_calibration.push_back(tmp_cal);
+
+                        is_valid_data = true;
+                    }
+                }, rx_payload.value());
+
+                if(is_valid_data == false) {
+                    client.calibrating = false;
+    		        fmt::print(fmt::fg(fmt::color::yellow), "ERROR: ESP32_AD5933: calibration received wrong event result packet\n");
+                    return;
+                }
+
                 client.progress_bar_fraction += progress_bar_step;
             } while(tmp_calibration.size() != wished_size);
             client.raw_calibration = tmp_raw_calibration;
@@ -80,7 +136,12 @@ namespace GUI {
 
                 client.progress_bar_fraction = 0.0f;
 
-                shm->send_packet(client.index, Magic::Packets::FrequencySweep::run);
+                shm->cmd.send(
+                    BLE_Client::StateMachines::Connection::Events::write_event{
+                        client.index,
+                        Magic::Events::Commands::Sweep::Run{}
+                    }
+                );
                 do {
                     const auto rx_payload { shm->notify_channels[client.index]->read_for(boost_timeout_ms) };
                     if(rx_payload.has_value() == false) {
@@ -94,12 +155,29 @@ namespace GUI {
                         return;
                     }
 
-                    std::array<uint8_t, 4> raw_array;
-                    std::copy(rx_payload.value().begin(), rx_payload.value().begin() + 4, raw_array.begin());
-                    AD5933::Data tmp_data { raw_array };
-                    tmp_raw_measurement.push_back(tmp_data);
-                    AD5933::Measurement<float> tmp_meas { tmp_data, tmp_calibration[tmp_measurement.size()] };
-                    tmp_measurement.push_back(tmp_meas);
+                    bool is_valid_data = false;
+                    std::visit([&is_valid_data, &tmp_raw_measurement, &tmp_measurement, &client, &tmp_calibration](auto&& event) {
+                        using T_Decay = std::decay_t<decltype(event)>;
+                        if constexpr(std::is_same_v<T_Decay, Magic::Events::Results::Sweep::ValidData>) {
+                            std::array<uint8_t, 4> raw_array;
+                            std::copy(event.real_imag_registers_data.begin(), event.real_imag_registers_data.end(), raw_array.begin());
+
+                            const AD5933::Data tmp_data { raw_array };
+                            tmp_raw_measurement.push_back(tmp_data);
+
+                            const AD5933::Measurement<float> tmp_meas { tmp_data, tmp_calibration[tmp_measurement.size()] };
+                            tmp_measurement.push_back(tmp_meas);
+
+                            is_valid_data = true;
+                        }
+                    }, rx_payload.value());
+
+                    if(is_valid_data == false) {
+                        client.calibrating = false;
+                        fmt::print(fmt::fg(fmt::color::yellow), "ERROR: ESP32_AD5933: calibration received wrong event result packet\n");
+                        return;
+                    }
+
                     client.progress_bar_fraction += progress_bar_step;
                 } while(tmp_measurement.size() != wished_size);
                 client.raw_measurement = tmp_raw_measurement;
@@ -108,7 +186,6 @@ namespace GUI {
             } while(client.periodically_sweeping);
             client.sweeping = false;
         }
-
 
         void sweep(int i, ImGuiID side_id, bool &enable, Client &client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
             static char base[] = "Configure";
@@ -216,7 +293,12 @@ namespace GUI {
                 ImGui::SameLine();
                 if(ImGui::Button("Freq Sweep End")) {
                     std::jthread t1([](Client& client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
-                        shm->send_packet(client.index, Magic::Packets::FrequencySweep::end);
+                        shm->cmd.send(
+                            BLE_Client::StateMachines::Connection::Events::write_event{
+                                client.index,
+                                Magic::Events::Commands::Sweep::End{}
+                            }
+                        );
                         client.configured = false;
                     }, std::ref(client), shm);
                     t1.detach();
@@ -244,6 +326,14 @@ namespace GUI {
                             std::jthread t1(run_sweep, client.ss.get_token(), std::ref(client), shm);
                             t1.detach();
                         }
+                        if(ImGui::Button("Save Calibration to File")) {
+                            std::jthread t1(
+                                save_calibration_to_file,
+                                client.configure_captures.config,
+                                client.calibration
+                            );
+                            t1.detach();
+                        }
                     } else if(client.calibrating == false) {
                         Spinner::Spinner("Measuring", 10.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                         ImGui::ProgressBar(client.progress_bar_fraction);
@@ -254,7 +344,5 @@ namespace GUI {
             client.configure_captures.update_config();
             ImGui::End();
         }
-
-   
     }
 }

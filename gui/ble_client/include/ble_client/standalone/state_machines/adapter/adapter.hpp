@@ -21,7 +21,7 @@ namespace BLE_Client {
             }
             
             namespace Guards {
-                bool bluetooth_active(SimpleBLE::Adapter& adapter);
+                bool bluetooth_active(SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm);
                 bool discovery_available(SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm);
             }
 

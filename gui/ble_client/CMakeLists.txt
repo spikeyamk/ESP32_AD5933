@@ -33,8 +33,7 @@ if(NOT TARGET sml)
     add_subdirectory(${BOOST_SML_DIR} ${CMAKE_BINARY_DIR}/sml)
 endif()
 
-add_executable(${CURRENT_PROJECT_NAME}
-    main.cpp
+set(BLE_CLIENT_SRCS
 	lib/init.cpp
 	lib/shm.cpp
 	lib/ostream_overloads.cpp
@@ -50,7 +49,7 @@ add_executable(${CURRENT_PROJECT_NAME}
 	lib/state_machines/connector/connector.cpp
 )
 
-target_link_libraries(${CURRENT_PROJECT_NAME} PRIVATE
+set(BLE_CLIENT_LIBS
     ${Boost_LIBRARIES}
     sml
     simpleble::simpleble
@@ -58,11 +57,42 @@ target_link_libraries(${CURRENT_PROJECT_NAME} PRIVATE
 	magic	
 )
 
-target_include_directories(${CURRENT_PROJECT_NAME} PRIVATE
+set(BLE_CLIENT_INCLUDE_DIRS
 	${CMAKE_CURRENT_LIST_DIR}/include
     ${Boost_INCLUDE_DIRS}
 )
 
+add_executable(${CURRENT_PROJECT_NAME}
+    main.cpp
+	${BLE_CLIENT_SRCS}
+)
+
+target_link_libraries(${CURRENT_PROJECT_NAME} PRIVATE
+	${BLE_CLIENT_LIBS}
+)
+
+target_include_directories(${CURRENT_PROJECT_NAME} PRIVATE
+	${BLE_CLIENT_INCLUDE_DIRS}
+)
+
 if(WIN32)
 	target_compile_definitions(${CURRENT_PROJECT_NAME} PRIVATE _WIN32_WINNT=0x0A00)
+endif()
+
+option(BLE_CLIENT_TEST "Enable BLE_Client Tests" OFF)
+
+if(BLE_CLIENT_TEST)
+	function(add_test_case TEST_NAME TEST_SOURCE)
+		add_executable(${TEST_NAME} ${TEST_SRCS} tests/${TEST_SOURCE})
+		target_link_libraries(${TEST_NAME} PRIVATE ${BLE_CLIENT_LIBS})
+		target_include_directories(${TEST_NAME} PRIVATE ${BLE_CLIENT_INCLUDE_DIRS})
+		add_test(NAME BLE_Client::Tests::${TEST_NAME}
+				COMMAND ${TEST_NAME})
+	endfunction()
+
+	enable_testing()
+	set(TEST_SRCS 
+		${BLE_CLIENT_SRCS}
+	)
+	add_test_case(ble_client_basic_test basic_test.cpp)
 endif()
