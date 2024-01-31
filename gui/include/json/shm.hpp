@@ -17,8 +17,15 @@ namespace ns {
     void to_json(json& j, const Channel& p);
     void from_json(const json& j, Channel& p);
 
+    struct Channels {
+        std::vector<Channel> channels_vector;
+    };
+
+    void to_json(json& j, const Channels& p);
+    void from_json(const json& j, Channels& p);
+
     struct SHM {
-        std::vector<Channel> channels;
+        Channels channels;
     };
 
     void to_json(json& j, const SHM& p);

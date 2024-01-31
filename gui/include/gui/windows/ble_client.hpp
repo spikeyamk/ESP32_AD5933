@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include "ble_client/shm.hpp"
+#include "ble_client/shm/parent/parent.hpp"
 #include "gui/windows/client.hpp"
 
 namespace GUI {

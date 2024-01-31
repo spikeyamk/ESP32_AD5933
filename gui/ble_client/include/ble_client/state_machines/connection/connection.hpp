@@ -9,7 +9,7 @@
 
 #include "ble_client/state_machines/logger.hpp"
 #include "ble_client/state_machines/connection/events.hpp"
-#include "ble_client/shm.hpp"
+#include "ble_client/shm/child/child.hpp"
 #include "ble_client/esp32_ad5933.hpp"
 
 namespace BLE_Client {

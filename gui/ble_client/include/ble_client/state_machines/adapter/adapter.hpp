@@ -10,7 +10,7 @@
 #include "ble_client/state_machines/logger.hpp"
 #include "ble_client/state_machines/adapter/events.hpp"
 #include "ble_client/state_machines/adapter/states.hpp"
-#include "ble_client/shm.hpp"
+#include "ble_client/shm/child/child.hpp"
 
 namespace BLE_Client {
     namespace StateMachines {

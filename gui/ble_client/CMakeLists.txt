@@ -40,12 +40,12 @@ endif()
 
 set(BLE_CLIENT_SRCS
 	lib/init.cpp
-	lib/shm.cpp
 	lib/ostream_overloads.cpp
 	lib/esp32_ad5933.cpp
 	lib/cmd_listener.cpp
 	lib/worker.cpp
-	lib/test.cpp
+	lib/shm/child/specialized.cpp
+	lib/shm/child/child.cpp
 	lib/state_machines/adapter/adapter.cpp
 	lib/state_machines/adapter/states.cpp
 	lib/state_machines/adapter/checker.cpp
@@ -92,7 +92,7 @@ if(BLE_CLIENT_TEST)
 	function(add_test_case TEST_NAME TEST_SOURCE)
 		add_executable(${TEST_NAME} ${TEST_SRCS} tests/${TEST_SOURCE})
 		target_link_libraries(${TEST_NAME} PRIVATE ${BLE_CLIENT_LIBS})
-		target_include_directories(${TEST_NAME} PRIVATE ${BLE_CLIENT_INCLUDE_DIRS})
+		target_include_directories(${TEST_NAME} PRIVATE ${BLE_CLIENT_INCLUDE_DIRS} ${TEST_INCLUDE_DIRS})
 		add_test(NAME BLE_Client::Tests::${TEST_NAME}
 				COMMAND ${TEST_NAME})
 	endfunction()
@@ -100,6 +100,13 @@ if(BLE_CLIENT_TEST)
 	enable_testing()
 	set(TEST_SRCS 
 		${BLE_CLIENT_SRCS}
+		"tests/test.cpp"
+		lib/shm/parent/specialized.cpp
+		lib/shm/parent/cleaner.cpp
+		lib/shm/parent/parent.cpp
+	)
+	set(TEST_INCLUDE_DIRS
+		${CMAKE_CURRENT_LIST_DIR}/tests/include
 	)
 	add_test_case(ble_client_basic_test basic_test.cpp)
 endif()

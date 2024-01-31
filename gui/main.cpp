@@ -8,8 +8,8 @@
 
 #include "gui/imgui_sdl.hpp"
 
-#include "ble_client/shm.hpp"
-#include "ble_client/test.hpp"
+#include "ble_client/shm/parent/parent.hpp"
+#include "ble_client/shm/parent/cleaner.hpp"
 #include "ble_client/worker.hpp"
 
 int main(int argc, char* argv[]) {

@@ -1,5 +1,5 @@
-#include "ble_client/test.hpp"
+#include "ble_client/tests/test.hpp"
 
 int main() {
-    return BLE_Client::basic_test();
+    return BLE_Client::Tests::basic_test();
 }
