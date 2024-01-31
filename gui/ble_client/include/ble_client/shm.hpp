@@ -22,6 +22,7 @@
 #include <boost/interprocess/sync/named_condition.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/thread/thread_time.hpp>
+#include <trielo/trielo.hpp>
 
 #include "ble_client/device.hpp"
 
@@ -143,12 +144,41 @@ namespace BLE_Client {
             }
         private:
             void add_names_to_json() const {
-                const ns::SHM shm_names {
-                    std::vector<ns::Channel> { ns::Channel { mutex_name, condition_name } }
-                };
-                const json shm_names_j = shm_names;
-                std::ofstream output_file { std::string(Names::shm).append(Names::json_postfix) };
-                output_file << std::setw(4) << shm_names_j;
+                const ns::Channel channel { mutex_name, condition_name };
+                try {
+                    std::ifstream input_file { std::string(Names::shm).append(Names::json_postfix) };
+                    if(input_file.is_open()) {
+                        json loaded_shm_json_names;
+                        input_file >> loaded_shm_json_names;
+                        input_file.close();
+                        ns::SHM loaded_shm_names = loaded_shm_json_names;
+                        if(std::find_if(
+                            loaded_shm_names.channels.begin(),
+                            loaded_shm_names.channels.end(),
+                            [&](const auto& e) {
+                                return (e.mutex == mutex_name) && (e.condition) == condition_name;
+                            }
+                        ) == loaded_shm_names.channels.end()) {
+                            loaded_shm_names.channels.push_back(channel);
+                            std::ofstream output_file { std::string(Names::shm).append(Names::json_postfix) };
+                            const json new_shm_json_names = loaded_shm_names;
+                            output_file << std::setw(4) << new_shm_json_names;
+                        }
+                    } else {
+                        const json shm_names_json = ns::SHM{ std::vector<ns::Channel> { channel } };
+                        std::ofstream output_file { std::string(Names::shm).append(Names::json_postfix) };
+                        output_file << std::setw(4) << shm_names_json;
+                    }
+                } catch(const std::exception& e) {
+                    std::cout << "ERROR: BLE_Client::SHM::T_ScopedChannel::add_names_to_json: existing SHM json file corrupted: exception: " << e.what() << std::endl;
+                    try {
+                        const json shm_names_json = ns::SHM{ std::vector<ns::Channel> { channel } };
+                        std::ofstream output_file { std::string(Names::shm).append(Names::json_postfix) };
+                        output_file << std::setw(4) << shm_names_json;
+                    } catch(...) {
+                        std::cout << "ERROR: BLE_Client::SHM::T_ScopedChannel::add_names_to_json: complete disaster exception: " << std::endl;
+                    }
+                }
             }
         };
 
@@ -317,27 +347,27 @@ namespace BLE_Client {
             }
         public:
             inline ~Cleaner() {
+                /* Top SHM segment */
+                Trielo::trielo<boost::interprocess::shared_memory_object::remove>(Trielo::OkErrCode(true), Names::shm);
+
                 /* CMD_ChannelRX cmd */
                 const auto cmd_mutex_name { std::string(CMD_ChannelRX::mutex_prefix).append(Names::cmd_postfix) };
-                boost::interprocess::named_mutex::remove(cmd_mutex_name.c_str());
+                Trielo::trielo<boost::interprocess::named_mutex::remove>(Trielo::OkErrCode(true), cmd_mutex_name.c_str());
                 const auto cmd_condition_name { std::string(CMD_ChannelRX::condition_prefix).append(Names::cmd_postfix) };
-                boost::interprocess::named_condition::remove(cmd_condition_name.c_str());
+                Trielo::trielo<boost::interprocess::named_condition::remove>(Trielo::OkErrCode(true), cmd_condition_name.c_str());
 
                 /* ConsoleChannelTX console */
                 const auto console_mutex_name { std::string(ConsoleChannelTX::mutex_prefix).append(Names::log_postfix) };
-                boost::interprocess::named_mutex::remove(console_mutex_name.c_str());
+                Trielo::trielo<boost::interprocess::named_mutex::remove>(Trielo::OkErrCode(true), console_mutex_name.c_str());
                 const auto console_condition_name { std::string(ConsoleChannelTX::condition_prefix).append(Names::log_postfix) };
-                boost::interprocess::named_condition::remove(console_condition_name.c_str());
-
-                /* Top SHM */
-                boost::interprocess::shared_memory_object::remove(Names::shm);
+                Trielo::trielo<boost::interprocess::named_condition::remove>(Trielo::OkErrCode(true), console_condition_name.c_str());
 
                 /* Additional NotifyChannelsRX */
                 const std::optional<ns::SHM> shm_names { read_json() };
                 if(shm_names.has_value()) {
                     for(const auto& e: shm_names.value().channels) {
-                        boost::interprocess::named_mutex::remove(e.mutex.c_str());
-                        boost::interprocess::named_condition::remove(e.condition.c_str());
+                        Trielo::trielo<boost::interprocess::named_mutex::remove>(Trielo::OkErrCode(true), e.mutex.c_str());
+                        Trielo::trielo<boost::interprocess::named_condition::remove>(Trielo::OkErrCode(true), e.condition.c_str());
                     }
                 }
             }

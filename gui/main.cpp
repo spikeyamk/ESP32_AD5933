@@ -35,13 +35,12 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    const boost::filesystem::path self_path { argv[0] };
-    boost::process::child ble_client { self_path, magic_key.data() };
+    boost::process::child ble_client { argv[0], magic_key.data() };
 
     bool done = false;
     GUI::run(done, ble_client, shm);
 
-    for(size_t i = 0; i < 10'000 && ble_client.running(); i++) {
+    for(size_t i = 0; i < 60'000 && ble_client.running(); i++) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     if(ble_client.running()) {
