@@ -70,16 +70,15 @@ set(BLE_CLIENT_INCLUDE_DIRS
     ${Boost_INCLUDE_DIRS}
 )
 
-add_executable(${CURRENT_PROJECT_NAME}
-    main.cpp
+add_library(${CURRENT_PROJECT_NAME}
 	${BLE_CLIENT_SRCS}
 )
 
-target_link_libraries(${CURRENT_PROJECT_NAME} PRIVATE
+target_link_libraries(${CURRENT_PROJECT_NAME} PUBLIC
 	${BLE_CLIENT_LIBS}
 )
 
-target_include_directories(${CURRENT_PROJECT_NAME} PRIVATE
+target_include_directories(${CURRENT_PROJECT_NAME} PUBLIC
 	${BLE_CLIENT_INCLUDE_DIRS}
 )
 

@@ -115,6 +115,7 @@ target_link_libraries(${CURRENT_PROJECT_NAME} PRIVATE
 	sml
 	nfd
 	nlohmann_json 
+	ble_client
 )
 
 if(WIN32)

@@ -183,18 +183,11 @@ namespace GUI {
 
             Boilerplate::render(renderer, clear_color);
         }
-
         Boilerplate::shutdown(renderer, window);
 
         for(size_t i = 0; i < shm->notify_channels.size(); i++) {
             shm->cmd.send(BLE_Client::StateMachines::Connection::Events::disconnect{i});
-            std::this_thread::sleep_for(std::chrono::milliseconds(10'000));
         }
-
         shm->cmd.send_killer(BLE_Client::StateMachines::Killer::Events::kill{});
-        std::this_thread::sleep_for(std::chrono::milliseconds(10'000));
-        if(ble_client.running()) {
-            ble_client.terminate();
-        }
     }
 }

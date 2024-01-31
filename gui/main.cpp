@@ -2,6 +2,7 @@
 #include <chrono>
 #include <iostream>
 #include <stop_token>
+#include <string_view>
 
 #include <boost/process.hpp>
 
@@ -9,15 +10,14 @@
 
 #include "ble_client/standalone/shm.hpp"
 #include "ble_client/standalone/test.hpp"
+#include "ble_client/standalone/worker.hpp"
 
 int main(int argc, char* argv[]) {
-    const boost::filesystem::path ble_client_path {
-    #ifdef _MSC_VER
-        "C:/Users/janco/source/repos/ESP32_AD5933/gui/build/ble_client/Debug/ble_client.exe"
-    #else
-        "/home/spikeyamk/Documents/git-repos/ESP32_AD5933/gui/build/ble_client/ble_client"
-    #endif
-    };
+    const std::string_view magic_key { "okOvDRmWjEUErr3grKvWKpHw2Z0c8L5p6rjl5KT4HAoRGenjFFdPxegc43vCt8BR9ZdWJIPiaMaTYwhr6TMu4od0gHO3r1f7qTQ8pmaQtEm12SqT3IikKLdAsAI46N9E" };
+    if(argc > 1 && magic_key == argv[1]) {
+        BLE_Client::worker();
+        return 0;
+    }
 
     std::shared_ptr<BLE_Client::SHM::ParentSHM> shm = nullptr;
     try {
@@ -35,10 +35,17 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    boost::process::child ble_client { ble_client_path };
+    const boost::filesystem::path self_path { argv[0] };
+    boost::process::child ble_client { self_path, magic_key.data() };
 
     bool done = false;
     GUI::run(done, ble_client, shm);
 
+    for(size_t i = 0; i < 10'000 && ble_client.running(); i++) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    if(ble_client.running()) {
+        ble_client.terminate();
+    }
     return 0;
 }

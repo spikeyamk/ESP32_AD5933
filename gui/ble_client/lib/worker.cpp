@@ -22,7 +22,6 @@ namespace BLE_Client {
     void worker() {
         std::cout << "BLE_Client: process started" << std::endl;
         std::atexit([]() { std::cout << "BLE_Client: process finished" << std::endl; });
-
         auto child_shm { std::make_shared<BLE_Client::SHM::ChildSHM>() };
         std::stop_source stop_source;
 
