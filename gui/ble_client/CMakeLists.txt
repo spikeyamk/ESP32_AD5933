@@ -43,7 +43,7 @@ set(BLE_CLIENT_SRCS
 	lib/ostream_overloads.cpp
 	lib/esp32_ad5933.cpp
 	lib/cmd_listener.cpp
-	lib/worker.cpp
+	lib/child_main.cpp
 	lib/shm/child/specialized.cpp
 	lib/shm/child/child.cpp
 	lib/state_machines/adapter/adapter.cpp
@@ -52,7 +52,6 @@ set(BLE_CLIENT_SRCS
 	lib/state_machines/killer/killer.cpp
 	lib/state_machines/connection/connection.cpp
 	lib/state_machines/connector/connector.cpp
-	${CMAKE_CURRENT_LIST_DIR}/../lib/json/shm.cpp
 )
 
 set(BLE_CLIENT_LIBS
@@ -101,8 +100,8 @@ if(BLE_CLIENT_TEST)
 	set(TEST_SRCS 
 		${BLE_CLIENT_SRCS}
 		"tests/test.cpp"
+		lib/shm/common/cleaner.cpp
 		lib/shm/parent/specialized.cpp
-		lib/shm/parent/cleaner.cpp
 		lib/shm/parent/parent.cpp
 	)
 	set(TEST_INCLUDE_DIRS

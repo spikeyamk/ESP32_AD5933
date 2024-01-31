@@ -15,13 +15,19 @@
 #include "ble_client/state_machines/connector/connector.hpp"
 #include "ble_client/state_machines/connection/connection.hpp"
 
-#include "ble_client/worker.hpp"
+#include "ble_client/child_main.hpp"
 
 namespace BLE_Client {
-    void worker() {
-        std::cout << "BLE_Client: process started" << std::endl;
-        std::atexit([]() { std::cout << "BLE_Client: process finished" << std::endl; });
-        auto child_shm { std::make_shared<BLE_Client::SHM::ChildSHM>() };
+    int child_main() {
+        std::cout << "BLE_Client: child process started" << std::endl;
+        std::atexit([]() { std::cout << "BLE_Client: child process finished" << std::endl; });
+        std::shared_ptr<BLE_Client::SHM::ChildSHM> child_shm = nullptr;
+        try {
+            child_shm = std::make_shared<BLE_Client::SHM::ChildSHM>();
+        } catch(const std::exception& e) {
+            std::cout << "ERROR: BLE_Client::child_main: could not attach to child SHM: exception: " << e.what() << std::endl;
+            return -1;
+        }
         std::stop_source stop_source;
 
         SimpleBLE::Adapter simpleble_adapter;
@@ -34,5 +40,6 @@ namespace BLE_Client {
         
         std::jthread cmd_listener_thread(BLE_Client::cmd_listener, stop_source, child_shm, std::ref(killer), std::ref(adapter_sm), std::ref(connections), std::ref(simpleble_adapter), std::ref(connector));
         std::jthread checker_thread(BLE_Client::StateMachines::Adapter::checker, stop_source, std::ref(adapter_sm), std::ref(simpleble_adapter), child_shm);
+        return 0;
     }
 }

@@ -1,5 +1,5 @@
 #pragma once
 
 namespace BLE_Client {
-    void worker();
+    int child_main();
 }

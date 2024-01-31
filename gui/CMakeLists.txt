@@ -73,9 +73,9 @@ add_subdirectory(${BLE_CLIENT_DIR})
 
 add_executable(${CURRENT_PROJECT_NAME}
 	main.cpp
+	ble_client/lib/shm/common/cleaner.cpp
 	ble_client/lib/shm/parent/specialized.cpp
 	ble_client/lib/shm/parent/parent.cpp
-	ble_client/lib/shm/parent/cleaner.cpp
 	lib/gui/imgui_sdl.cpp
 	lib/gui/boilerplate.cpp
 	lib/gui/spinner.cpp
@@ -90,7 +90,6 @@ add_executable(${CURRENT_PROJECT_NAME}
 	lib/gui/windows/plots/measurement.cpp
 	lib/gui/windows/plots/calibration.cpp
 	lib/json/conversion.cpp
-	lib/json/shm.cpp
 	${IMGUI_SRCS}
 	${IMPLOT_SRCS}
 )

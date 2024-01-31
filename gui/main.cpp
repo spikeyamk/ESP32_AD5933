@@ -8,15 +8,14 @@
 
 #include "gui/imgui_sdl.hpp"
 
+#include "ble_client/shm/common/cleaner.hpp"
 #include "ble_client/shm/parent/parent.hpp"
-#include "ble_client/shm/parent/cleaner.hpp"
-#include "ble_client/worker.hpp"
+#include "ble_client/child_main.hpp"
 
 int main(int argc, char* argv[]) {
-    const std::string_view magic_key { "okOvDRmWjEUErr3grKvWKpHw2Z0c8L5p6rjl5KT4HAoRGenjFFdPxegc43vCt8BR9ZdWJIPiaMaTYwhr6TMu4od0gHO3r1f7qTQ8pmaQtEm12SqT3IikKLdAsAI46N9E" };
-    if(argc > 1 && magic_key == argv[1]) {
-        BLE_Client::worker();
-        return 0;
+    static constexpr std::string_view magic_key { "okOvDRmWjEUErr3grKvWKpHw2Z0c8L5p6rjl5KT4HAoRGenjFFdPxegc43vCt8BR9ZdWJIPiaMaTYwhr6TMu4od0gHO3r1f7qTQ8pmaQtEm12SqT3IikKLdAsAI46N9E" };
+    if(argc > 1 && argv[1] == magic_key) {
+        return BLE_Client::child_main();
     }
 
     std::shared_ptr<BLE_Client::SHM::ParentSHM> shm = nullptr;

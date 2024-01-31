@@ -17,7 +17,7 @@
 #include "magic/events/commands.hpp"
 #include "ble_client/shm/child/child.hpp"
 #include "ble_client/shm/parent/parent.hpp"
-#include "ble_client/worker.hpp"
+#include "ble_client/child_main.hpp"
 #include "ble_client/cmd_listener.hpp"
 #include "ble_client/state_machines/adapter/adapter.hpp"
 #include "ble_client/state_machines/adapter/checker.hpp"
@@ -52,7 +52,7 @@ namespace BLE_Client {
                 return -1;
             }
 
-            std::jthread child_thread(BLE_Client::worker);
+            std::jthread child_thread(BLE_Client::child_main);
             child_thread.detach();
 
             parent_shm->cmd.send_adapter(BLE_Client::StateMachines::Adapter::Events::turn_on{});

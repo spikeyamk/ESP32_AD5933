@@ -1,7 +1,6 @@
 #pragma once
 
-#include <algorithm>
-#include <cassert>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -30,4 +29,15 @@ namespace ns {
 
     void to_json(json& j, const SHM& p);
     void from_json(const json& j, SHM& p);
+}
+
+namespace BLE_Client {
+    namespace SHM {
+        class Cleaner {
+        private:
+            const std::optional<ns::SHM> read_json() const noexcept;
+        public:
+            ~Cleaner() noexcept;
+        };
+    }
 }
