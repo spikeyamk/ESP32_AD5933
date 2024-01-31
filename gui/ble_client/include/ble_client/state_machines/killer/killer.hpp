@@ -6,8 +6,8 @@
 
 #include <boost/sml.hpp>
 
-#include "ble_client/standalone/state_machines/logger.hpp"
-#include "ble_client/standalone/state_machines/killer/events.hpp"
+#include "ble_client/state_machines/logger.hpp"
+#include "ble_client/state_machines/killer/events.hpp"
 
 namespace BLE_Client {
     namespace StateMachines {

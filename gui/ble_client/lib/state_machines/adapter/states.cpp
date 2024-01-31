@@ -1,4 +1,4 @@
-#include "ble_client/standalone/state_machines/adapter/states.hpp"
+#include "ble_client/state_machines/adapter/states.hpp"
 
 namespace BLE_Client {
     namespace StateMachines {

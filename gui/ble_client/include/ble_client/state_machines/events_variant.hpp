@@ -2,10 +2,10 @@
 
 #include <variant>
 
-#include "ble_client/standalone/state_machines/adapter/events.hpp"
-#include "ble_client/standalone/state_machines/connector/events.hpp"
-#include "ble_client/standalone/state_machines/connection/events.hpp"
-#include "ble_client/standalone/state_machines/killer/events.hpp"
+#include "ble_client/state_machines/adapter/events.hpp"
+#include "ble_client/state_machines/connector/events.hpp"
+#include "ble_client/state_machines/connection/events.hpp"
+#include "ble_client/state_machines/killer/events.hpp"
 
 namespace BLE_Client {
     namespace StateMachines {

@@ -1,4 +1,4 @@
-#include "ble_client/standalone/state_machines/connector/connector.hpp"
+#include "ble_client/state_machines/connector/connector.hpp"
 
 #include <stdexcept>
 #include <thread>

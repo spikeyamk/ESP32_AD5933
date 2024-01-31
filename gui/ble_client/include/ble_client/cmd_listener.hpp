@@ -6,10 +6,10 @@
 
 #include <simpleble/SimpleBLE.h>
 
-#include "ble_client/standalone/state_machines/adapter/adapter.hpp"
-#include "ble_client/standalone/state_machines/killer/killer.hpp"
-#include "ble_client/standalone/state_machines/connector/connector.hpp"
-#include "ble_client/standalone/state_machines/connection/connection.hpp"
+#include "ble_client/state_machines/adapter/adapter.hpp"
+#include "ble_client/state_machines/killer/killer.hpp"
+#include "ble_client/state_machines/connector/connector.hpp"
+#include "ble_client/state_machines/connection/connection.hpp"
 
 namespace BLE_Client {
     void cmd_listener(

@@ -1,4 +1,4 @@
-#include "ble_client/standalone/ostream_overloads.hpp"
+#include "ble_client/ostream_overloads.hpp"
 
 std::ostream& operator<<(std::ostream& os, SimpleBLE::Peripheral& peripheral) {
     os << "SimpleBLE: Peripheral Information:" << std::endl;

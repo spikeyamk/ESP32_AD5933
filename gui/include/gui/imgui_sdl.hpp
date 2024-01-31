@@ -6,7 +6,7 @@
 #include <boost/process.hpp>
 #include "imgui.h"
 
-#include "ble_client/standalone/shm.hpp"
+#include "ble_client/shm.hpp"
 
 namespace GUI {
     struct DockspaceIDs {

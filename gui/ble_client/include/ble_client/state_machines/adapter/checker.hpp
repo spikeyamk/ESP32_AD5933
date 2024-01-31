@@ -10,7 +10,7 @@
 #include <simpleble/SimpleBLE.h>
 #include <boost/sml.hpp>
 
-#include "ble_client/standalone/state_machines/adapter/adapter.hpp"
+#include "ble_client/state_machines/adapter/adapter.hpp"
 
 namespace BLE_Client {
     namespace StateMachines {

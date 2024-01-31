@@ -13,7 +13,7 @@
 #include "ad5933/measurement/measurement.hpp"
 #include "gui/imgui_sdl.hpp"
 #include "gui/windows/captures.hpp"
-#include "ble_client/standalone/shm.hpp"
+#include "ble_client/shm.hpp"
 
 namespace GUI {
     namespace Windows {

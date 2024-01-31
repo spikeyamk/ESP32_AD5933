@@ -7,10 +7,10 @@
 #include <boost/sml.hpp>
 #include <simpleble/SimpleBLE.h>
 
-#include "ble_client/standalone/state_machines/logger.hpp"
-#include "ble_client/standalone/state_machines/adapter/events.hpp"
-#include "ble_client/standalone/state_machines/adapter/states.hpp"
-#include "ble_client/standalone/shm.hpp"
+#include "ble_client/state_machines/logger.hpp"
+#include "ble_client/state_machines/adapter/events.hpp"
+#include "ble_client/state_machines/adapter/states.hpp"
+#include "ble_client/shm.hpp"
 
 namespace BLE_Client {
     namespace StateMachines {

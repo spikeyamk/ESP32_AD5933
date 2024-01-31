@@ -15,15 +15,15 @@
 
 #include "magic/packets/outcoming.hpp"
 #include "magic/events/commands.hpp"
-#include "ble_client/standalone/shm.hpp"
-#include "ble_client/standalone/worker.hpp"
-#include "ble_client/standalone/cmd_listener.hpp"
-#include "ble_client/standalone/state_machines/adapter/adapter.hpp"
-#include "ble_client/standalone/state_machines/adapter/checker.hpp"
-#include "ble_client/standalone/state_machines/killer/killer.hpp"
-#include "ble_client/standalone/state_machines/connector/connector.hpp"
+#include "ble_client/shm.hpp"
+#include "ble_client/worker.hpp"
+#include "ble_client/cmd_listener.hpp"
+#include "ble_client/state_machines/adapter/adapter.hpp"
+#include "ble_client/state_machines/adapter/checker.hpp"
+#include "ble_client/state_machines/killer/killer.hpp"
+#include "ble_client/state_machines/connector/connector.hpp"
 
-#include "ble_client/standalone/test.hpp"
+#include "ble_client/test.hpp"
 
 namespace BLE_Client {
     template<typename T_State>

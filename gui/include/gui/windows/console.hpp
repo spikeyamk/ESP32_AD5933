@@ -9,7 +9,7 @@
 #include "imgui.h"
 #include "misc/cpp/imgui_stdlib.h"
 
-#include <ble_client/standalone/shm.hpp>
+#include "ble_client/shm.hpp"
 
 namespace GUI {
     class Console {

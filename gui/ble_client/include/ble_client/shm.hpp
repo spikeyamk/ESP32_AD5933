@@ -23,10 +23,10 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/thread/thread_time.hpp>
 
-#include "ble_client/standalone/device.hpp"
+#include "ble_client/device.hpp"
 
-#include "ble_client/standalone/state_machines/events_variant.hpp"
-#include "ble_client/standalone/state_machines/adapter/states.hpp"
+#include "ble_client/state_machines/events_variant.hpp"
+#include "ble_client/state_machines/adapter/states.hpp"
 #include "magic/events/common.hpp"
 #include "magic/events/results.hpp"
 #include "json/shm.hpp"

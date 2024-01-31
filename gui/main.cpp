@@ -8,9 +8,9 @@
 
 #include "gui/imgui_sdl.hpp"
 
-#include "ble_client/standalone/shm.hpp"
-#include "ble_client/standalone/test.hpp"
-#include "ble_client/standalone/worker.hpp"
+#include "ble_client/shm.hpp"
+#include "ble_client/test.hpp"
+#include "ble_client/worker.hpp"
 
 int main(int argc, char* argv[]) {
     const std::string_view magic_key { "okOvDRmWjEUErr3grKvWKpHw2Z0c8L5p6rjl5KT4HAoRGenjFFdPxegc43vCt8BR9ZdWJIPiaMaTYwhr6TMu4od0gHO3r1f7qTQ8pmaQtEm12SqT3IikKLdAsAI46N9E" };

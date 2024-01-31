@@ -2,7 +2,7 @@
 
 #include "magic/packets/incoming.hpp"
 #include "magic/events/results.hpp"
-#include "ble_client/standalone/esp32_ad5933.hpp"
+#include "ble_client/esp32_ad5933.hpp"
 
 namespace BLE_Client {
     ESP32_AD5933::ESP32_AD5933(

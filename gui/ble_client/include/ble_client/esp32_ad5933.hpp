@@ -12,7 +12,7 @@
 #include <optional>
 #include <tuple>
 
-#include "ble_client/standalone/shm.hpp"
+#include "ble_client/shm.hpp"
 #include "magic/events/common.hpp"
 
 namespace BLE_Client {

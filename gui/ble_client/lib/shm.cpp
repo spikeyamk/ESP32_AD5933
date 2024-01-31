@@ -1,4 +1,4 @@
-#include "ble_client/standalone/shm.hpp"
+#include "ble_client/shm.hpp"
 
 namespace BLE_Client {
     namespace SHM {

@@ -1,5 +1,5 @@
-#include "ble_client/standalone/state_machines/adapter/adapter.hpp"
-#include "ble_client/standalone/init.hpp"
+#include "ble_client/state_machines/adapter/adapter.hpp"
+#include "ble_client/init.hpp"
 
 namespace BLE_Client {
     namespace StateMachines {

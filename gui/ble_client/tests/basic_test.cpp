@@ -1,4 +1,4 @@
-#include "ble_client/standalone/test.hpp"
+#include "ble_client/test.hpp"
 
 int main() {
     return BLE_Client::basic_test();

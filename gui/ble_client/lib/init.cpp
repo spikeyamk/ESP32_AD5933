@@ -3,9 +3,9 @@
 #include <thread>
 #include <chrono>
 
-#include "ble_client/standalone/ostream_overloads.hpp"
+#include "ble_client/ostream_overloads.hpp"
 
-#include "ble_client/standalone/init.hpp"
+#include "ble_client/init.hpp"
 
 namespace BLE_Client {
     std::optional<SimpleBLE::Adapter> find_default_active_adapter(std::shared_ptr<BLE_Client::SHM::ChildSHM> shm) {

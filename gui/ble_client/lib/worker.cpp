@@ -4,19 +4,19 @@
 #include <trielo/trielo.hpp>
 #include <simpleble/SimpleBLE.h>
 
-#include "ble_client/standalone/test.hpp"
-#include "ble_client/standalone/init.hpp"
-#include "ble_client/standalone/shm.hpp"
-#include "ble_client/standalone/cmd_listener.hpp"
-#include "ble_client/standalone/esp32_ad5933.hpp"
-#include "ble_client/standalone/state_machines/logger.hpp"
-#include "ble_client/standalone/state_machines/killer/killer.hpp"
-#include "ble_client/standalone/state_machines/adapter/adapter.hpp"
-#include "ble_client/standalone/state_machines/adapter/checker.hpp"
-#include "ble_client/standalone/state_machines/connector/connector.hpp"
-#include "ble_client/standalone/state_machines/connection/connection.hpp"
+#include "ble_client/test.hpp"
+#include "ble_client/init.hpp"
+#include "ble_client/shm.hpp"
+#include "ble_client/cmd_listener.hpp"
+#include "ble_client/esp32_ad5933.hpp"
+#include "ble_client/state_machines/logger.hpp"
+#include "ble_client/state_machines/killer/killer.hpp"
+#include "ble_client/state_machines/adapter/adapter.hpp"
+#include "ble_client/state_machines/adapter/checker.hpp"
+#include "ble_client/state_machines/connector/connector.hpp"
+#include "ble_client/state_machines/connection/connection.hpp"
 
-#include "ble_client/standalone/worker.hpp"
+#include "ble_client/worker.hpp"
 
 namespace BLE_Client {
     void worker() {
