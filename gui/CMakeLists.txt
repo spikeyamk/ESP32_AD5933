@@ -66,10 +66,10 @@ add_subdirectory(${AD5933_CONFIG_DIR} ${CMAKE_BINARY_DIR}/AD5933_config)
 add_subdirectory(${AD5933_MEASUREMENT_DIR} ${CMAKE_BINARY_DIR}/AD5933_measurement)
 add_subdirectory(${AD5933_TEMPERATURE_DIR} ${CMAKE_BINARY_DIR}/AD5933_temperature)
 add_subdirectory(${AD5933_DEBUG_DATA_DIR} ${CMAKE_BINARY_DIR}/AD5933_debug_data)
-set(BLE_CLIENT_TEST ON)
-add_subdirectory(${BLE_CLIENT_DIR})
 add_subdirectory(${JSON_DIR})
 add_subdirectory(${NATIVE_FILE_DIALOG_DIR})
+set(BLE_CLIENT_TEST ON)
+add_subdirectory(${BLE_CLIENT_DIR})
 
 add_executable(${CURRENT_PROJECT_NAME}
 	main.cpp
@@ -88,6 +88,7 @@ add_executable(${CURRENT_PROJECT_NAME}
 	lib/gui/windows/plots/measurement.cpp
 	lib/gui/windows/plots/calibration.cpp
 	lib/json/conversion.cpp
+	lib/json/shm.cpp
 	${IMGUI_SRCS}
 	${IMPLOT_SRCS}
 )

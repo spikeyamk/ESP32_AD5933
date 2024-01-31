@@ -1,5 +1,5 @@
 #pragma once
 
 namespace BLE_Client {
-    int test();
+    int basic_test();
 }

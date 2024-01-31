@@ -4,6 +4,7 @@
 #include <vector>
 #include <cstdint>
 #include <iostream>
+#include <fstream>
 #include <stdexcept>
 #include <memory>
 #include <cstdlib>
@@ -28,21 +29,32 @@
 #include "ble_client/standalone/state_machines/adapter/states.hpp"
 #include "magic/events/common.hpp"
 #include "magic/events/results.hpp"
+#include "json/shm.hpp"
 
 namespace BLE_Client {
     namespace SHM {
         using DiscoveryDevicesAllocator = boost::interprocess::allocator<BLE_Client::Discovery::Device, boost::interprocess::managed_shared_memory::segment_manager>;
         using DiscoveryDevices = boost::interprocess::vector<BLE_Client::Discovery::Device, DiscoveryDevicesAllocator>;
 
+        namespace Names {
+            constexpr char shm[] { "BLE_Client.shm" };
+            constexpr char cmd_postfix[] { "cmd" };
+            constexpr char log_postfix[] { "log" };
+            constexpr char discovery_devices[] { "BLE_Client.shm.discovery_devices" };
+            constexpr char adapter_active_state[] = "BLE_Client.SHM.adapter_active_state";
+            constexpr char json_postfix[] { ".json" };
+        }
+
         template<typename T_Container>
         class T_Channel {
+        public:
+            static constexpr std::string_view data_prefix      { "BLE_Client.SHM.T_Channel.data." };
+            static constexpr std::string_view mutex_prefix     { "BLE_Client.SHM.T_Channel.mutex." };
+            static constexpr std::string_view condition_prefix { "BLE_Client.SHM.T_Channel.condition." };
         protected:
             T_Container* data;
             boost::interprocess::named_mutex mutex;
             boost::interprocess::named_condition condition;
-            static constexpr std::string_view data_prefix      { "BLE_Client.SHM.T_Channel.data." };
-            static constexpr std::string_view mutex_prefix     { "BLE_Client.SHM.T_Channel.mutex." };
-            static constexpr std::string_view condition_prefix { "BLE_Client.SHM.T_Channel.condition." };
         public:
             T_Channel(const std::string_view& name, T_Container* data) :
                 data{ data },
@@ -120,13 +132,24 @@ namespace BLE_Client {
                 mutex_name{ std::string(T_Channel<T_Container>::mutex_prefix).append(name) },
                 condition_name{ std::string(T_Channel<T_Container>::condition_prefix).append(name) },
                 segment{ segment }
-            {}
+            {
+                add_names_to_json();
+            }
 
             ~T_ScopedChannel() {
                 segment.destroy<T_Container>(data_name.c_str());
                 boost::interprocess::named_mutex::remove(mutex_name.c_str());
                 boost::interprocess::named_condition::remove(condition_name.c_str());
-            }           
+            }
+        private:
+            void add_names_to_json() const {
+                const ns::SHM shm_names {
+                    std::vector<ns::Channel> { ns::Channel { mutex_name, condition_name } }
+                };
+                const json shm_names_j = shm_names;
+                std::ofstream output_file { std::string(Names::shm).append(Names::json_postfix) };
+                output_file << std::setw(4) << shm_names_j;
+            }
         };
 
         template<typename T_Container>
@@ -248,14 +271,6 @@ namespace BLE_Client {
             void log(const std::string& message);
         };
 
-        namespace Names {
-            constexpr char shm[] { "BLE_Client.shm" };
-            constexpr char cmd_postfix[] { "cmd" };
-            constexpr char log_postfix[] { "log" };
-            constexpr char discovery_devices[] { "BLE_Client.shm.discovery_devices" };
-            constexpr char adapter_active_state[] = "BLE_Client.SHM.adapter_active_state";
-        }
-
         class ParentSHM {
         private:
             static constexpr size_t size = 2 << 20;
@@ -282,6 +297,50 @@ namespace BLE_Client {
             BLE_Client::StateMachines::Adapter::States::T_Variant* active_state;
             ChildSHM();
             void init_notify_channel(const BLE_Client::StateMachines::Connector::Events::connect& connect_event);
+        };
+
+        class Cleaner {
+        private:
+            inline std::optional<ns::SHM> read_json() {
+                std::ifstream read_file { std::string(Names::shm).append(Names::json_postfix) };
+                if(read_file.is_open() == false) {
+                    return std::nullopt;
+                }
+
+                try {
+                    json j;
+                    read_file >> j;
+                    return j;
+                } catch(...) {
+                    return std::nullopt;
+                }
+            }
+        public:
+            inline ~Cleaner() {
+                /* CMD_ChannelRX cmd */
+                const auto cmd_mutex_name { std::string(CMD_ChannelRX::mutex_prefix).append(Names::cmd_postfix) };
+                boost::interprocess::named_mutex::remove(cmd_mutex_name.c_str());
+                const auto cmd_condition_name { std::string(CMD_ChannelRX::condition_prefix).append(Names::cmd_postfix) };
+                boost::interprocess::named_condition::remove(cmd_condition_name.c_str());
+
+                /* ConsoleChannelTX console */
+                const auto console_mutex_name { std::string(ConsoleChannelTX::mutex_prefix).append(Names::log_postfix) };
+                boost::interprocess::named_mutex::remove(console_mutex_name.c_str());
+                const auto console_condition_name { std::string(ConsoleChannelTX::condition_prefix).append(Names::log_postfix) };
+                boost::interprocess::named_condition::remove(console_condition_name.c_str());
+
+                /* Top SHM */
+                boost::interprocess::shared_memory_object::remove(Names::shm);
+
+                /* Additional NotifyChannelsRX */
+                const std::optional<ns::SHM> shm_names { read_json() };
+                if(shm_names.has_value()) {
+                    for(const auto& e: shm_names.value().channels) {
+                        boost::interprocess::named_mutex::remove(e.mutex.c_str());
+                        boost::interprocess::named_condition::remove(e.condition.c_str());
+                    }
+                }
+            }
         };
     }
 }

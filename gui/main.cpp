@@ -10,9 +10,6 @@
 #include "ble_client/standalone/shm.hpp"
 #include "ble_client/standalone/test.hpp"
 
-#include <nlohmann/json.hpp>
-using json = nlohmann::json;
-
 int main(int argc, char* argv[]) {
     const boost::filesystem::path ble_client_path {
     #ifdef _MSC_VER
@@ -21,14 +18,27 @@ int main(int argc, char* argv[]) {
         "/home/spikeyamk/Documents/git-repos/ESP32_AD5933/gui/build/ble_client/ble_client"
     #endif
     };
-    boost::interprocess::shared_memory_object::remove(BLE_Client::SHM::Names::shm);
-    auto shm = std::make_shared<BLE_Client::SHM::ParentSHM>();
-    boost::process::ipstream stdout_stream;
-    boost::process::ipstream stderr_stream;
-    boost::process::child ble_client { ble_client_path, boost::process::std_out > stdout_stream, boost::process::std_err > stderr_stream };
+
+    std::shared_ptr<BLE_Client::SHM::ParentSHM> shm = nullptr;
+    try {
+        shm = std::make_shared<BLE_Client::SHM::ParentSHM>();
+    } catch(const boost::interprocess::interprocess_exception& e) {
+        std::cout << "ERROR: GUI: Failed to open SHM: exception: " << e.what() << std::endl;
+        {
+            BLE_Client::SHM::Cleaner cleaner {};
+        }
+        try {
+            shm = std::make_shared<BLE_Client::SHM::ParentSHM>();
+        } catch(const boost::interprocess::interprocess_exception& e) {
+            std::cout << "ERROR: GUI: Failed to open SHM even after cleaning: exception: " << e.what() << std::endl;
+            return EXIT_FAILURE;
+        }
+    }
+
+    boost::process::child ble_client { ble_client_path };
 
     bool done = false;
-    GUI::run(done, ble_client, shm, stdout_stream, stderr_stream);
+    GUI::run(done, ble_client, shm);
 
     return 0;
 }

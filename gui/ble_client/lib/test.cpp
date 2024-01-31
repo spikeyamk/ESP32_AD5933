@@ -38,7 +38,7 @@ namespace BLE_Client {
         return success;
     }
 
-    int test() {
+    int basic_test() {
         std::shared_ptr<BLE_Client::SHM::ParentSHM> parent_shm = nullptr;
         try {
             parent_shm = std::make_shared<BLE_Client::SHM::ParentSHM>();
@@ -114,7 +114,7 @@ namespace BLE_Client {
             std::visit([&is_dump_all_registers](auto&& event) {
                 using T_Decay = std::decay_t<decltype(event)>;
                 if constexpr (std::is_same_v<T_Decay, Magic::Events::Results::Debug::Dump>) {
-                    std::printf("BLE_Client::test: dump_all_registers:");
+                    std::printf("BLE_Client::basic_test: dump_all_registers:");
                     std::for_each(event.registers_data.begin(), event.registers_data.end(), [index = 0](const auto e) mutable {
                         if(index % 8 == 0) {
                             std::printf("\n    ");

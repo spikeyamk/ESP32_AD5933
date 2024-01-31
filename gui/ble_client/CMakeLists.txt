@@ -33,6 +33,11 @@ if(NOT TARGET sml)
     add_subdirectory(${BOOST_SML_DIR} ${CMAKE_BINARY_DIR}/sml)
 endif()
 
+if(NOT TARGET nlohmann_json)
+	set(JSON_DIR ${CMAKE_CURRENT_LIST_DIR}/../lib/extern/json)
+    add_subdirectory(${JSON_DIR} ${CMAKE_BINARY_DIR}/json)
+endif()
+
 set(BLE_CLIENT_SRCS
 	lib/init.cpp
 	lib/shm.cpp
@@ -47,6 +52,7 @@ set(BLE_CLIENT_SRCS
 	lib/state_machines/killer/killer.cpp
 	lib/state_machines/connection/connection.cpp
 	lib/state_machines/connector/connector.cpp
+	${CMAKE_CURRENT_LIST_DIR}/../lib/json/shm.cpp
 )
 
 set(BLE_CLIENT_LIBS
@@ -54,11 +60,13 @@ set(BLE_CLIENT_LIBS
     sml
     simpleble::simpleble
     trielo
-	magic	
+	magic
+	nlohmann_json
 )
 
 set(BLE_CLIENT_INCLUDE_DIRS
 	${CMAKE_CURRENT_LIST_DIR}/include
+	${CMAKE_CURRENT_LIST_DIR}/../include
     ${Boost_INCLUDE_DIRS}
 )
 

@@ -113,9 +113,7 @@ namespace GUI {
     void run(
         bool &done,
         boost::process::child& ble_client,
-        std::shared_ptr<BLE_Client::SHM::ParentSHM> shm,
-        boost::process::ipstream& stdout_stream,
-        boost::process::ipstream& stderr_stream
+        std::shared_ptr<BLE_Client::SHM::ParentSHM> shm
     ) {
         SDL_Window* window;
         SDL_Renderer* renderer;
@@ -136,7 +134,7 @@ namespace GUI {
         int selected = -1;
 
         Windows::ble_client(menu_bar_enables.ble_client, top_ids.left, selected, shm, client_windows);
-        Console console { menu_bar_enables.console, stdout_stream, stderr_stream };
+        Console console { menu_bar_enables.console };
         std::jthread stdout_reader(
             [](Console& console, boost::process::child& ble_client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
                 while(ble_client.running()) {
