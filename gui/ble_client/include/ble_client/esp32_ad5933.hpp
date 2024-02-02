@@ -41,6 +41,14 @@ namespace BLE_Client {
         template<size_t N>
         void write(const std::array<uint8_t, N>& packet) {
             static_assert(N <= Magic::MTU);
+            std::printf("BLE_Client::ESP32_AD5933::write<%zu>(): packet: ", N);
+            for(size_t i = 0; i < packet.size(); i++) {
+                if(i % 8 == 0) {
+                    std::printf("\n\t");
+                }
+                std::printf("0x%02X, ", static_cast<uint8_t>(packet[i]));
+            }
+            std::printf("\n");
             peripheral.write_request(body_composistion_service.uuid(), body_composition_feature_chacteristic.uuid(), std::string(packet.begin(), packet.end()));
         }
 

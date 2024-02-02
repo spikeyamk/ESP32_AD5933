@@ -1,37 +1,20 @@
-#include <iostream>
-#include <sstream>
 #include <chrono>
 #include <functional>
-#include <tuple>
 #include <memory>
 #include <optional>
 #include <thread>
 #include <algorithm>
-#include <iomanip>
-#include <cmath>
 #include <vector>
-#include <numeric>
-#include <list>
-#include <type_traits>
 
 #include <trielo/trielo.hpp>
-
 #include "imgui_internal.h"
-#include "implot.h"
 
-#include "gui/imgui_sdl.hpp"
 #include "gui/boilerplate.hpp"
-#include "gui/spinner.hpp"
 #include "gui/windows/console.hpp"
-
-#include "ad5933/masks/maps.hpp"
-#include "ad5933/config/config.hpp"
-#include "ad5933/calibration/calibration.hpp"
-#include "ad5933/debug_data/debug_data.hpp"
-#include "gui/windows/captures.hpp"
 #include "gui/windows/client.hpp"
 #include "gui/windows/ble_client.hpp"
-#include "ad5933/measurement/measurement.hpp"
+
+#include "gui/run.hpp"
 
 #if !SDL_VERSION_ATLEAST(2,0,17)
 #error This backend requires SDL 2.0.17+ because of SDL_RenderGeometry() function
@@ -79,7 +62,6 @@ namespace GUI {
                     ImGui::MenuItem("Console", nullptr, &menu_bar_enables.console);
                     ImGui::MenuItem("Calibrate", nullptr, &menu_bar_enables.calibrate);
                     ImGui::MenuItem("Measure", nullptr, &menu_bar_enables.measure);
-                    ImGui::MenuItem("Configure", nullptr, &menu_bar_enables.configure);
                     ImGui::MenuItem("Debug Registers", nullptr, &menu_bar_enables.debug_registers);
                     ImGui::MenuItem("File Manager", nullptr, &menu_bar_enables.file_manager);
                     ImGui::MenuItem("Measurement Plots", nullptr, &menu_bar_enables.measurement_plots);

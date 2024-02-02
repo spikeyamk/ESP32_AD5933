@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <string_view>
 #include <string>
 #include <stdexcept>
@@ -76,7 +77,7 @@ namespace BLE_Client {
                 T_Channel<T_Container>{
                     name,
                     [&]() {
-                        auto tmp_name { std::string(T_Channel<T_Container>::data_prefix).append(name) };
+                        const auto tmp_name { std::string(T_Channel<T_Container>::data_prefix).append(name) };
                         T_Container* ret = segment.find<T_Container>(tmp_name.c_str()).first;
                         if(ret == nullptr) {
                             throw std::invalid_argument(std::string("BLE_Client::SHM::AttachChannel: could not attach to: ").append(tmp_name));

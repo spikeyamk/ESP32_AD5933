@@ -1,13 +1,9 @@
-#include <csignal>
-
 #include <boost/thread/thread_time.hpp>
 #include <trielo/trielo.hpp>
 #include <simpleble/SimpleBLE.h>
 
-#include "ble_client/init.hpp"
 #include "ble_client/shm/child/child.hpp"
 #include "ble_client/cmd_listener.hpp"
-#include "ble_client/esp32_ad5933.hpp"
 #include "ble_client/state_machines/logger.hpp"
 #include "ble_client/state_machines/killer/killer.hpp"
 #include "ble_client/state_machines/adapter/adapter.hpp"

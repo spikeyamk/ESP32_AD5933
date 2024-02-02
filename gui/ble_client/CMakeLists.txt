@@ -4,6 +4,7 @@ project(${CURRENT_PROJECT_NAME} C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	add_compile_options(-Wall -Wextra -Wpedantic)
@@ -90,16 +91,17 @@ option(BLE_CLIENT_TEST "Enable BLE_Client Tests" OFF)
 if(BLE_CLIENT_TEST)
 	function(add_test_case TEST_NAME TEST_SOURCE)
 		add_executable(${TEST_NAME} ${TEST_SRCS} tests/${TEST_SOURCE})
-		target_link_libraries(${TEST_NAME} PRIVATE ${BLE_CLIENT_LIBS})
+		target_link_libraries(${TEST_NAME} PRIVATE ${BLE_CLIENT_LIBS} ${ARGV2})
 		target_include_directories(${TEST_NAME} PRIVATE ${BLE_CLIENT_INCLUDE_DIRS} ${TEST_INCLUDE_DIRS})
 		add_test(NAME BLE_Client::Tests::${TEST_NAME}
 				COMMAND ${TEST_NAME})
 	endfunction()
-
+	
+	list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
 	enable_testing()
 	set(TEST_SRCS 
 		${BLE_CLIENT_SRCS}
-		"tests/test.cpp"
+		"tests/tests.cpp"
 		lib/shm/common/cleaner.cpp
 		lib/shm/parent/specialized.cpp
 		lib/shm/parent/parent.cpp
@@ -107,5 +109,7 @@ if(BLE_CLIENT_TEST)
 	set(TEST_INCLUDE_DIRS
 		${CMAKE_CURRENT_LIST_DIR}/tests/include
 	)
-	add_test_case(ble_client_basic_test basic_test.cpp)
+	set(TEST_LIBS AD5933_config)
+	add_test_case(ble_client_basic basic.cpp ${TEST_LIBS})
+	add_test_case(ble_client_debug_program_debug_dump debug_program_debug_dump.cpp ${TEST_LIBS})
 endif()

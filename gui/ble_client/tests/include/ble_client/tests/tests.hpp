@@ -2,6 +2,7 @@
 
 namespace BLE_Client {
     namespace Tests {
-        int basic_test();
+        int basic();
+        int debug_program_debug_dump();
     }
 }

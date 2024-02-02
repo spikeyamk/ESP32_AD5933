@@ -38,6 +38,14 @@ namespace BLE_Client {
             body_composition_measurement_chacteristic.uuid(),
             [&](SimpleBLE::ByteArray captured_payload) {
                 child_shm->console.log("BLE_Client::SimpleBLE::Peripheral::notify_callback\n");
+                std::printf("BLE_Client::SimpleBLE::Peripheral::notify_callback: captured_payload: ");
+                for(size_t i = 0; i < captured_payload.size(); i++) {
+                    if(i % 8 == 0) { 
+                        std::printf("\n\t");
+                    }
+                    std::printf("0x%02X, ", static_cast<uint8_t>(captured_payload[i]));
+                }
+                std::printf("\n");
                 Magic::T_MaxPacket raw_bytes;
                 std::copy(captured_payload.begin(), captured_payload.end(), raw_bytes.begin());
                 const Magic::InComingPacket<Magic::Events::Results::Variant, Magic::Events::Results::Map> incoming_packet { raw_bytes };

@@ -9,9 +9,17 @@
 #include "gui/windows/plots/calibration.hpp"
 
 #include "gui/windows/client.hpp"
-
 namespace GUI {
     namespace Windows {
+        Client::Client(const std::string name, const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> parent_shm) :
+            name{ name },
+            index{ index },
+            calibrate_window { index, parent_shm },
+            calibration_plots_window { index },
+            measure_window { index, parent_shm },
+            measurement_plots_window { index }
+        {}
+
         void client1(const int i, ImGuiID center_id, Client &client, MenuBarEnables &enables, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
             if(client.enable == false) {
                 return;
@@ -62,33 +70,31 @@ namespace GUI {
                     ImGui::DockBuilderAddNode(dockspace_id, dockspace_flags);
                     ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetWindowSize());
                     ImGuiID right_id = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.2f, nullptr, &dockspace_id);
-                    measurement_plots(right_id, enables.measurement_plots, client);
-                    calibration_plots(i, right_id, enables.calibration_plots, client);
-                    sweep(i, dockspace_id, enables.configure, client, shm);
+                    client.measurement_plots_window.draw(enables.measurement_plots, right_id);
+                    client.calibration_plots_window.draw(enables.calibration_plots, right_id);
                     debug_registers(i, dockspace_id, enables.debug_registers, client, shm);
-                    calibrate(i, dockspace_id, enables.calibrate, client, shm);
-                    measure(i, dockspace_id, enables.measure, client, shm);
+                    client.calibrate_window.draw(enables.calibrate, dockspace_id);
+                    client.measure_window.draw(enables.measure, dockspace_id);
                     file_manager(i, dockspace_id, enables.file_manager, client, shm);
                     first++;
                     ImGui::DockBuilderFinish(dockspace_id);
                 } else {
                     if(enables.measurement_plots) {
-                        measurement_plots(ImGui::GetID(static_cast<void*>(nullptr)), enables.measurement_plots, client);
+                        client.measurement_plots_window.update_vectors(client.measure_window.measurement_vectors.freq_float, client.measure_window.measurement_vectors.raw_measurement, client.measure_window.measurement_vectors.measurement);
+                        client.measurement_plots_window.draw(enables.measurement_plots, ImGui::GetID(static_cast<void*>(nullptr)));
                     }
                     if(enables.calibration_plots) {
-                        calibration_plots(i, ImGui::GetID(static_cast<void*>(nullptr)), enables.calibration_plots, client);
-                    }
-                    if(enables.configure) {
-                        sweep(i, ImGui::GetID(static_cast<void*>(nullptr)), enables.configure, client, shm);
+                        client.calibration_plots_window.update_vectors(client.calibrate_window.config, client.calibrate_window.raw_calibration, client.calibrate_window.calibration);
+                        client.calibration_plots_window.draw(enables.calibration_plots, ImGui::GetID(static_cast<void*>(nullptr)));
                     }
                     if(enables.debug_registers) {
                         debug_registers(i, ImGui::GetID(static_cast<void*>(nullptr)), enables.debug_registers, client, shm);
                     }
                     if(enables.calibrate) {
-                        calibrate(i, ImGui::GetID(static_cast<void*>(nullptr)), enables.calibrate, client, shm);
+                        client.calibrate_window.draw(enables.calibrate, ImGui::GetID(static_cast<void*>(nullptr)));
                     }
                     if(enables.measure) {
-                        measure(i, ImGui::GetID(static_cast<void*>(nullptr)), enables.measure, client, shm);
+                        client.measure_window.draw(enables.measure, ImGui::GetID(static_cast<void*>(nullptr)));
                     }
                     if(enables.file_manager) {
                         file_manager(i, ImGui::GetID(static_cast<void*>(nullptr)), enables.file_manager, client, shm);

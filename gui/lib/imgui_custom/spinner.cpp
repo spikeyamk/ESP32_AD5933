@@ -2,7 +2,7 @@
 
 #include "imgui_internal.h"
 
-#include "gui/spinner.hpp"
+#include "imgui_custom/spinner.hpp"
 
 namespace GUI {
     namespace Spinner {
