@@ -18,7 +18,7 @@ namespace GUI {
         bool ble_client { true };
         bool calibrate { true };
         bool measure { true };
-        bool debug_registers { true };
+        bool debug { true };
         bool file_manager { true };
         bool measurement_plots { true };
         bool calibration_plots { true };

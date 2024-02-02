@@ -1,7 +1,6 @@
 #include "imgui_internal.h"
 
-#include "gui/windows/debug_registers.hpp"
-#include "gui/windows/sweep.hpp"
+#include "gui/windows/debug.hpp"
 #include "gui/windows/calibrate.hpp"
 #include "gui/windows/measure.hpp"
 #include "gui/windows/file_manager.hpp"
@@ -72,7 +71,7 @@ namespace GUI {
                     ImGuiID right_id = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.2f, nullptr, &dockspace_id);
                     client.measurement_plots_window.draw(enables.measurement_plots, right_id);
                     client.calibration_plots_window.draw(enables.calibration_plots, right_id);
-                    debug_registers(i, dockspace_id, enables.debug_registers, client, shm);
+                    debug(i, dockspace_id, enables.debug, client, shm);
                     client.calibrate_window.draw(enables.calibrate, dockspace_id);
                     client.measure_window.draw(enables.measure, dockspace_id);
                     file_manager(i, dockspace_id, enables.file_manager, client, shm);
@@ -87,8 +86,8 @@ namespace GUI {
                         client.calibration_plots_window.update_vectors(client.calibrate_window.config, client.calibrate_window.raw_calibration, client.calibrate_window.calibration);
                         client.calibration_plots_window.draw(enables.calibration_plots, ImGui::GetID(static_cast<void*>(nullptr)));
                     }
-                    if(enables.debug_registers) {
-                        debug_registers(i, ImGui::GetID(static_cast<void*>(nullptr)), enables.debug_registers, client, shm);
+                    if(enables.debug) {
+                        debug(i, ImGui::GetID(static_cast<void*>(nullptr)), enables.debug, client, shm);
                     }
                     if(enables.calibrate) {
                         client.calibrate_window.draw(enables.calibrate, ImGui::GetID(static_cast<void*>(nullptr)));

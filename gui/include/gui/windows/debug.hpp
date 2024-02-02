@@ -8,7 +8,7 @@
 
 namespace GUI {
     namespace Windows {
-        void debug_registers(
+        void debug(
             int i,
             ImGuiID side_id,
             bool &enable,

@@ -91,7 +91,7 @@ set(GUI_SRCS
 	lib/gui/windows/ble_client.cpp
 	lib/gui/windows/file_manager.cpp
 	lib/gui/windows/client.cpp
-	lib/gui/windows/debug_registers.cpp
+	lib/gui/windows/debug.cpp
 	lib/gui/windows/plots/measurement.cpp
 	lib/gui/windows/plots/calibration.cpp
 	lib/json/conversion.cpp

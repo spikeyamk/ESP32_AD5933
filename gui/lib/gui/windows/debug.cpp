@@ -8,6 +8,8 @@
 #include "magic/events/commands.hpp"
 #include "magic/events/results.hpp"
 
+#include "gui/windows/debug.hpp"
+
 namespace GUI {
     namespace Windows {
         bool dump(Client &client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
@@ -70,8 +72,8 @@ namespace GUI {
     }
 
     namespace Windows {
-        void debug_registers(int i, ImGuiID side_id, bool &enable, Client &client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
-            std::string name = "Debug Registers##" + std::to_string(i);
+        void debug(int i, ImGuiID side_id, bool &enable, Client &client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
+            std::string name = "Debug##" + std::to_string(i);
             static int first = 0;
             if(first == i) {
                 ImGui::DockBuilderDockWindow(name.c_str(), side_id);

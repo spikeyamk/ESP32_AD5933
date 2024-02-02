@@ -62,7 +62,7 @@ namespace GUI {
                     ImGui::MenuItem("Console", nullptr, &menu_bar_enables.console);
                     ImGui::MenuItem("Calibrate", nullptr, &menu_bar_enables.calibrate);
                     ImGui::MenuItem("Measure", nullptr, &menu_bar_enables.measure);
-                    ImGui::MenuItem("Debug Registers", nullptr, &menu_bar_enables.debug_registers);
+                    ImGui::MenuItem("Debug", nullptr, &menu_bar_enables.debug);
                     ImGui::MenuItem("File Manager", nullptr, &menu_bar_enables.file_manager);
                     ImGui::MenuItem("Measurement Plots", nullptr, &menu_bar_enables.measurement_plots);
                     ImGui::MenuItem("Calibration Plots", nullptr, &menu_bar_enables.calibration_plots);

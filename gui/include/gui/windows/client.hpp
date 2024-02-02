@@ -28,8 +28,8 @@ namespace GUI {
             std::string name;
             size_t index;
             Windows::Calibrate calibrate_window;
-            Windows::Measure measure_window;
             Windows::Plots::Calibration calibration_plots_window;
+            Windows::Measure measure_window;
             Windows::Plots::Measurement measurement_plots_window;
             Windows::Captures::Measurement configure_captures;
             std::vector<AD5933::Data> raw_calibration;
