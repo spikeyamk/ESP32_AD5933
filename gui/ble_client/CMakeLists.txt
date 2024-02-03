@@ -55,7 +55,7 @@ set(BLE_CLIENT_SRCS
 	lib/state_machines/connector/connector.cpp
 )
 
-set(BLE_CLIENT_LIBS
+set(BLE_CLIENT_LINK_LIBS
     ${Boost_LIBRARIES}
     sml
     simpleble::simpleble
@@ -75,7 +75,7 @@ add_library(${CURRENT_PROJECT_NAME}
 )
 
 target_link_libraries(${CURRENT_PROJECT_NAME} PUBLIC
-	${BLE_CLIENT_LIBS}
+	${BLE_CLIENT_LINK_LIBS}
 )
 
 target_include_directories(${CURRENT_PROJECT_NAME} PUBLIC
@@ -91,8 +91,8 @@ option(BLE_CLIENT_TEST "Enable BLE_Client Tests" OFF)
 if(BLE_CLIENT_TEST)
 	function(add_test_case TEST_NAME TEST_SOURCE)
 		add_executable(${TEST_NAME} ${TEST_SRCS} tests/${TEST_SOURCE})
-		target_link_libraries(${TEST_NAME} PRIVATE ${BLE_CLIENT_LIBS} ${ARGV2})
-		target_include_directories(${TEST_NAME} PRIVATE ${BLE_CLIENT_INCLUDE_DIRS} ${TEST_INCLUDE_DIRS})
+		target_include_directories(${TEST_NAME} PRIVATE ${TEST_INCLUDE_DIRS})
+		target_link_libraries(${TEST_NAME} PRIVATE ${TEST_LINK_LIBS})
 		add_test(NAME BLE_Client::Tests::${TEST_NAME}
 				COMMAND ${TEST_NAME})
 	endfunction()
@@ -100,7 +100,6 @@ if(BLE_CLIENT_TEST)
 	list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
 	enable_testing()
 	set(TEST_SRCS 
-		${BLE_CLIENT_SRCS}
 		"tests/tests.cpp"
 		lib/shm/common/cleaner.cpp
 		lib/shm/parent/specialized.cpp
@@ -108,8 +107,13 @@ if(BLE_CLIENT_TEST)
 	)
 	set(TEST_INCLUDE_DIRS
 		${CMAKE_CURRENT_LIST_DIR}/tests/include
+		${BLE_CLIENT_INCLUDE_DIRS}
 	)
-	set(TEST_LIBS AD5933_config)
-	add_test_case(ble_client_basic basic.cpp ${TEST_LIBS})
-	add_test_case(ble_client_debug_program_debug_dump debug_program_debug_dump.cpp ${TEST_LIBS})
+	set(TEST_LINK_LIBS
+		${BLE_CLIENT_LINK_LIBS}
+		${CURRENT_PROJECT_NAME}
+		AD5933_config
+	)
+	add_test_case(ble_client_basic basic.cpp)
+	add_test_case(ble_client_debug_program_debug_dump debug_program_debug_dump.cpp)
 endif()

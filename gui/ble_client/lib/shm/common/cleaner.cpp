@@ -1,6 +1,7 @@
 #include <string>
 #include <fstream>
 #include <stdexcept>
+#include <functional>
 
 #include <trielo/trielo.hpp>
 
@@ -47,26 +48,57 @@ namespace BLE_Client {
     namespace SHM {
         Cleaner::~Cleaner() noexcept {
             /* Top SHM segment */
-            Trielo::trielo<boost::interprocess::shared_memory_object::remove>(Trielo::OkErrCode(true), Names::shm);
+            #ifdef _MSC_VER
+                /* Stupid Windows */
+                TRIELO_EQ(boost::interprocess::shared_memory_object::remove(Names::shm), true);
+            #elif
+                Trielo::trielo<boost::interprocess::shared_memory_object::remove>(Trielo::OkErrCode(true), Names::shm);
+            #endif
 
             /* CMD_ChannelRX cmd */
-            const auto cmd_mutex_name { std::string(CMD_ChannelTX::mutex_prefix).append(Names::cmd_postfix) };
-            Trielo::trielo<boost::interprocess::named_mutex::remove>(Trielo::OkErrCode(true), cmd_mutex_name.c_str());
-            const auto cmd_condition_name { std::string(CMD_ChannelTX::condition_prefix).append(Names::cmd_postfix) };
-            Trielo::trielo<boost::interprocess::named_condition::remove>(Trielo::OkErrCode(true), cmd_condition_name.c_str());
+            const std::string cmd_mutex_name { std::string(CMD_ChannelTX::mutex_prefix).append(Names::cmd_postfix) };
+            #ifdef _MSC_VER
+                /* Stupid Windows */
+                TRIELO_EQ(boost::interprocess::named_mutex::remove(cmd_mutex_name.c_str()), true);
+            #elif
+                Trielo::trielo<boost::interprocess::named_mutex::remove>(Trielo::OkErrCode(true), cmd_mutex_name.c_str());
+            #endif
+            const std::string cmd_condition_name { std::string(CMD_ChannelTX::condition_prefix).append(Names::cmd_postfix) };
+            #ifdef _MSC_VER
+                /* Stupid Windows */
+                TRIELO_EQ(boost::interprocess::named_condition::remove(cmd_condition_name.c_str()), true);
+            #elif
+                Trielo::trielo<boost::interprocess::named_condition::remove>(Trielo::OkErrCode(true), cmd_condition_name.c_str());
+            #endif
 
             /* ConsoleChannelTX console */
-            const auto console_mutex_name { std::string(ConsoleChannelRX::mutex_prefix).append(Names::log_postfix) };
-            Trielo::trielo<boost::interprocess::named_mutex::remove>(Trielo::OkErrCode(true), console_mutex_name.c_str());
-            const auto console_condition_name { std::string(ConsoleChannelRX::condition_prefix).append(Names::log_postfix) };
-            Trielo::trielo<boost::interprocess::named_condition::remove>(Trielo::OkErrCode(true), console_condition_name.c_str());
+            const std::string console_mutex_name { std::string(ConsoleChannelRX::mutex_prefix).append(Names::log_postfix) };
+            #ifdef _MSC_VER
+                /* Stupid Windows */
+                TRIELO_EQ(boost::interprocess::named_mutex::remove(console_mutex_name.c_str()), true);
+            #elif
+                Trielo::trielo<boost::interprocess::named_mutex::remove>(Trielo::OkErrCode(true), console_mutex_name.c_str());
+            #endif
+            const std::string console_condition_name { std::string(ConsoleChannelRX::condition_prefix).append(Names::log_postfix) };
+            #ifdef _MSC_VER
+                /* Stupid Windows */
+                TRIELO_EQ(boost::interprocess::named_condition::remove(console_condition_name.c_str()), true);
+            #elif
+                Trielo::trielo<boost::interprocess::named_condition::remove>(Trielo::OkErrCode(true), console_condition_name.c_str());
+            #endif
 
             /* Additional NotifyChannelsRX */
             const std::optional<ns::SHM> shm_names { read_json() };
             if(shm_names.has_value()) {
-                for(const auto& e: shm_names.value().channels.channels_vector) {
-                    Trielo::trielo<boost::interprocess::named_mutex::remove>(Trielo::OkErrCode(true), e.mutex.c_str());
-                    Trielo::trielo<boost::interprocess::named_condition::remove>(Trielo::OkErrCode(true), e.condition.c_str());
+                for(const ns::Channel& e: shm_names.value().channels.channels_vector) {
+                    #ifdef _MSC_VER
+                        /* Stupid Windows */
+                        TRIELO_EQ(boost::interprocess::named_mutex::remove(e.mutex.c_str()), true);
+                        TRIELO_EQ(boost::interprocess::named_condition::remove(e.condition.c_str()), true);
+                    #elif
+                        Trielo::trielo<boost::interprocess::named_mutex::remove>(Trielo::OkErrCode(true), e.mutex.c_str());
+                        Trielo::trielo<boost::interprocess::named_condition::remove>(Trielo::OkErrCode(true), e.condition.c_str());
+                    #endif
                 }
             }
         }

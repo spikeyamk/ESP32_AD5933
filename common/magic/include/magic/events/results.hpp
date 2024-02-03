@@ -70,11 +70,7 @@ namespace Magic {
                     using T_RawData = std::array<uint8_t, 17>;
                     inline constexpr T_RawData to_raw_data() const {
                         T_RawData ret { static_cast<uint8_t>(header) };
-<<<<<<< HEAD
                         std::generate(ret.begin() + 1, ret.end(), [index = 0, this]() mutable {
-=======
-                        std::generate(ret.begin() + 1 + 0, ret.end(), [index = 0, this] mutable {
->>>>>>> 041b40060bd2569894c08bdc61f8629046a13ca3
                             return static_cast<uint8_t>((bytes_used >> (8 * index++)) & 0xFF);
                         });
                         std::generate(ret.begin() + 1 + 8, ret.end(), [index = 0, this]() mutable {
@@ -100,11 +96,7 @@ namespace Magic {
                     using T_RawData = std::array<uint8_t, 9>;
                     inline constexpr T_RawData to_raw_data() const {
                         T_RawData ret { static_cast<uint8_t>(header) };
-<<<<<<< HEAD
                         std::generate(ret.begin() + 1, ret.end(), [index = 0, this]() mutable {
-=======
-                        std::generate(ret.begin() + 1 + 0, ret.end(), [index = 0, this] mutable {
->>>>>>> 041b40060bd2569894c08bdc61f8629046a13ca3
                             return static_cast<uint8_t>((num_of_files >> (8 * index++)) & 0xFF);
                         });
                         return ret;

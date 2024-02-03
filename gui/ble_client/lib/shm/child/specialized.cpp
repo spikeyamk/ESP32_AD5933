@@ -17,7 +17,12 @@ namespace BLE_Client {
         {}
 
         void ConsoleChannelTX::log(const std::string& message) {
-            //this->data->append(message);
+            #ifdef _MSC_VER
+                /* Stupid Windows */
+                this->data->append(message.c_str());
+            #elif
+                this->data->append(message);
+            #endif
             this->condition.notify_one();
             std::cout << message;
         }

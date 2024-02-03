@@ -70,6 +70,7 @@ add_subdirectory(${AD5933_DEBUG_DATA_DIR} ${CMAKE_BINARY_DIR}/AD5933_debug_data)
 add_subdirectory(${JSON_DIR})
 set(NFD_PORTAL ON)
 add_subdirectory(${NATIVE_FILE_DIALOG_DIR})
+
 set(BLE_CLIENT_TEST ON)
 list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
 enable_testing()
@@ -151,8 +152,10 @@ target_link_libraries(${SHM_CLEANER} PRIVATE
 	trielo
 	nlohmann_json
 	magic
+    ${Boost_LIBRARIES}
 )
 
 target_include_directories(${SHM_CLEANER} PRIVATE
 	${CMAKE_CURRENT_LIST_DIR}/ble_client/include
+    ${Boost_INCLUDE_DIRS}
 )
