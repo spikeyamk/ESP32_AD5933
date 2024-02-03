@@ -299,12 +299,13 @@ namespace Util {
 	}
 
 	void restart_button() {
-		Trielo::trielo<gpio_set_direction>(Trielo::OkErrCode(ESP_OK), GPIO_NUM_23, GPIO_MODE_INPUT);
-		Trielo::trielo<gpio_set_pull_mode>(Trielo::OkErrCode(ESP_OK), GPIO_NUM_23, GPIO_PULLDOWN_ONLY);
-		Trielo::trielo<gpio_set_intr_type>(Trielo::OkErrCode(ESP_OK), GPIO_NUM_23, GPIO_INTR_POSEDGE);
+		constexpr gpio_num_t button { GPIO_NUM_4 };
+		Trielo::trielo<gpio_set_direction>(Trielo::OkErrCode(ESP_OK), button, GPIO_MODE_INPUT);
+		Trielo::trielo<gpio_set_pull_mode>(Trielo::OkErrCode(ESP_OK), button, GPIO_PULLDOWN_ONLY);
+		Trielo::trielo<gpio_set_intr_type>(Trielo::OkErrCode(ESP_OK), button, GPIO_INTR_POSEDGE);
 		Trielo::trielo<gpio_install_isr_service>(Trielo::OkErrCode(ESP_OK), 0);
-		TRIELO_EQ(ESP_OK, gpio_isr_handler_add(GPIO_NUM_23, blinky_button_isr_handler, nullptr));
-		Trielo::trielo<gpio_intr_enable>(Trielo::OkErrCode(ESP_OK), GPIO_NUM_23);
+		TRIELO_EQ(ESP_OK, gpio_isr_handler_add(button, blinky_button_isr_handler, nullptr));
+		Trielo::trielo<gpio_intr_enable>(Trielo::OkErrCode(ESP_OK), button);
 	}
 }
 

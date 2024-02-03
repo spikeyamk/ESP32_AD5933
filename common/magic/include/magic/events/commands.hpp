@@ -64,7 +64,7 @@ namespace Magic {
                     using T_RawData = std::array<uint8_t, 13>;
                     inline constexpr T_RawData to_raw_data() const {
                         T_RawData ret { static_cast<uint8_t>(header), };
-                        std::copy(registers_data.begin() + 1, registers_data.end(), ret.begin() + 1);
+                        std::copy(registers_data.begin(), registers_data.end(), ret.begin() + 1);
                         return ret;
                     }
                     static inline constexpr Program from_raw_data(const T_RawData& raw_data) {
@@ -105,7 +105,7 @@ namespace Magic {
                     using T_RawData = std::array<uint8_t, 13>;
                     inline constexpr T_RawData to_raw_data() const {
                         T_RawData ret { static_cast<uint8_t>(header), };
-                        std::copy(registers_data.begin() + 1, registers_data.end(), ret.begin() + 1);
+                        std::copy(registers_data.begin(), registers_data.end(), ret.begin() + 1);
                         return ret;
                     }
                     static inline constexpr Configure from_raw_data(const T_RawData& raw_data) {
