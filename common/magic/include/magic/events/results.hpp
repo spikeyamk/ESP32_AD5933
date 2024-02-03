@@ -33,7 +33,7 @@ namespace Magic {
                     using T_RawData = T_MaxPacket;
                     inline constexpr T_RawData to_raw_data() const {
                         T_RawData ret { static_cast<uint8_t>(header), };
-                        std::copy(registers_data.begin() + 1, registers_data.end(), ret.begin() + 1);
+                        std::copy(registers_data.begin(), registers_data.end(), ret.begin() + 1);
                         return ret;
                     }
                     static inline constexpr Dump from_raw_data(const T_RawData& raw_data) {
@@ -51,7 +51,7 @@ namespace Magic {
                     using T_RawData = std::array<uint8_t, 5>;
                     inline constexpr T_RawData to_raw_data() const {
                         T_RawData ret { static_cast<uint8_t>(header), };
-                        std::copy(real_imag_registers_data.begin() + 1, real_imag_registers_data.end(), ret.begin() + 1);
+                        std::copy(real_imag_registers_data.begin(), real_imag_registers_data.end(), ret.begin() + 1);
                         return ret;
                     }
                     static inline constexpr ValidData from_raw_data(const T_RawData& raw_data) {
@@ -70,7 +70,11 @@ namespace Magic {
                     using T_RawData = std::array<uint8_t, 17>;
                     inline constexpr T_RawData to_raw_data() const {
                         T_RawData ret { static_cast<uint8_t>(header) };
+<<<<<<< HEAD
                         std::generate(ret.begin() + 1, ret.end(), [index = 0, this]() mutable {
+=======
+                        std::generate(ret.begin() + 1 + 0, ret.end(), [index = 0, this] mutable {
+>>>>>>> 041b40060bd2569894c08bdc61f8629046a13ca3
                             return static_cast<uint8_t>((bytes_used >> (8 * index++)) & 0xFF);
                         });
                         std::generate(ret.begin() + 1 + 8, ret.end(), [index = 0, this]() mutable {
@@ -96,7 +100,11 @@ namespace Magic {
                     using T_RawData = std::array<uint8_t, 9>;
                     inline constexpr T_RawData to_raw_data() const {
                         T_RawData ret { static_cast<uint8_t>(header) };
+<<<<<<< HEAD
                         std::generate(ret.begin() + 1, ret.end(), [index = 0, this]() mutable {
+=======
+                        std::generate(ret.begin() + 1 + 0, ret.end(), [index = 0, this] mutable {
+>>>>>>> 041b40060bd2569894c08bdc61f8629046a13ca3
                             return static_cast<uint8_t>((num_of_files >> (8 * index++)) & 0xFF);
                         });
                         return ret;

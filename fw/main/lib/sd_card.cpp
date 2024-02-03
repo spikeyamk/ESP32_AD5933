@@ -25,9 +25,9 @@ static const char *TAG = "example";
 // Pin assignments can be set in menuconfig, see "SD SPI Example Configuration" menu.
 // You can also change the pin assignments here by changing the following 4 lines.
 #define CONFIG_EXAMPLE_PIN_MISO 2
-#define CONFIG_EXAMPLE_PIN_MOSI 10
 #define CONFIG_EXAMPLE_PIN_CLK  11
-#define CONFIG_EXAMPLE_PIN_CS   18
+#define CONFIG_EXAMPLE_PIN_MOSI 10
+#define CONFIG_EXAMPLE_PIN_CS   3
 #define CONFIG_EXAMPLE_FORMAT_IF_MOUNT_FAILED
 
 #define PIN_NUM_MISO  CONFIG_EXAMPLE_PIN_MISO
@@ -175,12 +175,14 @@ void spi_sd_card_test(void) {
         return;
     }
 
+    /*
     // Format FATFS
     ret = esp_vfs_fat_sdcard_format(mount_point, card);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to format FATFS (%s)", esp_err_to_name(ret));
         return;
     }
+    */
 
     if (stat(file_foo, &st) == 0) {
         ESP_LOGI(TAG, "file still exists");

@@ -28,6 +28,7 @@
 
 extern "C" void app_main() {
 	TRIELO_VOID(Util::restart_button());
+	spi_sd_card_test();
 	I2C::Bus i2c_bus {};
 	while(i2c_bus.device_add(AD5933::SLAVE_ADDRESS) == false) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
