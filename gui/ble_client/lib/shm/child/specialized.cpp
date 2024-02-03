@@ -17,7 +17,7 @@ namespace BLE_Client {
         {}
 
         void ConsoleChannelTX::log(const std::string& message) {
-            this->data->append(message);
+            //this->data->append(message);
             this->condition.notify_one();
             std::cout << message;
         }

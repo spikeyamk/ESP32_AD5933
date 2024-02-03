@@ -70,10 +70,10 @@ namespace Magic {
                     using T_RawData = std::array<uint8_t, 17>;
                     inline constexpr T_RawData to_raw_data() const {
                         T_RawData ret { static_cast<uint8_t>(header) };
-                        std::generate(ret.begin() + 1, ret.end(), [index = 0, this] mutable {
+                        std::generate(ret.begin() + 1, ret.end(), [index = 0, this]() mutable {
                             return static_cast<uint8_t>((bytes_used >> (8 * index++)) & 0xFF);
                         });
-                        std::generate(ret.begin() + 1 + 8, ret.end(), [index = 0, this] mutable {
+                        std::generate(ret.begin() + 1 + 8, ret.end(), [index = 0, this]() mutable {
                             return static_cast<uint8_t>((bytes_free >> (8 * index++)) & 0xFF);
                         });
                         return ret;
@@ -96,7 +96,7 @@ namespace Magic {
                     using T_RawData = std::array<uint8_t, 9>;
                     inline constexpr T_RawData to_raw_data() const {
                         T_RawData ret { static_cast<uint8_t>(header) };
-                        std::generate(ret.begin() + 1, ret.end(), [index = 0, this] mutable {
+                        std::generate(ret.begin() + 1, ret.end(), [index = 0, this]() mutable {
                             return static_cast<uint8_t>((num_of_files >> (8 * index++)) & 0xFF);
                         });
                         return ret;
@@ -130,7 +130,7 @@ namespace Magic {
                     using T_RawData = std::array<uint8_t, 9>;
                     inline constexpr T_RawData to_raw_data() const {
                         T_RawData ret { static_cast<uint8_t>(header) };
-                        std::generate(ret.begin() + 1, ret.end(), [index = 0, this] mutable {
+                        std::generate(ret.begin() + 1, ret.end(), [index = 0, this]() mutable {
                             return static_cast<uint8_t>((num_of_bytes >> (8 * index++)) & 0xFF);
                         });
                         return ret;
