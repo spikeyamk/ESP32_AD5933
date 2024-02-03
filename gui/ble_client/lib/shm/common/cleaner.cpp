@@ -51,7 +51,7 @@ namespace BLE_Client {
             #ifdef _MSC_VER
                 /* Stupid Windows */
                 TRIELO_EQ(boost::interprocess::shared_memory_object::remove(Names::shm), true);
-            #elif
+            #else
                 Trielo::trielo<boost::interprocess::shared_memory_object::remove>(Trielo::OkErrCode(true), Names::shm);
             #endif
 
@@ -60,14 +60,14 @@ namespace BLE_Client {
             #ifdef _MSC_VER
                 /* Stupid Windows */
                 TRIELO_EQ(boost::interprocess::named_mutex::remove(cmd_mutex_name.c_str()), true);
-            #elif
+            #else
                 Trielo::trielo<boost::interprocess::named_mutex::remove>(Trielo::OkErrCode(true), cmd_mutex_name.c_str());
             #endif
             const std::string cmd_condition_name { std::string(CMD_ChannelTX::condition_prefix).append(Names::cmd_postfix) };
             #ifdef _MSC_VER
                 /* Stupid Windows */
                 TRIELO_EQ(boost::interprocess::named_condition::remove(cmd_condition_name.c_str()), true);
-            #elif
+            #else
                 Trielo::trielo<boost::interprocess::named_condition::remove>(Trielo::OkErrCode(true), cmd_condition_name.c_str());
             #endif
 
@@ -76,14 +76,14 @@ namespace BLE_Client {
             #ifdef _MSC_VER
                 /* Stupid Windows */
                 TRIELO_EQ(boost::interprocess::named_mutex::remove(console_mutex_name.c_str()), true);
-            #elif
+            #else
                 Trielo::trielo<boost::interprocess::named_mutex::remove>(Trielo::OkErrCode(true), console_mutex_name.c_str());
             #endif
             const std::string console_condition_name { std::string(ConsoleChannelRX::condition_prefix).append(Names::log_postfix) };
             #ifdef _MSC_VER
                 /* Stupid Windows */
                 TRIELO_EQ(boost::interprocess::named_condition::remove(console_condition_name.c_str()), true);
-            #elif
+            #else
                 Trielo::trielo<boost::interprocess::named_condition::remove>(Trielo::OkErrCode(true), console_condition_name.c_str());
             #endif
 
@@ -95,7 +95,7 @@ namespace BLE_Client {
                         /* Stupid Windows */
                         TRIELO_EQ(boost::interprocess::named_mutex::remove(e.mutex.c_str()), true);
                         TRIELO_EQ(boost::interprocess::named_condition::remove(e.condition.c_str()), true);
-                    #elif
+                    #else
                         Trielo::trielo<boost::interprocess::named_mutex::remove>(Trielo::OkErrCode(true), e.mutex.c_str());
                         Trielo::trielo<boost::interprocess::named_condition::remove>(Trielo::OkErrCode(true), e.condition.c_str());
                     #endif

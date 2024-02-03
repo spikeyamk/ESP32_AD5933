@@ -20,7 +20,7 @@ namespace BLE_Client {
             #ifdef _MSC_VER
                 /* Stupid Windows */
                 this->data->append(message.c_str());
-            #elif
+            #else
                 this->data->append(message);
             #endif
             this->condition.notify_one();

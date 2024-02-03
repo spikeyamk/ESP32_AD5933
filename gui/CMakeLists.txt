@@ -68,7 +68,6 @@ add_subdirectory(${AD5933_MEASUREMENT_DIR} ${CMAKE_BINARY_DIR}/AD5933_measuremen
 add_subdirectory(${AD5933_TEMPERATURE_DIR} ${CMAKE_BINARY_DIR}/AD5933_temperature)
 add_subdirectory(${AD5933_DEBUG_DATA_DIR} ${CMAKE_BINARY_DIR}/AD5933_debug_data)
 add_subdirectory(${JSON_DIR})
-set(NFD_PORTAL ON)
 add_subdirectory(${NATIVE_FILE_DIALOG_DIR})
 
 set(BLE_CLIENT_TEST ON)
