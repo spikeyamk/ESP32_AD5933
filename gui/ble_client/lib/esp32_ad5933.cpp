@@ -5,34 +5,56 @@
 #include "ble_client/esp32_ad5933.hpp"
 
 namespace BLE_Client {
+    ESP32_AD5933::Service::Service(
+        SimpleBLE::Service& service,
+        SimpleBLE::Characteristic body_composition_measurement,
+        SimpleBLE::Characteristic body_composition_feature,
+        SimpleBLE::Characteristic time_update_control_point,
+        SimpleBLE::Characteristic hid_information
+    ) :
+        Base{ service },
+        body_composition_measurement { body_composition_measurement },
+        body_composition_feature { body_composition_feature },
+        time_update_control_point { time_update_control_point },
+        hid_information { hid_information }
+    {}
+
     ESP32_AD5933::ESP32_AD5933(
         SimpleBLE::Peripheral& peripheral, 
-        SimpleBLE::Service& body_composistion_service,
-        SimpleBLE::Characteristic& body_composition_measurement_characteristic,
-        SimpleBLE::Characteristic& body_composition_feature_characteristic,
-        SimpleBLE::Characteristic& time_update_control_point_characteristic,
-        SimpleBLE::Characteristic& hid_information_characteristic,
+        Service& characteristics,
         std::shared_ptr<BLE_Client::SHM::NotifyChannelTX> body_composition_measurement_channel,
         std::shared_ptr<BLE_Client::SHM::NotifyChannelTX> hid_information_channel,
         std::shared_ptr<BLE_Client::SHM::ChildSHM> child_shm
     ) :
         peripheral{ peripheral },
-        body_composistion_service{ body_composistion_service },
-        characteristics {
-            body_composition_measurement_characteristic,
-            body_composition_feature_characteristic,
-            time_update_control_point_characteristic,
-            hid_information_characteristic
-        },
+        service { characteristics },
         channels{ body_composition_measurement_channel, hid_information_channel },
         child_shm{ child_shm }
     {}
 
-    void ESP32_AD5933::setup_subscriptions_and_update_time() {
+    void ESP32_AD5933::update_time() {
+        Magic::Events::Commands::Time::UpdateTimeval timeval_command;
+        Magic::Events::Commands::Time::UpdateTimezone timezone_command;
+        gettimeofday(&timeval_command.tv, &timezone_command.tz);
+        const auto timeval_command_serialized { timeval_command.to_raw_data() };
+        peripheral.write_command(
+            service.uuid(),
+            service.time_update_control_point.uuid(),
+            std::string(timeval_command_serialized.begin(), timeval_command_serialized.end())
+        );
+        const auto timezone_command_serialized { timezone_command.to_raw_data() };
+        peripheral.write_command(
+            service.uuid(),
+            service.time_update_control_point.uuid(),
+            std::string(timezone_command_serialized.begin(), timezone_command_serialized.end())
+        );
+    }
+
+    void ESP32_AD5933::setup_subscriptions() {
         const std::string tmp_address { get_address_without_semicolons(peripheral) };
         peripheral.indicate(
-            body_composistion_service.uuid(),
-            characteristics.body_composition_measurement.uuid(),
+            service.uuid(),
+            service.body_composition_measurement.uuid(),
             [&](SimpleBLE::ByteArray captured_payload) {
                 child_shm->console.log("BLE_Client::SimpleBLE::Peripheral::body_composition_measurement::indicate_callback\n");
                 Magic::T_MaxPacket raw_bytes;
@@ -46,8 +68,8 @@ namespace BLE_Client {
         );
 
         peripheral.indicate(
-            body_composistion_service.uuid(),
-            characteristics.hid_information.uuid(),
+            service.uuid(),
+            service.hid_information.uuid(),
             [&](SimpleBLE::ByteArray captured_payload) {
                 child_shm->console.log("BLE_Client::SimpleBLE::Peripheral::hid_information::indicate_callback\n");
                 Magic::T_MaxPacket raw_bytes;
@@ -59,33 +81,17 @@ namespace BLE_Client {
                 }
             }
         );
-
-        Magic::Events::Commands::Time::UpdateTimeval timeval_command;
-        Magic::Events::Commands::Time::UpdateTimezone timezone_command;
-        gettimeofday(&timeval_command.tv, &timezone_command.tz);
-        const auto timeval_command_serialized { timeval_command.to_raw_data() };
-        peripheral.write_command(
-            body_composistion_service.uuid(),
-            characteristics.time_update_control_point.uuid(),
-            std::string(timeval_command_serialized.begin(), timeval_command_serialized.end())
-        );
-        const auto timezone_command_serialized { timezone_command.to_raw_data() };
-        peripheral.write_command(
-            body_composistion_service.uuid(),
-            characteristics.time_update_control_point.uuid(),
-            std::string(timezone_command_serialized.begin(), timezone_command_serialized.end())
-        );
     }
 
     void ESP32_AD5933::remove_subscriptions() {
         peripheral.unsubscribe(
-            body_composistion_service.uuid(),
-            characteristics.body_composition_measurement.uuid()
+            service.uuid(),
+            service.body_composition_measurement.uuid()
         );
 
         peripheral.unsubscribe(
-            body_composistion_service.uuid(),
-            characteristics.hid_information.uuid()
+            service.uuid(),
+            service.hid_information.uuid()
         );
     }
 
@@ -97,7 +103,7 @@ namespace BLE_Client {
         peripheral.disconnect();
     }
 
-    std::optional<std::tuple<SimpleBLE::Service, SimpleBLE::Characteristic, SimpleBLE::Characteristic, SimpleBLE::Characteristic, SimpleBLE::Characteristic>> find_services_characteristics(SimpleBLE::Peripheral& peripheral) {
+    std::optional<BLE_Client::ESP32_AD5933::Service> find_services_characteristics(SimpleBLE::Peripheral& peripheral) {
         try {
             static constexpr std::string_view BODY_COMPOSITION_SERVICE_UUID { "0000181b-0000-1000-8000-00805f9b34fb" };
             static constexpr std::string_view BODY_COMPOSITION_FEATURE_UUID { "00002a9b-0000-1000-8000-00805f9b34fb" };
@@ -194,7 +200,13 @@ namespace BLE_Client {
                 return std::nullopt;
             }
 
-            return std::optional{ std::make_tuple(*it_service, *it_body_composition_measurement.value(), *it_body_composition_feature.value(), *it_hid_information.value(), *it_time_update_control_point.value()) };
+            return BLE_Client::ESP32_AD5933::Service {
+                *it_service,
+                *it_body_composition_measurement.value(),
+                *it_body_composition_feature.value(),
+                *it_time_update_control_point.value(),
+                *it_hid_information.value()
+            };
         } catch(const std::exception& e) {
             //shm->console.log(std::string("ERROR: BLE_Client::ESP32_AD5933::find_services_characteristics: exception: ") + e.what() + "\n");
             return std::nullopt;

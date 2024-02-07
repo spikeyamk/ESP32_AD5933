@@ -534,6 +534,7 @@ namespace BLE_Client {
                 }
 
                 if(find_services_characteristics(nimble_peripheral).has_value() == false) {
+                    nimble_peripheral.disconnect();
                     return -10'000;
                 }
 

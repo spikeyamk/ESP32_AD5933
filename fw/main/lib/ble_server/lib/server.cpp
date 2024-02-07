@@ -590,7 +590,7 @@ namespace BLE {
                 std::cout << "BLE::Server::indicate_hid_information: failed to ble_hs_mbuf_from_flat\n";
                 return false;
             }
-            const int ret = ble_gatts_indicate_custom(conn_handle, body_composition_measurement_characteristic_handle, txom);
+            const int ret = ble_gatts_indicate_custom(conn_handle, hid_control_information_characteristic_handle, txom);
             if(ret == 0) {
                 return true;
             } else {
