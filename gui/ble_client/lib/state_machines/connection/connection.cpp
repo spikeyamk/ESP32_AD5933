@@ -1,5 +1,3 @@
-#include "ble_client/standalone/state_machines/connection/connection.hpp"
-
 #include <stdexcept>
 #include <iostream>
 #include <vector>
@@ -10,6 +8,8 @@
 #include <string_view>
 
 #include "magic/packets/outcoming.hpp"
+
+#include "ble_client/state_machines/connection/connection.hpp"
 
 namespace BLE_Client {
     namespace StateMachines {

@@ -4,6 +4,6 @@
 #include "ble_client/standalone/test.hpp"
 
 int main(void) {
-	BLE_Client::worker();
+	BLE_Client::child_main();
 	return 0;
 }

@@ -1,4 +1,4 @@
-#include "ble_client/standalone/state_machines/connector/connector.hpp"
+#include "ble_client/state_machines/connector/connector.hpp"
 
 #include <stdexcept>
 #include <thread>
@@ -25,21 +25,27 @@ namespace BLE_Client {
                         it->connect();
 
                         for(size_t i = 0; it->is_connected() == false && i <= 100; i++) {
-                            std::this_thread::sleep_for(std::chrono::milliseconds(100));
                             if(i == 100) {
                                 throw std::runtime_error("timed out");
                             }
+                            std::this_thread::sleep_for(std::chrono::milliseconds(100));
                         }
                         
-                        auto ret { find_services_characteristics(*it, shm) };
+                        auto ret { find_services_characteristics(*it) };
                         if(ret.has_value() == false) {
                             it->disconnect();
                             throw std::runtime_error("not an ESP32_AD5933");
                         }
 
                         shm->init_device(Events::connect{ it->address() });
+<<<<<<< HEAD
                         auto tmp_esp32_ad5933 { std::make_shared<BLE_Client::ESP32_AD5933>(*it, std::get<0>(ret.value()), std::get<1>(ret.value()), std::get<2>(ret.value()), std::get<3>(ret.value()), std::get<4>(ret.value()), shm->active_devices.back().measurement, shm->active_devices.back().information, shm) };
                         tmp_esp32_ad5933->setup_subscriptions_and_update_time();
+=======
+                        auto tmp_esp32_ad5933 { std::make_shared<BLE_Client::ESP32_AD5933>(*it, ret.value(), shm->active_devices.back().measurement, shm->active_devices.back().information, shm) };
+                        tmp_esp32_ad5933->setup_subscriptions();
+                        tmp_esp32_ad5933->update_time();
+>>>>>>> origin/gui
                         BLE_Client::StateMachines::Logger logger {};
                         connections.push_back(new decltype(BLE_Client::StateMachines::Connection::Dummy<int>::sm){ tmp_esp32_ad5933, logger, shm });
                         return true;

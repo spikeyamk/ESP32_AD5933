@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <functional>
 #include <utility>
+#include <ctime>
 
 #include "nvs_flash.h"
 #include "nimble/nimble_port.h"
@@ -59,7 +60,9 @@ namespace BLE {
         static uint16_t time_update_control_point_characteristic_handle;
         static uint16_t hid_control_information_characteristic_handle;
         static uint16_t conn_handle = 0;
-        uint16_t body_composition_measurement_characteristic_handle = 0;
+        static uint16_t body_composition_measurement_characteristic_handle = 0;
+        static uint16_t time_update_control_point_characteristic_handle;
+        static uint16_t hid_control_information_characteristic_handle;
         std::atomic<bool> heartbeat_running = false;
     }
 
@@ -224,20 +227,33 @@ namespace BLE {
 
         static int gatt_svr_chr_write(struct os_mbuf *om, uint16_t min_len, uint16_t max_len, void *dst, uint16_t *out_copy_len) {
             std::printf("BLE::Server::gatt_svr_chr_write\n");
-            uint16_t om_len;
-            int rc;
-
-            om_len = OS_MBUF_PKTLEN(om);
+            const uint16_t om_len = OS_MBUF_PKTLEN(om);
             if(om_len < min_len || om_len > max_len) {
                 return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
             }
 
+<<<<<<< HEAD
             rc = ble_hs_mbuf_to_flat(om, dst, max_len, out_copy_len);
+=======
+            const int rc = ble_hs_mbuf_to_flat(om, dst, max_len, out_copy_len);
+>>>>>>> origin/gui
             if (rc != 0) {
                 return BLE_ATT_ERR_UNLIKELY;
             }
 
             return 0;
+        }
+        
+        void print_received_packet(const Magic::T_MaxPacket& packet) {
+            std::printf("BLE::Server::print_received_packet:");
+            std::for_each(packet.begin(), packet.end(), [index = 0](const auto& e) mutable {
+                if(index % 8 == 0) {;
+                    std::printf("\n\t");
+                }
+                std::printf("0x%02X, ", e);
+                index++;
+            });
+            std::printf("\n");
         }
 
         void print_received_packet(const Magic::T_MaxPacket& packet) {
@@ -274,6 +290,54 @@ namespace BLE {
                 return rc;
             }
             return BLE_ATT_ERR_UNLIKELY;
+        }
+
+        int time_update_control_point_characteristic_access_cb(
+            uint16_t conn_handle,
+            uint16_t attr_handle,
+            struct ble_gatt_access_ctxt *ctxt,
+            void *arg
+        ) {
+            std::printf("BLE::Server::time_update_control_point_characteristic_access_cb\n");
+            switch(ctxt->op) {
+            case BLE_GATT_ACCESS_OP_WRITE_CHR: //!! In case user accessed this characterstic to write, bellow lines will executed.
+                Magic::T_MaxPacket tmp_characteristic_received_value { 0 };
+                const int rc = gatt_svr_chr_write(ctxt->om, 1, tmp_characteristic_received_value.size(), tmp_characteristic_received_value.data(), NULL); //!! Function "gatt_svr_chr_write" will fire.
+                print_received_packet(tmp_characteristic_received_value);
+                Magic::InComingPacket<Magic::Events::Commands::Variant, Magic::Events::Commands::Map> incoming_packet { tmp_characteristic_received_value };
+                auto event_variant { incoming_packet.to_event_variant() };
+                if(event_variant.has_value()) {
+                    std::visit([](auto &&arg) {
+                        using T_Decay = std::decay_t<decltype(arg)>;
+                        static constexpr auto print_current_time = []() {
+                            const time_t current_time = std::chrono::high_resolution_clock::to_time_t(std::chrono::high_resolution_clock::now());
+                            std::cout << "BLE_Server::time_update_control_point_characteristic_access_cb: Current time is: " << std::ctime(&current_time) << std::endl;
+                        };
+                        if constexpr (std::is_same_v<T_Decay, Magic::Events::Commands::Time::UpdateTimeval>) {
+                            settimeofday(&arg.tv, nullptr);
+                            std::printf("BLE_Server::time_update_control_point_characteristic_access_cb: Updated timeval\n");
+                            print_current_time();
+                        } else if constexpr (std::is_same_v<T_Decay, Magic::Events::Commands::Time::UpdateTimezone>) {
+                            settimeofday(nullptr, &arg.tz);
+                            std::printf("BLE_Server::time_update_control_point_characteristic_access_cb: Updated timezone\n");
+                            print_current_time();
+                        }
+                    }, incoming_packet.to_event_variant().value());
+                }
+                return rc;
+            }
+            return BLE_ATT_ERR_UNLIKELY;
+        }
+
+        int hid_control_information_characteristic_access_cb(
+            uint16_t conn_handle,
+            uint16_t attr_handle,
+            struct ble_gatt_access_ctxt *ctxt,
+            void *arg
+        ) {
+            std::printf("BLE::Server::hid_control_information_characteristic_access_cb\n");
+            /* Is supposed to be empty because no write or read access only notify and indicate */
+            return 0;
         }
 
         void advertise() {
@@ -591,7 +655,11 @@ namespace BLE {
                 std::cout << "BLE::Server::indicate_hid_information: failed to ble_hs_mbuf_from_flat\n";
                 return false;
             }
+<<<<<<< HEAD
             const int ret = ble_gatts_indicate_custom(conn_handle, body_composition_measurement_characteristic_handle, txom);
+=======
+            const int ret = ble_gatts_indicate_custom(conn_handle, hid_control_information_characteristic_handle, txom);
+>>>>>>> origin/gui
             if(ret == 0) {
                 return true;
             } else {

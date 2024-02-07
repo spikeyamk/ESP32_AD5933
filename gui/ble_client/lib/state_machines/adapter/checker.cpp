@@ -1,4 +1,4 @@
-#include "ble_client/standalone/state_machines/adapter/checker.hpp"
+#include "ble_client/state_machines/adapter/checker.hpp"
 
 namespace BLE_Client {
     namespace StateMachines {

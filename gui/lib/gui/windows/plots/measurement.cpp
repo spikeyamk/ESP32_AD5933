@@ -1,151 +1,142 @@
-#include "imgui_internal.h"
-#include "implot.h"
+#include <algorithm>
 
 #include "gui/windows/plots/measurement.hpp"
 
+#include "imgui_internal.h"
+#include "implot.h"
+
 namespace GUI {
-   namespace Windows {
-        void freq_sweep_raw_data_plots(
-            std::vector<float> &frequency_vector,
-            std::vector<AD5933::Data> &raw_measurement_data
-        ) {
-            if(ImPlot::BeginPlot("Measurement Raw Real Data")) {
-                ImPlot::SetupAxes("f [Hz]", "REAL_DATA");
-                std::vector<float> real_data_vector(raw_measurement_data.size());
-                std::transform(raw_measurement_data.begin(), raw_measurement_data.end(), real_data_vector.begin(), [](AD5933::Data &e) { return static_cast<float>(e.get_real_data()); });
-                ImPlot::PlotLine("REAL_DATA [1/Ohm]", frequency_vector.data(), real_data_vector.data(), frequency_vector.size());
-                ImPlot::EndPlot();
-            }
-            if(ImPlot::BeginPlot("Measurement Raw Imag Data")) {
-                ImPlot::SetupAxes("f [Hz]", "IMAG_DATA");
-                std::vector<float> imag_data_vector(raw_measurement_data.size());
-                std::transform(raw_measurement_data.begin(), raw_measurement_data.end(), imag_data_vector.begin(), [](AD5933::Data &e) { return static_cast<float>(e.get_imag_data()); });
-                ImPlot::PlotLine("IMAG_DATA [1/Ohm]", frequency_vector.data(), imag_data_vector.data(), frequency_vector.size());
-                ImPlot::EndPlot();
-            }
-        }
-
-        void freq_sweep_calculated_data_plots(
-            std::vector<float> &frequency_vector,
-            std::vector<AD5933::Data> &raw_measurement_data
-        ) {
-            if(ImPlot::BeginPlot("Measurement Calculated Magnitude")) {
-                ImPlot::SetupAxes("f [Hz]", "RAW_MAGNITUDE");
-                std::vector<float> raw_magnitude_vector(raw_measurement_data.size());
-                std::transform(raw_measurement_data.begin(), raw_measurement_data.end(), raw_magnitude_vector.begin(), [](AD5933::Data &e) { return e.get_raw_magnitude<float>(); });
-                ImPlot::PlotLine("RAW_MAGNITUDE [1/Ohm]", frequency_vector.data(), raw_magnitude_vector.data(), frequency_vector.size());
-                ImPlot::EndPlot();
-            }
-            if(ImPlot::BeginPlot("Measurement Calculated Phase")) {
-                ImPlot::SetupAxes("f [Hz]", "RAW_PHASE");
-                std::vector<float> raw_phase_vector(raw_measurement_data.size());
-                std::transform(raw_measurement_data.begin(), raw_measurement_data.end(), raw_phase_vector.begin(), [](AD5933::Data &e) { return e.get_raw_phase<float>(); });
-                ImPlot::PlotLine("RAW_PHASE [rad]", frequency_vector.data(), raw_phase_vector.data(), frequency_vector.size());
-                ImPlot::EndPlot();
-            }
-        }
-
-        void freq_sweep_corrected_data_plots(
-            std::vector<float> &frequency_vector,
-            std::vector<AD5933::Measurement<float>> &measurement_data
-        ) {
-            if(ImPlot::BeginPlot("Measurement Corrected Data")) {
-                ImPlot::SetupAxes("f [Hz]", "CORRECTED_IMPEDANCE");
-                std::vector<float> corrected_impedance_vector(measurement_data.size());
-                std::transform(measurement_data.begin(), measurement_data.end(), corrected_impedance_vector.begin(), [](AD5933::Measurement<float> &e) {
-                    return e.get_magnitude();
-                });
-                ImPlot::PlotLine("CORRECTED_IMPEDANCE [Ohm]", frequency_vector.data(), corrected_impedance_vector.data(), frequency_vector.size());
-                ImPlot::EndPlot();
-            }
-            if(ImPlot::BeginPlot("Measurement Calculated Phase")) {
-                ImPlot::SetupAxes("f [Hz]", "CORRECTED_PHASE");
-                std::vector<float> corrected_phase_vector(measurement_data.size());
-                std::transform(measurement_data.begin(), measurement_data.end(), corrected_phase_vector.begin(), [](AD5933::Measurement<float> &e) {
-                    return e.get_phase();
-                });
-                ImPlot::PlotLine("CORRECTED_PHASE [rad]", frequency_vector.data(), corrected_phase_vector.data(), frequency_vector.size());
-                ImPlot::EndPlot();
-            }
-        }
-
-        void freq_sweep_impedance_data_plots(
-            std::vector<float> &frequency_vector,
-            std::vector<AD5933::Measurement<float>> &measurement_data
-        ) {
-            if(ImPlot::BeginPlot("Measurement Resistance Data")) {
-                ImPlot::SetupAxes("f [Hz]", "RESISTANCE");
-                std::vector<float> resistance_vector(measurement_data.size());
-                std::transform(measurement_data.begin(), measurement_data.end(), resistance_vector.begin(), [](AD5933::Measurement<float> &e) {
-                    return e.get_resistance();
-                });
-                ImPlot::PlotLine("RESISTANCE [Ohm]", frequency_vector.data(), resistance_vector.data(), frequency_vector.size());
-                ImPlot::EndPlot();
-            }
-            if(ImPlot::BeginPlot("Measurement Reactance Data")) {
-                ImPlot::SetupAxes("f [Hz]", "REACTANCE");
-                std::vector<float> reactance_vector(measurement_data.size());
-                std::transform(measurement_data.begin(), measurement_data.end(), reactance_vector.begin(), [](AD5933::Measurement<float> &e) {
-                    return e.get_reactance();
-                });
-                ImPlot::PlotLine("REACTANCE [Ohm]", frequency_vector.data(), reactance_vector.data(), frequency_vector.size());
-                ImPlot::EndPlot();
-            }
-        }
-    }
-
     namespace Windows {
-        void measurement_plots(ImGuiID side_id, bool &enable, Client& client) {
-            std::string name = "Measurement Plots##" + std::to_string(client.index);
-            static size_t first = 0;
-            if(first == client.index) {
-                ImGui::DockBuilderDockWindow(name.c_str(), side_id);
+        namespace Plots {
+            Measurement::Measurement(size_t index) :
+                index { index }
+            {
+                name.append(std::to_string(index));
             }
 
-            ImPlot::CreateContext();
-            if(ImGui::Begin(name.c_str(), &enable) == false) {
+            void Measurement::draw(bool& enable, const ImGuiID side_id) {
+                if(first) {
+                    ImGui::DockBuilderDockWindow(name.c_str(), side_id);
+                    ImPlot::CreateContext();
+                }
+
+                if(ImGui::Begin(name.c_str(), &enable) == false) {
+                    ImGui::End();
+                    return;
+                }
+
+                if(first) {
+                    ImGui::End();
+                    first = false;
+                    return;
+                }
+
+                if(ImGui::BeginTabBar("MEASUREMENT_PLOTS")) {
+                    if(ImGui::BeginTabItem("RAW_DATA")) {
+                        draw_raw_data();
+                        ImGui::EndTabItem();
+                    }
+                    if(ImGui::BeginTabItem("CALCULATED_DATA")) {
+                        draw_calculated_data();
+                        ImGui::EndTabItem();
+                    }
+                    if(ImGui::BeginTabItem("CORRECTED_GON_DATA")) {
+                        draw_corrected_gon_data();
+                        ImGui::EndTabItem();
+                    }
+                    if(ImGui::BeginTabItem("CORRECTED_ALG_DATA")) {
+                        draw_corrected_alg_data();
+                        ImGui::EndTabItem();
+                    }
+                    ImGui::EndTabBar();
+                }
+
                 ImGui::End();
-                return;
             }
 
-            if(first == client.index) {
-                ImGui::End();
-                first++;
-                return;
+            void Measurement::update_vectors(
+                const std::vector<float>& freq,
+                const std::vector<AD5933::Data>& raw_measurement,
+                const std::vector<AD5933::Measurement<float>>& measurement
+            ) {
+                vectors.freq = freq;
+
+                vectors.raw.real_data.resize(raw_measurement.size());
+                std::transform(raw_measurement.begin(), raw_measurement.end(), vectors.raw.real_data.begin(), [](const AD5933::Data &e) { return static_cast<float>(e.get_real_data()); });
+
+                vectors.raw.imag_data.resize(raw_measurement.size());
+                std::transform(raw_measurement.begin(), raw_measurement.end(), vectors.raw.imag_data.begin(), [](const AD5933::Data &e) { return e.get_raw_magnitude<float>(); });
+
+                vectors.raw.magnitude.resize(raw_measurement.size());
+                std::transform(raw_measurement.begin(), raw_measurement.end(), vectors.raw.magnitude.begin(), [](const AD5933::Data &e) { return e.get_raw_magnitude<float>(); });
+
+                vectors.raw.phase.resize(raw_measurement.size());
+                std::transform(raw_measurement.begin(), raw_measurement.end(), vectors.raw.phase.begin(), [](const AD5933::Data &e) { return e.get_raw_phase<float>(); });
+
+                vectors.corrected.impedance.resize(measurement.size());
+                std::transform(measurement.begin(), measurement.end(), vectors.corrected.impedance.begin(), [](const AD5933::Measurement<float> &e) { return e.get_magnitude(); });               
+
+                vectors.corrected.phase.resize(measurement.size());
+                std::transform(measurement.begin(), measurement.end(), vectors.corrected.phase.begin(), [](const AD5933::Measurement<float> &e) { return e.get_phase(); });
+
+                vectors.corrected.resistance.resize(measurement.size());
+                std::transform(measurement.begin(), measurement.end(), vectors.corrected.resistance.begin(), [](const AD5933::Measurement<float> &e) { return e.get_resistance(); });
+
+                vectors.corrected.reactance.resize(measurement.size());
+                std::transform(measurement.begin(), measurement.end(), vectors.corrected.reactance.begin(), [](const AD5933::Measurement<float> &e) { return e.get_reactance(); });
             }
 
-            const auto start_freq = client.configure_captures.config.get_start_freq();
-            const auto inc_freq = client.configure_captures.config.get_inc_freq();
-            std::vector<float> frequency_vector(client.measurement.size());
-            std::generate(
-                frequency_vector.begin(),
-                frequency_vector.end(),
-                [start_freq, inc_freq, n = 0.0] () mutable {
-                    return static_cast<float>(start_freq.unwrap() + ((n++) * inc_freq.unwrap()));
+            void Measurement::draw_raw_data() {
+                if(ImPlot::BeginPlot("Measurement Raw Real Data")) {
+                    ImPlot::SetupAxes("f [Hz]", "REAL_DATA");
+                    ImPlot::PlotLine("REAL_DATA [1/Ohm]", vectors.freq.data(), vectors.raw.real_data.data(), std::min(vectors.freq.size(), vectors.raw.real_data.size()));
+                    ImPlot::EndPlot();
                 }
-            );
-
-            if(ImGui::BeginTabBar("FREQ_SWEEP_BAR")) {
-                if (ImGui::BeginTabItem("RAW_DATA")) {
-                    freq_sweep_raw_data_plots(frequency_vector, client.raw_measurement);
-                    ImGui::EndTabItem();
+                if(ImPlot::BeginPlot("Measurement Raw Imag Data")) {
+                    ImPlot::SetupAxes("f [Hz]", "IMAG_DATA");
+                    ImPlot::PlotLine("IMAG_DATA [1/Ohm]", vectors.freq.data(), vectors.raw.imag_data.data(), std::min(vectors.freq.size(), vectors.raw.imag_data.size()));
+                    ImPlot::EndPlot();
                 }
-                if (ImGui::BeginTabItem("CALCULATED_DATA")) {
-                    freq_sweep_calculated_data_plots(frequency_vector, client.raw_measurement);
-                    ImGui::EndTabItem();
-                }
-                if (ImGui::BeginTabItem("CORRECTED_DATA")) {
-                    freq_sweep_corrected_data_plots(frequency_vector, client.measurement);
-                    ImGui::EndTabItem();
-                }
-                if (ImGui::BeginTabItem("IMPEDANCE_DATA")) {
-                    freq_sweep_impedance_data_plots(frequency_vector, client.measurement);
-                    ImGui::EndTabItem();
-                }
-                ImGui::EndTabBar();
             }
 
-            ImGui::End();
+            void Measurement::draw_calculated_data() {
+                if(ImPlot::BeginPlot("Measurement Calculated Magnitude")) {
+                    ImPlot::SetupAxes("f [Hz]", "RAW_MAGNITUDE");
+                    ImPlot::PlotLine("RAW_MAGNITUDE [1/Ohm]", vectors.freq.data(), vectors.raw.magnitude.data(), std::min(vectors.freq.size(), vectors.raw.magnitude.size()));
+                    ImPlot::EndPlot();
+                }
+                if(ImPlot::BeginPlot("Measurement Calculated Phase")) {
+                    ImPlot::SetupAxes("f [Hz]", "RAW_PHASE");
+                    ImPlot::PlotLine("RAW_PHASE [rad]", vectors.freq.data(), vectors.raw.phase.data(), std::min(vectors.freq.size(), vectors.raw.phase.size()));
+                    ImPlot::EndPlot();
+                }
+            }
+
+            void Measurement::draw_corrected_gon_data() {
+                if(ImPlot::BeginPlot("Measurement Corrected Data")) {
+                    ImPlot::SetupAxes("f [Hz]", "CORRECTED_IMPEDANCE");
+                    ImPlot::PlotLine("CORRECTED_IMPEDANCE [Ohm]", vectors.freq.data(), vectors.corrected.impedance.data(), std::min(vectors.freq.size(), vectors.corrected.impedance.size()));
+                    ImPlot::EndPlot();
+                }
+                if(ImPlot::BeginPlot("Measurement Calculated Phase")) {
+                    ImPlot::SetupAxes("f [Hz]", "CORRECTED_PHASE");
+                    ImPlot::PlotLine("CORRECTED_PHASE [rad]", vectors.freq.data(), vectors.corrected.phase.data(), std::min(vectors.freq.size(), vectors.corrected.phase.size()));
+                    ImPlot::EndPlot();
+                }
+            }
+
+            void Measurement::draw_corrected_alg_data() {
+                if(ImPlot::BeginPlot("Measurement Resistance Data")) {
+                    ImPlot::SetupAxes("f [Hz]", "RESISTANCE");
+                    ImPlot::PlotLine("RESISTANCE [Ohm]", vectors.freq.data(), vectors.corrected.resistance.data(), std::min(vectors.freq.size(), vectors.corrected.resistance.size()));
+                    ImPlot::EndPlot();
+                }
+                if(ImPlot::BeginPlot("Measurement Reactance Data")) {
+                    ImPlot::SetupAxes("f [Hz]", "REACTANCE");
+                    ImPlot::PlotLine("REACTANCE [Ohm]", vectors.freq.data(), vectors.corrected.reactance.data(), std::min(vectors.freq.size(), vectors.corrected.reactance.size()));
+                    ImPlot::EndPlot();
+                }
+            }
         }
     }
 }

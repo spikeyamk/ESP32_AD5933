@@ -1,4 +1,4 @@
-#include "ble_client/standalone/state_machines/killer/killer.hpp"
+#include "ble_client/state_machines/killer/killer.hpp"
 
 namespace BLE_Client {
     namespace StateMachines {

@@ -1,4 +1,4 @@
-#include "ble_client/standalone/cmd_listener.hpp"
+#include "ble_client/cmd_listener.hpp"
 
 namespace BLE_Client {
     void cmd_listener(

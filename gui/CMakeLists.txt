@@ -4,6 +4,7 @@ project(${CURRENT_PROJECT_NAME} C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	add_compile_options(-Wall -Wextra -Wpedantic)
@@ -66,25 +67,31 @@ add_subdirectory(${AD5933_CONFIG_DIR} ${CMAKE_BINARY_DIR}/AD5933_config)
 add_subdirectory(${AD5933_MEASUREMENT_DIR} ${CMAKE_BINARY_DIR}/AD5933_measurement)
 add_subdirectory(${AD5933_TEMPERATURE_DIR} ${CMAKE_BINARY_DIR}/AD5933_temperature)
 add_subdirectory(${AD5933_DEBUG_DATA_DIR} ${CMAKE_BINARY_DIR}/AD5933_debug_data)
-set(BLE_CLIENT_TEST ON)
-add_subdirectory(${BLE_CLIENT_DIR})
 add_subdirectory(${JSON_DIR})
 add_subdirectory(${NATIVE_FILE_DIALOG_DIR})
 
-add_executable(${CURRENT_PROJECT_NAME}
+set(BLE_CLIENT_TEST ON)
+list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
+enable_testing()
+add_subdirectory(${BLE_CLIENT_DIR})
+
+set(GUI_SRCS
 	main.cpp
-	ble_client/lib/shm.cpp
-	lib/gui/imgui_sdl.cpp
+	ble_client/lib/shm/common/cleaner.cpp
+	ble_client/lib/shm/parent/specialized.cpp
+	ble_client/lib/shm/parent/parent.cpp
+	lib/gui/run.cpp
 	lib/gui/boilerplate.cpp
-	lib/gui/spinner.cpp
+	lib/imgui_custom/spinner.cpp
+	lib/imgui_custom/input_items.cpp
+	lib/imgui_custom/char_filters.cpp
 	lib/gui/windows/console.cpp
 	lib/gui/windows/calibrate.cpp
 	lib/gui/windows/measure.cpp
 	lib/gui/windows/ble_client.cpp
 	lib/gui/windows/file_manager.cpp
 	lib/gui/windows/client.cpp
-	lib/gui/windows/debug_registers.cpp
-	lib/gui/windows/sweep.cpp
+	lib/gui/windows/debug.cpp
 	lib/gui/windows/plots/measurement.cpp
 	lib/gui/windows/plots/calibration.cpp
 	lib/json/conversion.cpp
@@ -92,7 +99,7 @@ add_executable(${CURRENT_PROJECT_NAME}
 	${IMPLOT_SRCS}
 )
 
-target_include_directories(${CURRENT_PROJECT_NAME} PRIVATE
+set(GUI_INCLUDE_DIRS
 	${CMAKE_CURRENT_LIST_DIR}/include
 	${CMAKE_CURRENT_LIST_DIR}/ble_client/include
 	${IMGUI_DIR}
@@ -100,7 +107,7 @@ target_include_directories(${CURRENT_PROJECT_NAME} PRIVATE
     ${Boost_INCLUDE_DIRS}
 )
 
-target_link_libraries(${CURRENT_PROJECT_NAME} PRIVATE
+set(GUI_LINK_LIBRARIES
 	trielo
 	simpleble::simpleble
 	magic
@@ -114,9 +121,40 @@ target_link_libraries(${CURRENT_PROJECT_NAME} PRIVATE
 	sml
 	nfd
 	nlohmann_json 
+	ble_client
+)
+
+add_executable(${CURRENT_PROJECT_NAME}
+	${GUI_SRCS}
+)
+
+target_include_directories(${CURRENT_PROJECT_NAME} PRIVATE
+	${GUI_INCLUDE_DIRS}
+)
+
+target_link_libraries(${CURRENT_PROJECT_NAME} PRIVATE
+	${GUI_LINK_LIBRARIES}
 )
 
 if(WIN32)
 	target_compile_definitions(${CURRENT_PROJECT_NAME} PRIVATE _WIN32_WINNT=0x0A00)
 endif()
 
+set(SHM_CLEANER shm_cleaner)
+
+add_executable(${SHM_CLEANER}
+	misc/shm_cleaner.cpp
+	ble_client/lib/shm/common/cleaner.cpp
+)
+
+target_link_libraries(${SHM_CLEANER} PRIVATE
+	trielo
+	nlohmann_json
+	magic
+    ${Boost_LIBRARIES}
+)
+
+target_include_directories(${SHM_CLEANER} PRIVATE
+	${CMAKE_CURRENT_LIST_DIR}/ble_client/include
+    ${Boost_INCLUDE_DIRS}
+)

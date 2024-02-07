@@ -9,7 +9,7 @@
 #include "imgui.h"
 #include "misc/cpp/imgui_stdlib.h"
 
-#include <ble_client/standalone/shm.hpp>
+#include "ble_client/shm/parent/parent.hpp"
 
 namespace GUI {
     class Console {
@@ -18,11 +18,9 @@ namespace GUI {
         std::string text;
         bool auto_scroll = true;
         bool& enable;
-        boost::process::ipstream& stdout_stream;
-        boost::process::ipstream& stderr_stream;
         std::mutex mutex;
     public:
-        Console(bool& enable, boost::process::ipstream& stdout_stream, boost::process::ipstream& stderr_stream);
+        Console(bool& enable);
         void log(const std::string& text);
         void draw();
     private:

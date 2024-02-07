@@ -5,7 +5,7 @@
 #include "imgui.h"
 
 #include "gui/windows/client.hpp"
-#include "ble_client/standalone/shm.hpp"
+#include "ble_client/shm/parent/parent.hpp"
 
 namespace GUI {
     namespace Windows {

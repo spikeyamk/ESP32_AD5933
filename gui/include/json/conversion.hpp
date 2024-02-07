@@ -1,6 +1,8 @@
 #pragma once
 
 #include <utility>
+#include <cstdint>
+#include <vector>
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
@@ -8,15 +10,6 @@ using json = nlohmann::json;
 #include "ad5933/calibration/calibration.hpp"
 
 namespace ns {
-    struct Calibration {
-        float freq;
-        float gain_factor;
-        float sys_phase;
-    };
-
-    void to_json(json& j, const Calibration& p);
-    void from_json(const json& j, Calibration& p);
-
     struct Config {
         AD5933::Masks::Or::Ctrl::HB::Command command;
         AD5933::Masks::Or::Ctrl::HB::VoltageRange range;
@@ -27,20 +20,40 @@ namespace ns {
         uint16_t num_of_inc;
         uint16_t set_cycles_num;
         AD5933::Masks::Or::SettlingTimeCyclesHB::Multiplier set_cycles_mult;
+        Config() = default;
+        Config(const AD5933::Config& config);
     };
 
-    void to_json(json& j, const Config& p);
-    void from_json(const json& j, Config& p);
+    struct Point {
+        float gain_factor;
+        float sys_phase;
+        Point() = default;
+        Point(const AD5933::Calibration<float>& ad5933_calibration);
+    };
+
+    struct Calibration {
+        float impedance;
+        Config config;
+        std::vector<Point> points;
+        Calibration() = default;
+        Calibration(const float impedance, const AD5933::Config& config, const std::vector<AD5933::Calibration<float>>& calibration_vector);
+    };
 
     struct CalibrationFile {
-        Config config;
-        std::vector<Calibration> calibration;
+        Calibration calibration;
         CalibrationFile() = default;
-        CalibrationFile(const AD5933::Config& in_config, const std::vector<AD5933::Calibration<float>>& in_calibration);
-        std::pair<AD5933::Config, std::vector<AD5933::Calibration<float>>> to_data() const;
-        json to_json() const;
+        CalibrationFile(const float impedance, const AD5933::Config& config, const std::vector<AD5933::Calibration<float>>& calibration_vector);
+        std::pair<AD5933::Config, std::vector<AD5933::Calibration<float>>> unwrap() const;
     };
+}
 
+namespace ns {
+    void to_json(json& j, const Config& p);
+    void from_json(const json& j, Config& p);
+    void to_json(json& j, const Point& p);
+    void from_json(const json& j, Point& p);
+    void to_json(json& j, const Calibration& p);
+    void from_json(const json& j, Calibration& p);
     void to_json(json& j, const CalibrationFile& p);
     void from_json(const json& j, CalibrationFile& p);
 }

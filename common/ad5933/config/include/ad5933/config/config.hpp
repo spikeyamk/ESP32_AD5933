@@ -3,6 +3,10 @@
 #include <cstdint>
 #include <array>
 #include <cmath>
+#include <vector>
+#include <algorithm>
+#include <type_traits>
+#include <concepts>
 
 #include "ad5933/register_types.hpp"
 #include "ad5933/uint_types.hpp"
@@ -39,20 +43,19 @@ namespace AD5933 {
 		Register24_t inc_freq;
 		Register16_t num_of_inc;
 		Register16_t settling_time_cycles;
-		Config() = delete;
 
 		inline constexpr Config(
-			const Masks::Or::Ctrl::HB::Command command,
-			const Masks::Or::Ctrl::HB::VoltageRange range,
-			const Masks::Or::Ctrl::HB::PGA_Gain pga_gain,
-			const Masks::Or::Ctrl::LB::SysClkSrc sysclk_src,
+			const Masks::Or::Ctrl::HB::Command command = Masks::Or::Ctrl::HB::Command::PowerDownMode,
+			const Masks::Or::Ctrl::HB::VoltageRange range = Masks::Or::Ctrl::HB::VoltageRange::Two_Vppk,
+			const Masks::Or::Ctrl::HB::PGA_Gain pga_gain = Masks::Or::Ctrl::HB::PGA_Gain::OneTime,
+			const Masks::Or::Ctrl::LB::SysClkSrc sysclk_src = Masks::Or::Ctrl::LB::SysClkSrc::Internal,
 
-			const uint_startfreq_t start_freq,
-			const uint_incfreq_t inc_freq,
-			const uint9_t num_of_inc,
+			const uint_startfreq_t start_freq = uint_startfreq_t { 30'000 },
+			const uint_incfreq_t inc_freq = uint_incfreq_t { 10 },
+			const uint9_t num_of_inc = uint9_t { 2 },
 
-			const uint9_t settling_time_cycles_number,
-			const Masks::Or::SettlingTimeCyclesHB::Multiplier settling_time_cycles_multiplier
+			const uint9_t settling_time_cycles_number = uint9_t { 15 },
+			const Masks::Or::SettlingTimeCyclesHB::Multiplier settling_time_cycles_multiplier = Masks::Or::SettlingTimeCyclesHB::Multiplier::OneTime
 		) :
 			ctrl{get_ctrl(command, range, pga_gain, sysclk_src)},
 			start_freq{ get_freq_register(start_freq) },
@@ -290,5 +293,31 @@ namespace AD5933 {
 		}
 	public:
 		void print() const;	
+	public:
+		constexpr size_t get_freq_container_size() const {
+			return get_num_of_inc().unwrap() + 1;
+		}
+
+		template<typename T>
+		constexpr std::vector<T> get_freq_vector() const {
+			std::vector<T> ret;
+			ret.resize(get_freq_container_size());
+            std::generate(
+				ret.begin(),
+				ret.end(),
+				[
+					start_freq = get_start_freq(),
+					inc_freq = get_inc_freq(),
+					n = static_cast<T>(0.0f)
+				] () mutable {
+					return static_cast<float>(start_freq.unwrap() + ((n++) * inc_freq.unwrap()));
+				}
+			);
+			return ret;
+		}
+
+		constexpr uint32_t get_freq_end() const {
+            return get_start_freq().unwrap() + (get_num_of_inc().unwrap() * get_inc_freq().unwrap());
+		}
 	};
 }

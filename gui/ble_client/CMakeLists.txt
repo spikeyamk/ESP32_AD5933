@@ -4,6 +4,7 @@ project(${CURRENT_PROJECT_NAME} C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	add_compile_options(-Wall -Wextra -Wpedantic)
@@ -33,14 +34,19 @@ if(NOT TARGET sml)
     add_subdirectory(${BOOST_SML_DIR} ${CMAKE_BINARY_DIR}/sml)
 endif()
 
+if(NOT TARGET nlohmann_json)
+	set(JSON_DIR ${CMAKE_CURRENT_LIST_DIR}/../lib/extern/json)
+    add_subdirectory(${JSON_DIR} ${CMAKE_BINARY_DIR}/json)
+endif()
+
 set(BLE_CLIENT_SRCS
 	lib/init.cpp
-	lib/shm.cpp
 	lib/ostream_overloads.cpp
 	lib/esp32_ad5933.cpp
 	lib/cmd_listener.cpp
-	lib/worker.cpp
-	lib/test.cpp
+	lib/child_main.cpp
+	lib/shm/child/specialized.cpp
+	lib/shm/child/child.cpp
 	lib/state_machines/adapter/adapter.cpp
 	lib/state_machines/adapter/states.cpp
 	lib/state_machines/adapter/checker.cpp
@@ -49,29 +55,30 @@ set(BLE_CLIENT_SRCS
 	lib/state_machines/connector/connector.cpp
 )
 
-set(BLE_CLIENT_LIBS
+set(BLE_CLIENT_LINK_LIBS
     ${Boost_LIBRARIES}
     sml
     simpleble::simpleble
     trielo
-	magic	
+	magic
+	nlohmann_json
 )
 
 set(BLE_CLIENT_INCLUDE_DIRS
 	${CMAKE_CURRENT_LIST_DIR}/include
+	${CMAKE_CURRENT_LIST_DIR}/../include
     ${Boost_INCLUDE_DIRS}
 )
 
-add_executable(${CURRENT_PROJECT_NAME}
-    main.cpp
+add_library(${CURRENT_PROJECT_NAME}
 	${BLE_CLIENT_SRCS}
 )
 
-target_link_libraries(${CURRENT_PROJECT_NAME} PRIVATE
-	${BLE_CLIENT_LIBS}
+target_link_libraries(${CURRENT_PROJECT_NAME} PUBLIC
+	${BLE_CLIENT_LINK_LIBS}
 )
 
-target_include_directories(${CURRENT_PROJECT_NAME} PRIVATE
+target_include_directories(${CURRENT_PROJECT_NAME} PUBLIC
 	${BLE_CLIENT_INCLUDE_DIRS}
 )
 
@@ -84,15 +91,31 @@ option(BLE_CLIENT_TEST "Enable BLE_Client Tests" OFF)
 if(BLE_CLIENT_TEST)
 	function(add_test_case TEST_NAME TEST_SOURCE)
 		add_executable(${TEST_NAME} ${TEST_SRCS} tests/${TEST_SOURCE})
-		target_link_libraries(${TEST_NAME} PRIVATE ${BLE_CLIENT_LIBS})
-		target_include_directories(${TEST_NAME} PRIVATE ${BLE_CLIENT_INCLUDE_DIRS})
+		target_include_directories(${TEST_NAME} PRIVATE ${TEST_INCLUDE_DIRS})
+		target_link_libraries(${TEST_NAME} PRIVATE ${TEST_LINK_LIBS})
 		add_test(NAME BLE_Client::Tests::${TEST_NAME}
 				COMMAND ${TEST_NAME})
 	endfunction()
-
+	
+	list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
 	enable_testing()
 	set(TEST_SRCS 
-		${BLE_CLIENT_SRCS}
+		"tests/tests.cpp"
+		lib/shm/common/cleaner.cpp
+		lib/shm/parent/specialized.cpp
+		lib/shm/parent/parent.cpp
 	)
-	add_test_case(ble_client_basic_test basic_test.cpp)
+	set(TEST_INCLUDE_DIRS
+		${CMAKE_CURRENT_LIST_DIR}/tests/include
+		${BLE_CLIENT_INCLUDE_DIRS}
+	)
+	set(TEST_LINK_LIBS
+		${BLE_CLIENT_LINK_LIBS}
+		${CURRENT_PROJECT_NAME}
+		AD5933_config
+	)
+	add_test_case(ble_client_sync_scan_connect sync_scan_connect.cpp)
+	add_test_case(ble_client_async_scan_connect async_scan_connect.cpp)
+	add_test_case(ble_client_basic basic.cpp)
+	add_test_case(ble_client_debug_program_debug_dump debug_program_debug_dump.cpp)
 endif()

@@ -83,7 +83,6 @@ namespace GUI {
             ImGuiIO& io = ImGui::GetIO();
             io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_DockingEnable | ImGuiConfigFlags_ViewportsEnable;     // Enable Keyboard Controls
 
-            // Setup Platform/Renderer backends
             ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
             ImGui_ImplSDLRenderer3_Init(renderer);
 

@@ -3,10 +3,8 @@
 #include "gui/windows/console.hpp"
 
 namespace GUI {
-    Console::Console(bool& enable, boost::process::ipstream& stdout_stream, boost::process::ipstream& stderr_stream) :
-        enable { enable },
-        stdout_stream{ stdout_stream },
-        stderr_stream{ stderr_stream }
+    Console::Console(bool& enable) :
+        enable { enable }
     {}
 
     void Console::log(const std::string& text) {

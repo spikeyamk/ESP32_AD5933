@@ -1,6 +1,6 @@
 #include "imgui_internal.h"
 
-#include "gui/spinner.hpp"
+#include "imgui_custom/spinner.hpp"
 
 #include "gui/windows/ble_client.hpp"
 
@@ -46,7 +46,7 @@ namespace GUI {
                         ImGui::TableNextColumn();
                         ImGui::Text(e.get_address().data());
                         ImGui::TableNextColumn();
-                        if(e.connected) {
+                        if(e.get_connected()) {
                             ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Connected");
                         } else {
                             ImGui::Text("Disconnected");
@@ -68,7 +68,7 @@ namespace GUI {
                         shm->cmd.send_adapter(BLE_Client::StateMachines::Adapter::Events::start_discovery{});
                     }
                 } else if constexpr (std::is_same_v<T_Decay, BLE_Client::StateMachines::Adapter::States::discovering>) {
-                    if(ImGui::Button("Stop Scan")) {
+                    if(ImGui::Button("Stop")) {
                         shm->cmd.send_adapter(BLE_Client::StateMachines::Adapter::Events::stop_discovery{});
                     }
                     ImGui::SameLine();
@@ -86,7 +86,11 @@ namespace GUI {
                                 for(int i = 0; i < 100; i++) {
                                     try{
                                         shm->attach_device(connect_event);
+<<<<<<< HEAD
                                         client_windows.push_back(Windows::Client{std::string(connect_event.get_address()), client_windows.size() });
+=======
+                                        client_windows.push_back(Windows::Client{std::string(connect_event.get_address()), client_windows.size(), shm });
+>>>>>>> origin/gui
                                         break;
                                     } catch(...) {
                                         std::this_thread::sleep_for(std::chrono::milliseconds(500));
