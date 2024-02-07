@@ -66,7 +66,7 @@ namespace BLE {
 				if(ret.has_value()) {
 					const Magic::Events::Results::Debug::Dump dump_event { ret.value() };
 					const Magic::OutComingPacket<Magic::Events::Results::Debug::Dump> dump_packet { dump_event };
-					sender.notify(dump_packet);
+					sender.indicate_hid_information(dump_packet);
 				}
 			}
 
@@ -121,7 +121,7 @@ namespace BLE {
 					if(data.has_value()) {
 						const Magic::Events::Results::Sweep::ValidData valid_data_event { data.value() };
 						const Magic::OutComingPacket<Magic::Events::Results::Sweep::ValidData> valid_data_packet { valid_data_event };
-						sender.notify(valid_data_packet);
+						sender.indicate_hid_information(valid_data_packet);
 					}
 					ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::IncFreq);
 				} while(ad5933.has_status_condition(AD5933::Masks::Or::Status::FreqSweepComplete) == false);

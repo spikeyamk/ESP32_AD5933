@@ -25,7 +25,7 @@ namespace BLE {
         void inject(const i2c_master_dev_handle_t handle);
         void advertise();
         void stop();
-        bool notify(const std::span<uint8_t, std::dynamic_extent>& message);
+        bool indicate_hid_information(const std::span<uint8_t, std::dynamic_extent>& message);
     }
 
     namespace Server {
@@ -35,9 +35,9 @@ namespace BLE {
             Sender() = default;
 
 			template<typename T_OutComingPacket>
-            inline bool notify(const T_OutComingPacket& event) const {
+            inline bool indicate_hid_information(const T_OutComingPacket& event) const {
 				auto tmp_array { event.get_raw_data() };
-                return BLE::Server::notify(std::span(tmp_array.begin(), tmp_array.end()));
+                return BLE::Server::indicate_hid_information(std::span(tmp_array.begin(), tmp_array.end()));
             }
         };
     }
