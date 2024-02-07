@@ -13,8 +13,16 @@ else()
 		add_compile_options(-Wall -Wextra -Wpedantic)
 	endif()
 
-	add_library(magic STATIC 
+	set(MAGIC_SRCS
 		tests/tests.cpp
+	)
+
+	if(WIN32)
+		list(${MAGIC_SRCS} APPEND lib/misc/gettimeofday.cpp)
+	endif()
+
+	add_library(magic STATIC
+		${MAGIC_SRCS}
 	)
 
     target_include_directories(magic PUBLIC
@@ -33,9 +41,8 @@ else()
 
 		enable_testing()
 		set(TEST_SRCS 
-			tests/tests.cpp
+			${MAGIC_SRCS}
 		)
 		add_test_case(event_variant_map event_variant_map.cpp)
 	endif()
 endif()
-
