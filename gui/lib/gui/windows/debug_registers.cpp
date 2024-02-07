@@ -11,8 +11,8 @@
 namespace GUI {
     namespace Windows {
         bool dump(Client &client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
-            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_event{ client.index, Magic::Events::Commands::Debug::Dump{} });
-            const auto rx_payload { shm->notify_channels[client.index]->read_for(boost::posix_time::milliseconds(1'000)) };
+            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ client.index, Magic::Events::Commands::Debug::Dump{} });
+            const auto rx_payload { shm->active_devices[client.index].information->read_for(boost::posix_time::milliseconds(1'000)) };
 
             if(rx_payload.has_value() == false) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: Debug: Dump failed: timeout\n");
@@ -38,7 +38,7 @@ namespace GUI {
 
         void debug_program(Client &client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
             shm->cmd.send(
-                BLE_Client::StateMachines::Connection::Events::write_event{
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     client.index,
                     Magic::Events::Commands::Debug::Program{
                         client.debug_captures.config.to_raw_array()
@@ -56,7 +56,7 @@ namespace GUI {
 
         void command_and_dump(Client &client, AD5933::Masks::Or::Ctrl::HB::Command command, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
             shm->cmd.send(
-                BLE_Client::StateMachines::Connection::Events::write_event{
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     client.index,
                     Magic::Events::Commands::Debug::CtrlHB{
                         static_cast<uint8_t>(command)
@@ -87,7 +87,7 @@ namespace GUI {
                 if(client.debug_started == false) {
                     if(ImGui::Button("Start")) {
                         shm->cmd.send(
-                            BLE_Client::StateMachines::Connection::Events::write_event{
+                            BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                                 client.index,
                                 Magic::Events::Commands::Debug::Start{}
                             }
@@ -105,7 +105,7 @@ namespace GUI {
                     ImGui::SameLine();
                     if(ImGui::Button("End")) {
                         shm->cmd.send(
-                            BLE_Client::StateMachines::Connection::Events::write_event{
+                            BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                                 client.index,
                                 Magic::Events::Commands::Debug::End{}
                             }

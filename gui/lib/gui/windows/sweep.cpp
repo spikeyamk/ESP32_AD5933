@@ -38,7 +38,7 @@ namespace GUI {
 
         void send_configure(Client &client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
             shm->cmd.send(
-                BLE_Client::StateMachines::Connection::Events::write_event{
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     client.index,
                     Magic::Events::Commands::Sweep::Configure{
                         client.configure_captures.config.to_raw_array()
@@ -66,13 +66,13 @@ namespace GUI {
             client.progress_bar_fraction = 0.0f;
 
             shm->cmd.send(
-                BLE_Client::StateMachines::Connection::Events::write_event{
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     client.index,
                     Magic::Events::Commands::Sweep::Run{}
                 }
             );
             do {
-                const auto rx_payload { shm->notify_channels[client.index]->read_for(boost_timeout_ms) };
+                const auto rx_payload { shm->active_devices[client.index].information->read_for(boost_timeout_ms) };
                 if(rx_payload.has_value() == false) {
                     fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: sweep: calibrate: timeout\n");
                     return;
@@ -137,13 +137,13 @@ namespace GUI {
                 client.progress_bar_fraction = 0.0f;
 
                 shm->cmd.send(
-                    BLE_Client::StateMachines::Connection::Events::write_event{
+                    BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                         client.index,
                         Magic::Events::Commands::Sweep::Run{}
                     }
                 );
                 do {
-                    const auto rx_payload { shm->notify_channels[client.index]->read_for(boost_timeout_ms) };
+                    const auto rx_payload { shm->active_devices[client.index].information->read_for(boost_timeout_ms) };
                     if(rx_payload.has_value() == false) {
                         fmt::print(fmt::fg(fmt::color::red), "ERROR: ESP32_AD5933: sweep: failed: timeout\n");
                         return;
@@ -294,7 +294,7 @@ namespace GUI {
                 if(ImGui::Button("Freq Sweep End")) {
                     std::jthread t1([](Client& client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
                         shm->cmd.send(
-                            BLE_Client::StateMachines::Connection::Events::write_event{
+                            BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                                 client.index,
                                 Magic::Events::Commands::Sweep::End{}
                             }

@@ -264,11 +264,15 @@ namespace BLE_Client {
             CMD_ChannelTX cmd;
             ConsoleChannelRX console;
             DiscoveryDevices* discovery_devices;
-            std::vector<std::shared_ptr<NotifyChannelRX>> notify_channels;
+            struct Device {
+                std::shared_ptr<NotifyChannelRX> measurement { nullptr };
+                std::shared_ptr<NotifyChannelRX> information { nullptr };
+            };
+            std::vector<Device> active_devices;
             BLE_Client::StateMachines::Adapter::States::T_Variant* active_state;
             ParentSHM();
             ~ParentSHM();
-            void attach_notify_channel(const BLE_Client::StateMachines::Connector::Events::connect& connect_event);
+            void attach_device(const BLE_Client::StateMachines::Connector::Events::connect& connect_event);
         };
 
         class ChildSHM {
@@ -278,10 +282,14 @@ namespace BLE_Client {
             CMD_ChannelRX cmd;
             ConsoleChannelTX console;
             DiscoveryDevices* discovery_devices;
-            std::vector<std::shared_ptr<NotifyChannelTX>> notify_channels;
+            struct Device {
+                std::shared_ptr<NotifyChannelTX> measurement { nullptr };
+                std::shared_ptr<NotifyChannelTX> information { nullptr };
+            };
+            std::vector<Device> active_devices;
             BLE_Client::StateMachines::Adapter::States::T_Variant* active_state;
             ChildSHM();
-            void init_notify_channel(const BLE_Client::StateMachines::Connector::Events::connect& connect_event);
+            void init_device(const BLE_Client::StateMachines::Connector::Events::connect& connect_event);
         };
     }
 }

@@ -88,10 +88,13 @@ namespace BLE_Client {
             boost::interprocess::shared_memory_object::remove(Names::shm);
         }
 
-        void ParentSHM::attach_notify_channel(const BLE_Client::StateMachines::Connector::Events::connect& connect_event) {
-            notify_channels.push_back(std::make_shared<NotifyChannelRX>(connect_event.get_address_dots_instead_of_colons().c_str(), segment));
+        void ParentSHM::attach_device(const BLE_Client::StateMachines::Connector::Events::connect& connect_event) {
+            const Device tmp_device {
+                std::make_shared<NotifyChannelRX>(connect_event.get_measurement_name().c_str(), segment),
+                std::make_shared<NotifyChannelRX>(connect_event.get_information_name().c_str(), segment)
+            };
+            active_devices.push_back(tmp_device);
         }
-
     }
 
     namespace SHM {
@@ -109,8 +112,12 @@ namespace BLE_Client {
             }() }
         {}
 
-        void ChildSHM::init_notify_channel(const BLE_Client::StateMachines::Connector::Events::connect& connect_event) {
-            notify_channels.push_back(std::make_shared<NotifyChannelTX>(connect_event.get_address_dots_instead_of_colons().c_str(), segment));
+        void ChildSHM::init_device(const BLE_Client::StateMachines::Connector::Events::connect& connect_event) {
+            const Device tmp_device {
+                std::make_shared<NotifyChannelTX>(connect_event.get_measurement_name().c_str(), segment),
+                std::make_shared<NotifyChannelTX>(connect_event.get_information_name().c_str(), segment)
+            };
+            active_devices.push_back(tmp_device);
         }
     }
 }

@@ -37,9 +37,9 @@ namespace BLE_Client {
                             throw std::runtime_error("not an ESP32_AD5933");
                         }
 
-                        shm->init_notify_channel(Events::connect{ it->address() });
-                        auto tmp_esp32_ad5933 { std::make_shared<BLE_Client::ESP32_AD5933>(*it, std::get<0>(ret.value()), std::get<1>(ret.value()), std::get<2>(ret.value()), shm->notify_channels.back(), shm) };
-                        tmp_esp32_ad5933->setup_subscriptions();
+                        shm->init_device(Events::connect{ it->address() });
+                        auto tmp_esp32_ad5933 { std::make_shared<BLE_Client::ESP32_AD5933>(*it, std::get<0>(ret.value()), std::get<1>(ret.value()), std::get<2>(ret.value()), std::get<3>(ret.value()), std::get<4>(ret.value()), shm->active_devices.back().measurement, shm->active_devices.back().information, shm) };
+                        tmp_esp32_ad5933->setup_subscriptions_and_update_time();
                         BLE_Client::StateMachines::Logger logger {};
                         connections.push_back(new decltype(BLE_Client::StateMachines::Connection::Dummy<int>::sm){ tmp_esp32_ad5933, logger, shm });
                         return true;

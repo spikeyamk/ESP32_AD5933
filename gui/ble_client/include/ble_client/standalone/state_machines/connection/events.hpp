@@ -15,11 +15,11 @@ namespace BLE_Client {
                 struct disconnect{
                     size_t index;
                 };
-                struct write_event{
+                struct write_body_composition_feature{
                     size_t index;
                     Magic::Events::Commands::Variant event_variant;
                 };
-                using T_Variant = std::variant<disconnect, write_event>;
+                using T_Variant = std::variant<disconnect, write_body_composition_feature>;
             }
         }
     }

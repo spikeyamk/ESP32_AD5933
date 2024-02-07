@@ -95,17 +95,17 @@ namespace BLE_Client {
             parent_shm->cmd.send(connect_event);
             std::this_thread::sleep_for(std::chrono::milliseconds(5'000));
             try {
-                parent_shm->attach_notify_channel(connect_event);
+                parent_shm->attach_device(connect_event);
             } catch(...) {
                 return -2 - (10 * i);
             }
 
-            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_event{ 0, Magic::Events::Commands::Debug::Start{} });
-            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_event{ 0, Magic::Events::Commands::Debug::Dump{} });
-            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_event{ 0, Magic::Events::Commands::Debug::End{} });
+            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ 0, Magic::Events::Commands::Debug::Start{} });
+            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ 0, Magic::Events::Commands::Debug::Dump{} });
+            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ 0, Magic::Events::Commands::Debug::End{} });
 
             std::this_thread::sleep_for(std::chrono::milliseconds(5'000));
-            const auto dump_all_registers { parent_shm->notify_channels[0]->read_for(boost::posix_time::milliseconds(5'000)) };
+            const auto dump_all_registers { parent_shm->active_devices[0].information->read_for(boost::posix_time::milliseconds(5'000)) };
             if(dump_all_registers.has_value() == false) {
                 return -3 - (10 * i);
             }
@@ -134,7 +134,7 @@ namespace BLE_Client {
             parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::disconnect{ 0 });
             std::this_thread::sleep_for(std::chrono::milliseconds(5'000));
             try {
-                parent_shm->notify_channels.erase(parent_shm->notify_channels.begin());
+                parent_shm->active_devices.erase(parent_shm->active_devices.begin());
             } catch(...) {
                 return -5 - (10 * i);
             }
