@@ -244,7 +244,7 @@ namespace GUI {
             Calibrate& calibrate_window
         ) {
             calibrate_window.shm->cmd.send(
-                BLE_Client::StateMachines::Connection::Events::write_event{
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     calibrate_window.index,
                     Magic::Events::Commands::Sweep::Configure{
                         calibrate_window.config.to_raw_array()
@@ -269,13 +269,13 @@ namespace GUI {
             tmp_calibration.reserve(wished_size);
 
             calibrate_window.shm->cmd.send(
-                BLE_Client::StateMachines::Connection::Events::write_event{
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     calibrate_window.index,
                     Magic::Events::Commands::Sweep::Run{}
                 }
             );
             do {
-                const auto rx_payload { calibrate_window.shm->notify_channels[calibrate_window.index]->read_for(boost_timeout_ms) };
+                const auto rx_payload { calibrate_window.shm->active_devices[calibrate_window.index].information->read_for(boost_timeout_ms) };
                 if(rx_payload.has_value() == false) {
                     calibrate_window.status = Status::Failed;
                     std::cout << "ERROR: ESP32_AD5933: sweep: calibrate: timeout\n";
@@ -318,7 +318,7 @@ namespace GUI {
             calibrate_window.calibration = tmp_calibration;
 
             calibrate_window.shm->cmd.send(
-                BLE_Client::StateMachines::Connection::Events::write_event{
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     calibrate_window.index,
                     Magic::Events::Commands::Sweep::End{}
                 }

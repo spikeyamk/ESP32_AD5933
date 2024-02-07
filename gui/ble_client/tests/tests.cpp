@@ -23,6 +23,7 @@
 #include "ble_client/state_machines/adapter/checker.hpp"
 #include "ble_client/state_machines/killer/killer.hpp"
 #include "ble_client/state_machines/connector/connector.hpp"
+#include "ble_client/device.hpp"
 #include "ad5933/config/config.hpp"
 
 #include "ble_client/tests/tests.hpp"
@@ -169,19 +170,19 @@ namespace BLE_Client {
                 
                 auto connect_event { BLE_Client::StateMachines::Connector::Events::connect{ nimble_address } };
                 parent_shm->cmd.send(connect_event);
-                std::this_thread::sleep_for(std::chrono::milliseconds(5'000));
+                std::this_thread::sleep_for(std::chrono::milliseconds(60'000));
                 try {
-                    parent_shm->attach_notify_channel(connect_event);
+                    parent_shm->attach_device(connect_event);
                 } catch(...) {
                     return -2 - (10 * i);
                 }
 
-                parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_event{ 0, Magic::Events::Commands::Debug::Start{} });
-                parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_event{ 0, Magic::Events::Commands::Debug::Dump{} });
-                parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_event{ 0, Magic::Events::Commands::Debug::End{} });
+                parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ 0, Magic::Events::Commands::Debug::Start{} });
+                parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ 0, Magic::Events::Commands::Debug::Dump{} });
+                parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ 0, Magic::Events::Commands::Debug::End{} });
 
                 std::this_thread::sleep_for(std::chrono::milliseconds(5'000));
-                const auto dump_all_registers { parent_shm->notify_channels[0]->read_for(boost::posix_time::milliseconds(5'000)) };
+                const auto dump_all_registers { parent_shm->active_devices[0].information->read_for(boost::posix_time::milliseconds(5'000)) };
                 if(dump_all_registers.has_value() == false) {
                     return -3 - (10 * i);
                 }
@@ -195,7 +196,7 @@ namespace BLE_Client {
                 parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::disconnect{ 0 });
                 std::this_thread::sleep_for(std::chrono::milliseconds(5'000));
                 try {
-                    parent_shm->notify_channels.erase(parent_shm->notify_channels.begin());
+                    parent_shm->active_devices.erase(parent_shm->active_devices.begin());
                 } catch(const std::exception& e) {
                     std::cout << "ERROR: BLE_Client::Tests::debug_program_debug_dump: failed to erase one of the notify_channels: exception: " << e.what() << std::endl;
                     return -5 - (10 * i);
@@ -269,18 +270,18 @@ namespace BLE_Client {
             parent_shm->cmd.send(connect_event);
             std::this_thread::sleep_for(std::chrono::milliseconds(5'000));
             try {
-                parent_shm->attach_notify_channel(connect_event);
+                parent_shm->attach_device(connect_event);
             } catch(const std::exception& e) {
                 std::cout << "ERROR: BLE_Client::Tests::debug_program_debug_dump: failed to attach to one of the notify_channels: exception: " << e.what() << std::endl;
                 return -11;
             }
 
-            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_event{ 0, Magic::Events::Commands::Debug::Start{} });
-            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_event{ 0, Magic::Events::Commands::Debug::Dump{} });
-            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_event{ 0, Magic::Events::Commands::Debug::End{} });
+            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ 0, Magic::Events::Commands::Debug::Start{} });
+            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ 0, Magic::Events::Commands::Debug::Dump{} });
+            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ 0, Magic::Events::Commands::Debug::End{} });
 
             std::this_thread::sleep_for(std::chrono::milliseconds(5'000));
-            const auto dump_before { parent_shm->notify_channels[0]->read_for(boost::posix_time::milliseconds(5'000)) };
+            const auto dump_before { parent_shm->active_devices[0].information->read_for(boost::posix_time::milliseconds(5'000)) };
             if(dump_before.has_value() == false) {
                 return -12;
             }
@@ -303,15 +304,15 @@ namespace BLE_Client {
             
             const auto default_config_raw_array = default_config.to_raw_array();
             const Magic::Events::Commands::Debug::Program default_config_program_magic_event { default_config_raw_array };
-            const BLE_Client::StateMachines::Connection::Events::write_event default_config_program_ble_client_connection_write_event { 0, default_config_program_magic_event };
+            const BLE_Client::StateMachines::Connection::Events::write_body_composition_feature default_config_program_ble_client_connection_write_event { 0, default_config_program_magic_event };
 
-            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_event{ 0, Magic::Events::Commands::Debug::Start{} });
+            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature { 0, Magic::Events::Commands::Debug::Start{} });
             parent_shm->cmd.send(default_config_program_ble_client_connection_write_event);
-            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_event{ 0, Magic::Events::Commands::Debug::Dump{} });
-            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_event{ 0, Magic::Events::Commands::Debug::End{} });
+            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature { 0, Magic::Events::Commands::Debug::Dump{} });
+            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature { 0, Magic::Events::Commands::Debug::End{} });
 
             std::this_thread::sleep_for(std::chrono::milliseconds(5'000));
-            const auto dump_after { parent_shm->notify_channels[0]->read_for(boost::posix_time::milliseconds(5'000)) };
+            const auto dump_after { parent_shm->active_devices[0].information->read_for(boost::posix_time::milliseconds(5'000)) };
             if(dump_after.has_value() == false) {
                 return -14;
             }
@@ -326,13 +327,13 @@ namespace BLE_Client {
                 return -16;
             }
 
-            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_event{ 0, Magic::Events::Commands::Debug::Start{} });
-            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_event{ 0, Magic::Events::Commands::Debug::Program{ default_config.to_raw_array() } });
-            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_event{ 0, Magic::Events::Commands::Debug::Dump{} });
-            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_event{ 0, Magic::Events::Commands::Debug::End{} });
+            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature { 0, Magic::Events::Commands::Debug::Start{} });
+            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature { 0, Magic::Events::Commands::Debug::Program{ default_config.to_raw_array() } });
+            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature { 0, Magic::Events::Commands::Debug::Dump{} });
+            parent_shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature { 0, Magic::Events::Commands::Debug::End{} });
 
             std::this_thread::sleep_for(std::chrono::milliseconds(5'000));
-            const auto dump_after_after { parent_shm->notify_channels[0]->read_for(boost::posix_time::milliseconds(5'000)) };
+            const auto dump_after_after { parent_shm->active_devices[0].information->read_for(boost::posix_time::milliseconds(5'000)) };
             if(dump_after_after.has_value() == false) {
                 return -17;
             }
@@ -357,7 +358,7 @@ namespace BLE_Client {
             std::this_thread::sleep_for(std::chrono::milliseconds(5'000));
 
             try {
-                parent_shm->notify_channels.erase(parent_shm->notify_channels.begin());
+                parent_shm->active_devices.erase(parent_shm->active_devices.begin());
             } catch(const std::exception& e) {
                 std::cout << "ERROR: BLE_Client::Tests::debug_program_debug_dump: failed to erase one of the notify_channels: exception: " << e.what() << std::endl;
                 return -100;
@@ -371,6 +372,179 @@ namespace BLE_Client {
                 std::cout << "ERROR: BLE_Client::Tests::debug_program_debug_dump: failed to exit from the parent because child is still running: exception: " << e.what() << std::endl;
                 return -200;
             }
+        }
+    }
+}
+
+namespace BLE_Client {
+    namespace Tests {
+        int sync_scan_connect() {
+            try {
+                if(SimpleBLE::Adapter::get_adapters().empty()) {
+                    return -3;
+                }
+            } catch(const std::exception& e) {
+                std::cout << "ERROR: BLE_Client::Tests::sync_scan_connect: SimpleBLE::Adapter::get_adapters().empty() failed: exception: " << e.what() << std::endl;
+                return -4;
+            }
+
+            SimpleBLE::Adapter default_adapter;
+            try {
+                default_adapter = SimpleBLE::Adapter::get_adapters()[0];
+                default_adapter.scan_for(30'000);
+                if(default_adapter.scan_get_results().empty()) {
+                    return -5;
+                }
+            } catch(const std::exception& e) {
+                std::cout << "ERROR: BLE_Client::Tests::sync_scan_connect: failed to try to initialize scan with the default adapter: exception: " << e.what() << std::endl;
+                return -6;
+            }
+
+            std::vector<SimpleBLE::Peripheral> scan_results;
+
+            try {
+                scan_results = default_adapter.scan_get_results();
+            } catch(const std::exception& e) {
+                std::cout << "ERROR: BLE_Client::Tests::sync_scan_connect: failed to get the scan results: exception: " << e.what() << std::endl;
+                return -7;
+            }
+
+            try {
+                static constexpr std::string_view nimble_address { "40:4C:CA:43:11:B2" };
+                auto nimble_it {
+                    std::find_if(scan_results.begin(), scan_results.end(), [&](SimpleBLE::Peripheral& e) {
+                        return nimble_address == e.address();
+                    })
+                };
+                
+                if(nimble_it == scan_results.end()) {
+                    std::cout << "ERROR: BLE_Client::Tests::sync_scan_connect: Failed to find nimble_address device: " << nimble_address << std::endl;
+                    return -8;
+                }
+
+                nimble_it->connect();
+                std::this_thread::sleep_for(std::chrono::milliseconds(10'000));
+                if(nimble_it->is_connected() == false) {
+                    return -9;
+                }
+
+                if(find_services_characteristics(*nimble_it).has_value() == false) {
+                    return -10;
+                }
+
+                nimble_it->disconnect();
+            } catch(const std::exception& e) {
+                std::cout << "ERROR: BLE_Client::Tests::sync_scan_connect: exception: " << e.what() << std::endl;
+                return -9999;
+            }
+            return 0;
+        }
+
+        int async_scan_connect() {
+            try {
+                if(SimpleBLE::Adapter::get_adapters().empty()) {
+                    return -1;
+                }
+            } catch(const std::exception& e) {
+                std::cout << "ERROR: BLE_Client::Tests::async_scan_connect: SimpleBLE::Adapter::get_adapters().empty() failed: exception: " << e.what() << std::endl;
+                return -2;
+            }
+
+            SimpleBLE::Adapter default_adapter;
+            try {
+                default_adapter = SimpleBLE::Adapter::get_adapters()[0];
+                if(default_adapter.bluetooth_enabled() == false) {
+                    return -3;
+                }
+
+                std::vector<BLE_Client::Discovery::Device> discovered_devices;
+                static constexpr std::string_view nimble_address { "40:4C:CA:43:11:B2" };
+                default_adapter.set_callback_on_scan_found([&](SimpleBLE::Peripheral peripheral) {
+                    auto device_it {
+                        std::find_if(discovered_devices.begin(), discovered_devices.end(), [&](const BLE_Client::Discovery::Device& e) {
+                            return (
+                                e.get_address() == peripheral.address()
+                                && e.get_identifier() == peripheral.identifier()
+                                && e.get_connected() == peripheral.is_connected()
+                            );
+                        })
+                    };
+
+                    if(device_it != discovered_devices.end()) {
+                        return;
+                    }
+
+                    discovered_devices.push_back(BLE_Client::Discovery::Device{ peripheral.identifier(), peripheral.address(), peripheral.is_connected() });
+                });
+
+                default_adapter.set_callback_on_scan_updated([&](SimpleBLE::Peripheral peripheral) {
+                    auto device_it {
+                        std::find_if(discovered_devices.begin(), discovered_devices.end(), [&](const BLE_Client::Discovery::Device& e) {
+                            return (
+                                e.get_address() == peripheral.address()
+                            );
+                        })
+                    };
+
+                    if(device_it == discovered_devices.end()) {
+                        return;
+                    }
+
+                    *device_it = BLE_Client::Discovery::Device{ peripheral.identifier(), peripheral.address(), peripheral.is_connected() };
+                });
+
+                default_adapter.scan_start();
+
+                SimpleBLE::Peripheral nimble_peripheral;
+                for(size_t i = 0; i <= 3'000; i++) {
+                    static constexpr std::string_view nimble_address { "40:4C:CA:43:11:B2" };
+                    auto nimble_it {
+                        std::find_if(discovered_devices.begin(), discovered_devices.end(), [&](BLE_Client::Discovery::Device& e) {
+                            return (
+                                e.get_address() == nimble_address
+                                && e.get_connected() == false
+                            );
+                        })
+                    };
+                    if(nimble_it != discovered_devices.end()) {
+                        std::cout << "BLE_Client::Tests::async_scan_connect: finding NimBLE ESP32_AD5933: i: " << i << std::endl;
+                        auto scan_results { default_adapter.scan_get_results() };
+                        auto peripheral_it { std::find_if(scan_results.begin(), scan_results.end(), [&](SimpleBLE::Peripheral& e) {
+                            return e.address() == nimble_address;
+                        }) };
+                        nimble_peripheral = *peripheral_it;
+                        break;
+                    }
+                    if(i == 3'000) {
+                        return -3'000;
+                    }
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                }
+
+                nimble_peripheral.connect();
+                for(size_t i = 0; i < 3'000; i++) {
+                    if(nimble_peripheral.is_connected()) {
+                        std::cout << "BLE_Client::Tests::async_scan_connect: connecting to NimBLE ESP32_AD5933: i: " << i << std::endl;
+                        break;
+                    }
+                    if(i == 3'000) {
+                        return -6'000;
+                    }
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                }
+
+                if(find_services_characteristics(nimble_peripheral).has_value() == false) {
+                    return -10'000;
+                }
+
+                nimble_peripheral.disconnect();
+                default_adapter.scan_stop();
+            } catch(const std::exception& e) {
+                std::cout << "ERROR: BLE_Client::Tests::async_scan_connect: failed to try to initialize scan with the default adapter: exception: " << e.what() << std::endl;
+                return -4;
+            }
+
+            return 0;
         }
     }
 }

@@ -46,7 +46,7 @@ namespace GUI {
                         ImGui::TableNextColumn();
                         ImGui::Text(e.get_address().data());
                         ImGui::TableNextColumn();
-                        if(e.connected) {
+                        if(e.get_connected()) {
                             ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Connected");
                         } else {
                             ImGui::Text("Disconnected");
@@ -85,8 +85,8 @@ namespace GUI {
                             std::thread([](auto shm, const BLE_Client::StateMachines::Connector::Events::connect connect_event, bool& connecting, std::vector<Windows::Client>& client_windows) {
                                 for(int i = 0; i < 100; i++) {
                                     try{
-                                        shm->attach_notify_channel(connect_event);
-                                        client_windows.push_back(Windows::Client{ connect_event.get_address_dots_instead_of_colons(), client_windows.size(), shm });
+                                        shm->attach_device(connect_event);
+                                        client_windows.push_back(Windows::Client{std::string(connect_event.get_address()), client_windows.size(), shm });
                                         break;
                                     } catch(...) {
                                         std::this_thread::sleep_for(std::chrono::milliseconds(500));

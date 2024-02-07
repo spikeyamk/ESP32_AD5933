@@ -142,7 +142,7 @@ namespace GUI {
             const std::vector<AD5933::Calibration<float>> tmp_calibration(cal_start_it, cal_end_it + 1);
 
             self.shm->cmd.send(
-                BLE_Client::StateMachines::Connection::Events::write_event{
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     self.index,
                     Magic::Events::Commands::Sweep::Configure{
                         self.configs.measurement.to_raw_array()
@@ -170,13 +170,13 @@ namespace GUI {
                 tmp_measurement.reserve(wished_size);
 
                 self.shm->cmd.send(
-                    BLE_Client::StateMachines::Connection::Events::write_event{
+                    BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                         self.index,
                         Magic::Events::Commands::Sweep::Run{}
                     }
                 );
                 do {
-                    const auto rx_payload { self.shm->notify_channels[self.index]->read_for(boost_timeout_ms) };
+                    const auto rx_payload { self.shm->active_devices[self.index].information->read_for(boost_timeout_ms) };
                     if(rx_payload.has_value() == false) {
                         self.status = Status::Failed;
                         std::cout << "ERROR: GUI::Windows::Measure::measure_cb: sweep: timeout\n";
@@ -223,7 +223,7 @@ namespace GUI {
             } while(self.periodically_sweeping);
 
             self.shm->cmd.send(
-                BLE_Client::StateMachines::Connection::Events::write_event{
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     self.index,
                     Magic::Events::Commands::Sweep::End{}
                 }

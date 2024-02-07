@@ -26,8 +26,8 @@ namespace BLE_Client {
             }
             
             namespace Guards {
-                bool write_event_successful(const BLE_Client::StateMachines::Connection::Events::write_event& event, std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm);
-                bool write_event_failed(const BLE_Client::StateMachines::Connection::Events::write_event& event, std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm);
+                bool write_body_composition_feature_successful(const BLE_Client::StateMachines::Connection::Events::write_body_composition_feature& event, std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm);
+                bool write_body_composition_feature_failed(const BLE_Client::StateMachines::Connection::Events::write_body_composition_feature& event, std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm);
             }
 
             struct Connection {
@@ -37,8 +37,8 @@ namespace BLE_Client {
                     auto ret = make_transition_table(
                         *state<States::off> = state<States::connected>,
                         state<States::connected> + event<Events::disconnect>                                             / function{Actions::disconnect} = state<States::disconnected>,
-                        state<States::connected> + event<Events::write_event> [function{Guards::write_event_successful}]                                 = state<States::connected>,
-                        state<States::connected> + event<Events::write_event> [function{Guards::write_event_failed}]     / function{Actions::disconnect} = state<States::disconnected>
+                        state<States::connected> + event<Events::write_body_composition_feature> [function{Guards::write_body_composition_feature_successful}]                                 = state<States::connected>,
+                        state<States::connected> + event<Events::write_body_composition_feature> [function{Guards::write_body_composition_feature_failed}]     / function{Actions::disconnect} = state<States::disconnected>
                     );
                     return ret;
                 }

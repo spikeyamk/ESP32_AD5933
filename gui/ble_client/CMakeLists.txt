@@ -114,6 +114,8 @@ if(BLE_CLIENT_TEST)
 		${CURRENT_PROJECT_NAME}
 		AD5933_config
 	)
+	add_test_case(ble_client_sync_scan_connect sync_scan_connect.cpp)
+	add_test_case(ble_client_async_scan_connect async_scan_connect.cpp)
 	add_test_case(ble_client_basic basic.cpp)
 	add_test_case(ble_client_debug_program_debug_dump debug_program_debug_dump.cpp)
 endif()

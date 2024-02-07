@@ -11,9 +11,8 @@ namespace BLE_Client {
         private:
             std::array<char, 50> p_identifier { 0 };
             std::array<char, 18> p_address { 0 };
-        public:
             bool connected = false;
-
+        public:
             Device() = default;
 
             inline Device(const std::string& in_identifier, const std::string& in_address, bool connected) :
@@ -39,6 +38,10 @@ namespace BLE_Client {
                     }
                 }
                 return ret;
+            }
+
+            inline bool get_connected() const {
+                return connected;
             }
         private:
             template<typename T>
