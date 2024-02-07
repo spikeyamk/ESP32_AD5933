@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <functional>
 #include <utility>
+#include <ctime>
 
 #include "nvs_flash.h"
 #include "nimble/nimble_port.h"
@@ -33,8 +34,16 @@ namespace BLE {
     namespace Server {
         #define APPEARANCE_GENERIC_SENSOR_UUID 0x0540
         #define PROFILE_BODY_COMPOSITION_UUID 0x1014
+
         #define CHARACTERISTIC_BODY_COMPOSITION_FEATURE_UUID 0x2A9B
         #define CHARACTERISTIC_BODY_COMPOSITION_MEASUREMENT_UUID 0x2A9C
+
+        #define CHARACTERISTIC_TIME_UPDATE_CONTROL_POINT 0x2A16 
+        #define CHARACTERISTIC_TIME_UPDATE_STATE 0x2A17
+
+        #define CHARACTERISTIC_HID_CONTROL_POINT 0x2A4C
+        #define CHARACTERISTIC_HID_INFORMATION 0x2A4A
+
         #define CONFIG_EXAMPLE_IO_TYPE 3
 
         #define UNIT_ELECTRICAL_RESISTANCE_OHM_UUID 0x272A
@@ -48,7 +57,9 @@ namespace BLE {
         static uint8_t own_addr_type;
         static uint16_t body_composition_feature_characteristic_handle;
         static uint16_t conn_handle = 0;
-        uint16_t body_composition_measurement_characteristic_handle = 0;
+        static uint16_t body_composition_measurement_characteristic_handle = 0;
+        static uint16_t time_update_control_point_characteristic_handle;
+        static uint16_t hid_control_information_characteristic_handle;
         std::atomic<bool> heartbeat_running = false;
 
         char characteristic_received_value[500] { 0x00 };
@@ -213,22 +224,31 @@ namespace BLE {
             return 0;
         }
 
-        static int gatt_svr_chr_write(struct os_mbuf *om, uint16_t min_len, uint16_t max_len, void *dst, uint16_t *len) {
+        static int gatt_svr_chr_write(struct os_mbuf *om, uint16_t min_len, uint16_t max_len, void *dst, uint16_t *out_copy_len) {
             std::printf("BLE::Server::gatt_svr_chr_write\n");
-            uint16_t om_len;
-            int rc;
-
-            om_len = OS_MBUF_PKTLEN(om);
+            const uint16_t om_len = OS_MBUF_PKTLEN(om);
             if(om_len < min_len || om_len > max_len) {
                 return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
             }
 
-            rc = ble_hs_mbuf_to_flat(om, dst, max_len, len);
+            const int rc = ble_hs_mbuf_to_flat(om, dst, max_len, out_copy_len);
             if (rc != 0) {
                 return BLE_ATT_ERR_UNLIKELY;
             }
 
             return 0;
+        }
+        
+        void print_received_packet(const Magic::T_MaxPacket& packet) {
+            std::printf("BLE::Server::print_received_packet:");
+            std::for_each(packet.begin(), packet.end(), [index = 0](const auto& e) mutable {
+                if(index % 8 == 0) {;
+                    std::printf("\n\t");
+                }
+                std::printf("0x%02X, ", e);
+                index++;
+            });
+            std::printf("\n");
         }
 
         int body_composition_feature_characteristic_access_cb(
@@ -238,24 +258,12 @@ namespace BLE {
             void *arg
         ) {
             std::printf("BLE::Server::body_composition_feature_characteristic_access_cb\n");
-            int rc;
-            Magic::T_MaxPacket received_packet { 0x00 };
             switch(ctxt->op) {
             case BLE_GATT_ACCESS_OP_WRITE_CHR: //!! In case user accessed this characterstic to write, bellow lines will executed.
-                rc = gatt_svr_chr_write(ctxt->om, 1, 700, &characteristic_received_value, NULL); //!! Function "gatt_svr_chr_write" will fire.
-                std::printf("Received= rc: %d\n", rc);  // Print the received value
-                []() {
-                    for(size_t i = 0; i < Magic::MTU; i++) {
-                        if(i % 8 == 0) {;
-                            std::printf("\n");
-                        }
-                        std::printf("0x%02X, ", characteristic_received_value[i]);
-                    }
-                    std::printf("\n");
-                }();
-                std::memcpy(received_packet.data(), reinterpret_cast<uint8_t*>(characteristic_received_value), received_packet.size()); 
-                std::memset(characteristic_received_value, 0, sizeof(characteristic_received_value));
-                Magic::InComingPacket<Magic::Events::Commands::Variant, Magic::Events::Commands::Map> incoming_packet { received_packet };
+                Magic::T_MaxPacket tmp_characteristic_received_value { 0 };
+                const int rc = gatt_svr_chr_write(ctxt->om, 1, tmp_characteristic_received_value.size(), tmp_characteristic_received_value.data(), NULL); //!! Function "gatt_svr_chr_write" will fire.
+                print_received_packet(tmp_characteristic_received_value);
+                const Magic::InComingPacket<Magic::Events::Commands::Variant, Magic::Events::Commands::Map> incoming_packet { tmp_characteristic_received_value };
                 auto event_variant { incoming_packet.to_event_variant() };
                 if(event_variant.has_value()) {
                     std::visit([](auto &&arg) {
@@ -265,6 +273,54 @@ namespace BLE {
                 return rc;
             }
             return BLE_ATT_ERR_UNLIKELY;
+        }
+
+        int time_update_control_point_characteristic_access_cb(
+            uint16_t conn_handle,
+            uint16_t attr_handle,
+            struct ble_gatt_access_ctxt *ctxt,
+            void *arg
+        ) {
+            std::printf("BLE::Server::time_update_control_point_characteristic_access_cb\n");
+            switch(ctxt->op) {
+            case BLE_GATT_ACCESS_OP_WRITE_CHR: //!! In case user accessed this characterstic to write, bellow lines will executed.
+                Magic::T_MaxPacket tmp_characteristic_received_value { 0 };
+                const int rc = gatt_svr_chr_write(ctxt->om, 1, tmp_characteristic_received_value.size(), tmp_characteristic_received_value.data(), NULL); //!! Function "gatt_svr_chr_write" will fire.
+                print_received_packet(tmp_characteristic_received_value);
+                Magic::InComingPacket<Magic::Events::Commands::Variant, Magic::Events::Commands::Map> incoming_packet { tmp_characteristic_received_value };
+                auto event_variant { incoming_packet.to_event_variant() };
+                if(event_variant.has_value()) {
+                    std::visit([](auto &&arg) {
+                        using T_Decay = std::decay_t<decltype(arg)>;
+                        static constexpr auto print_current_time = []() {
+                            const time_t current_time = std::chrono::high_resolution_clock::to_time_t(std::chrono::high_resolution_clock::now());
+                            std::cout << "BLE_Server::time_update_control_point_characteristic_access_cb: Current time is: " << std::ctime(&current_time) << std::endl;
+                        };
+                        if constexpr (std::is_same_v<T_Decay, Magic::Events::Commands::Time::UpdateTimeval>) {
+                            settimeofday(&arg.tv, nullptr);
+                            std::printf("BLE_Server::time_update_control_point_characteristic_access_cb: Updated timeval\n");
+                            print_current_time();
+                        } else if constexpr (std::is_same_v<T_Decay, Magic::Events::Commands::Time::UpdateTimezone>) {
+                            settimeofday(nullptr, &arg.tz);
+                            std::printf("BLE_Server::time_update_control_point_characteristic_access_cb: Updated timezone\n");
+                            print_current_time();
+                        }
+                    }, incoming_packet.to_event_variant().value());
+                }
+                return rc;
+            }
+            return BLE_ATT_ERR_UNLIKELY;
+        }
+
+        int hid_control_information_characteristic_access_cb(
+            uint16_t conn_handle,
+            uint16_t attr_handle,
+            struct ble_gatt_access_ctxt *ctxt,
+            void *arg
+        ) {
+            std::printf("BLE::Server::hid_control_information_characteristic_access_cb\n");
+            /* Is supposed to be empty because no write or read access only notify and indicate */
+            return 0;
         }
 
         void advertise() {
@@ -401,7 +457,7 @@ namespace BLE {
         }
 
         void run() {
-            esp_err_t ret = Trielo::trielo<nvs_flash_init>(Trielo::OkErrCode(ESP_OK));
+            const esp_err_t ret = Trielo::trielo<nvs_flash_init>(Trielo::OkErrCode(ESP_OK));
             if(ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
                 Trielo::trielo<nvs_flash_erase>(Trielo::OkErrCode(ESP_OK));
                 Trielo::trielo<nvs_flash_init>(Trielo::OkErrCode(ESP_OK));
@@ -433,6 +489,20 @@ namespace BLE {
                 }
             };
 
+            static constexpr ble_uuid_any_t time_update_control_point_uuid {
+                .u16 = {
+                    .u = BLE_UUID_TYPE_16,
+                    .value = CHARACTERISTIC_TIME_UPDATE_CONTROL_POINT
+                }
+            };
+
+            static constexpr ble_uuid_any_t hid_control_information_uuid {
+                .u16 = {
+                    .u = BLE_UUID_TYPE_16,
+                    .value = CHARACTERISTIC_HID_INFORMATION
+                }
+            };
+
             // Initialize your characteristic definition.
             static constexpr ble_gatt_chr_def body_composition_feature_characteristic {
                 .uuid = &body_composition_feature_characteristic_uuid.u,
@@ -450,9 +520,31 @@ namespace BLE {
                 .access_cb = body_composition_measurement_characteristic_access_cb,
                 .arg = nullptr,  // Replace with your actual argument.
                 .descriptors = nullptr,
-                .flags = BLE_GATT_CHR_F_INDICATE | BLE_GATT_CHR_F_NOTIFY,
+                .flags = BLE_GATT_CHR_F_INDICATE,
                 .min_key_size = 0,  // Replace with your minimum key size.
                 .val_handle = &body_composition_measurement_characteristic_handle,  // The value handle will be filled in at registration time.
+            };
+
+            // Initialize your characteristic definition.
+            static constexpr ble_gatt_chr_def time_update_control_point_characteristic {
+                .uuid = &time_update_control_point_uuid.u,
+                .access_cb = time_update_control_point_characteristic_access_cb,
+                .arg = nullptr,  // Replace with your actual argument.
+                .descriptors = nullptr,
+                .flags = BLE_GATT_CHR_F_WRITE,  // Replace with your flags.
+                .min_key_size = 0,  // Replace with your minimum key size.
+                .val_handle = &time_update_control_point_characteristic_handle,  // The value handle will be filled in at registration time.
+            };
+
+            // Initialize your characteristic definition.
+            static constexpr ble_gatt_chr_def hid_control_information_characteristic {
+                .uuid = &hid_control_information_uuid.u,
+                .access_cb = hid_control_information_characteristic_access_cb,
+                .arg = nullptr,  // Replace with your actual argument.
+                .descriptors = nullptr,
+                .flags = BLE_GATT_CHR_F_INDICATE,  // Replace with your flags.
+                .min_key_size = 0,  // Replace with your minimum key size.
+                .val_handle = &hid_control_information_characteristic_handle,  // The value handle will be filled in at registration time.
             };
 
             static constexpr ble_uuid_any_t body_composition_service_uuid {
@@ -465,6 +557,8 @@ namespace BLE {
             static constexpr ble_gatt_chr_def body_composition_service_characteristics[] { 
                 body_composition_feature_characteristic,
                 body_composition_measurement_characteristic,
+                time_update_control_point_characteristic,
+                hid_control_information_characteristic,
                 { nullptr, nullptr, nullptr, nullptr, 0, 0, nullptr },
             };
 
@@ -488,20 +582,38 @@ namespace BLE {
     }
 
     namespace Server {
-        bool notify(const std::span<uint8_t, std::dynamic_extent>& message) {
+        bool indicate_hid_information(const std::span<uint8_t, std::dynamic_extent>& message) {
             assert(message.size() <= Magic::MTU);
             struct os_mbuf *txom = ble_hs_mbuf_from_flat(message.data(), message.size());
             if(txom == nullptr) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ");
-                std::cout << "BLE::Servernotify: failed to ble_hs_mbuf_from_flat\n";
+                std::cout << "BLE::Server::indicate_hid_information: failed to ble_hs_mbuf_from_flat\n";
                 return false;
             }
-            int ret;
-            if((ret = ble_gatts_notify_custom(conn_handle, body_composition_measurement_characteristic_handle, txom)) == 0) {
+            const int ret = ble_gatts_indicate_custom(conn_handle, body_composition_measurement_characteristic_handle, txom);
+            if(ret == 0) {
                 return true;
             } else {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ");
-                std::cout << "BLE::Server::notify: failed to ble_gatts_indicate_custom: " << ret << std::endl;
+                std::cout << "BLE::Server::indicate_hid_information: failed to ble_gatts_indicate_custom: " << ret << std::endl;
+                return false;
+            }
+        }
+
+        bool indicate_body_composition_measurement(const std::span<uint8_t, std::dynamic_extent>& message) {
+            assert(message.size() <= Magic::MTU);
+            struct os_mbuf *txom = ble_hs_mbuf_from_flat(message.data(), message.size());
+            if(txom == nullptr) {
+    		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ");
+                std::cout << "BLE::Server::indicate_body_composition_measurement: failed to ble_hs_mbuf_from_flat\n";
+                return false;
+            }
+            const int ret = ble_gatts_indicate_custom(conn_handle, body_composition_measurement_characteristic_handle, txom);
+            if(ret == 0) {
+                return true;
+            } else {
+    		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ");
+                std::cout << "BLE::Server::indicate_body_composition_measurement: failed to ble_gatts_indicate_custom: " << ret << std::endl;
                 return false;
             }
         }
