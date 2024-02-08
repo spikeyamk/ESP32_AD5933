@@ -18,7 +18,7 @@ else()
 	)
 
 	if(WIN32)
-		list(${MAGIC_SRCS} APPEND lib/misc/gettimeofday.cpp)
+		list(APPEND MAGIC_SRCS lib/misc/gettimeofday.cpp)
 	endif()
 
 	add_library(magic STATIC

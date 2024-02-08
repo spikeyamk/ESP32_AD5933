@@ -6,8 +6,7 @@
 #include <variant>
 #include <bitset>
 
-#include <sys/cdefs.h>
-#include <sys/time.h>
+#include "magic/misc/gettimeofday.hpp"
 
 #include "magic/events/common.hpp"
 
@@ -267,8 +266,8 @@ namespace Magic {
             namespace Time {
                 struct UpdateTimeval {
                     static constexpr Header header { Header::TimeUpdateTimeval };
-                    using T_RawData = std::array<uint8_t, 1 + sizeof(timeval)>;
-                    timeval tv;
+                    using T_RawData = std::array<uint8_t, 1 + sizeof(mytimeval64_t)>;
+                    mytimeval64_t tv;
                     inline constexpr T_RawData to_raw_data() const {
                         return T_RawData {
                             static_cast<uint8_t>(header),
@@ -280,6 +279,7 @@ namespace Magic {
                             static_cast<uint8_t>((tv.tv_sec >> (5 * 8)) & 0xFF),
                             static_cast<uint8_t>((tv.tv_sec >> (6 * 8)) & 0xFF),
                             static_cast<uint8_t>((tv.tv_sec >> (7 * 8)) & 0xFF),
+
                             static_cast<uint8_t>((tv.tv_usec >> (0 * 8)) & 0xFF),
                             static_cast<uint8_t>((tv.tv_usec >> (1 * 8)) & 0xFF),
                             static_cast<uint8_t>((tv.tv_usec >> (2 * 8)) & 0xFF),
@@ -292,10 +292,30 @@ namespace Magic {
                     }
 
                     static inline constexpr UpdateTimeval from_raw_data(const T_RawData& raw_data) {
-                        const decltype(timeval::tv_sec)* tmp_sec = reinterpret_cast<const decltype(timeval::tv_sec)*>(raw_data.data() + 1);
-                        const decltype(timeval::tv_usec)* tmp_usec = reinterpret_cast<const decltype(timeval::tv_usec)*>(raw_data.data() + 1 + sizeof(decltype(timeval::tv_sec)));
-                        const timeval tmp_tv { *tmp_sec, *tmp_usec };
-                        return UpdateTimeval { tmp_tv };
+                        /*
+                        const decltype(timeval::tv_sec) tmp_sec = 
+                               (static_cast<decltype(mytimeval64_t::tv_sec)>(raw_data[0 + 1]) << (0 * 8))
+                            || (static_cast<decltype(mytimeval64_t::tv_sec)>(raw_data[1 + 1]) << (1 * 8))
+                            || (static_cast<decltype(mytimeval64_t::tv_sec)>(raw_data[2 + 1]) << (2 * 8))
+                            || (static_cast<decltype(mytimeval64_t::tv_sec)>(raw_data[3 + 1]) << (3 * 8))
+                            || (static_cast<decltype(mytimeval64_t::tv_sec)>(raw_data[4 + 1]) << (4 * 8))
+                            || (static_cast<decltype(mytimeval64_t::tv_sec)>(raw_data[5 + 1]) << (5 * 8))
+                            || (static_cast<decltype(mytimeval64_t::tv_sec)>(raw_data[6 + 1]) << (6 * 8))
+                            || (static_cast<decltype(mytimeval64_t::tv_sec)>(raw_data[7 + 1]) << (7 * 8));
+
+                        const decltype(timeval::tv_usec) tmp_usec = 
+                               (static_cast<decltype(mytimeval64_t::tv_sec)>(raw_data[0 + 1 + sizeof(decltype(mytimeval64_t::tv_sec))]) << (0 * 8))
+                            || (static_cast<decltype(mytimeval64_t::tv_sec)>(raw_data[1 + 1 + sizeof(decltype(mytimeval64_t::tv_sec))]) << (1 * 8))
+                            || (static_cast<decltype(mytimeval64_t::tv_sec)>(raw_data[2 + 1 + sizeof(decltype(mytimeval64_t::tv_sec))]) << (2 * 8))
+                            || (static_cast<decltype(mytimeval64_t::tv_sec)>(raw_data[3 + 1 + sizeof(decltype(mytimeval64_t::tv_sec))]) << (3 * 8))
+                            || (static_cast<decltype(mytimeval64_t::tv_sec)>(raw_data[4 + 1 + sizeof(decltype(mytimeval64_t::tv_sec))]) << (4 * 8))
+                            || (static_cast<decltype(mytimeval64_t::tv_sec)>(raw_data[5 + 1 + sizeof(decltype(mytimeval64_t::tv_sec))]) << (5 * 8))
+                            || (static_cast<decltype(mytimeval64_t::tv_sec)>(raw_data[6 + 1 + sizeof(decltype(mytimeval64_t::tv_sec))]) << (6 * 8))
+                            || (static_cast<decltype(mytimeval64_t::tv_sec)>(raw_data[7 + 1 + sizeof(decltype(mytimeval64_t::tv_sec))]) << (7 * 8));
+                            */
+                        return UpdateTimeval {};
+                        //timeval { tmp_sec, tmp_usec }
+                        //};
                     }
                 };
 
@@ -317,9 +337,23 @@ namespace Magic {
                         };
                     }
                     static inline constexpr UpdateTimezone from_raw_data(const T_RawData& raw_data) {
-                        const decltype(timezone::tz_minuteswest)* tmp_minutewest = reinterpret_cast<const decltype(timezone::tz_minuteswest)*>(raw_data.data() + 1);
-                        const decltype(timezone::tz_dsttime)* tmp_dsttime = reinterpret_cast<const decltype(timezone::tz_dsttime)*>(raw_data.data() + 1 + sizeof(decltype(timezone::tz_minuteswest)));
-                        return UpdateTimezone { *tmp_minutewest, *tmp_dsttime };
+                        /*
+                        const decltype(timezone::tz_minuteswest) tmp_minutewest = 
+                               (static_cast<decltype(timezone::tz_minuteswest)>(raw_data[0 + 1]) << (0 * 8))
+                            || (static_cast<decltype(timezone::tz_minuteswest)>(raw_data[1 + 1]) << (1 * 8))
+                            || (static_cast<decltype(timezone::tz_minuteswest)>(raw_data[2 + 1]) << (2 * 8))
+                            || (static_cast<decltype(timezone::tz_minuteswest)>(raw_data[3 + 1]) << (3 * 8));
+
+                        const decltype(timezone::tz_dsttime) tmp_dsttime = 
+                               (static_cast<decltype(timezone::tz_dsttime)>(raw_data[0 + 1 + sizeof(decltype(timezone::tz_minuteswest))]) << (0 * 8))
+                            || (static_cast<decltype(timezone::tz_dsttime)>(raw_data[1 + 1 + sizeof(decltype(timezone::tz_minuteswest))]) << (1 * 8))
+                            || (static_cast<decltype(timezone::tz_dsttime)>(raw_data[2 + 1 + sizeof(decltype(timezone::tz_minuteswest))]) << (2 * 8))
+                            || (static_cast<decltype(timezone::tz_dsttime)>(raw_data[3 + 1 + sizeof(decltype(timezone::tz_minuteswest))]) << (3 * 8));
+                        */
+ 
+                        return UpdateTimezone {
+                            //tmp_minutewest, tmp_dsttime
+                        };
                     }
                 };
             }
