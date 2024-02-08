@@ -93,8 +93,12 @@ if(BLE_CLIENT_TEST)
 		add_executable(${TEST_NAME} ${TEST_SRCS} tests/${TEST_SOURCE})
 		target_include_directories(${TEST_NAME} PRIVATE ${TEST_INCLUDE_DIRS})
 		target_link_libraries(${TEST_NAME} PRIVATE ${TEST_LINK_LIBS})
+		if(WIN32)
+			target_compile_definitions(${TEST_NAME} PRIVATE _WIN32_WINNT=0x0A00)
+		endif()
 		add_test(NAME BLE_Client::Tests::${TEST_NAME}
 				COMMAND ${TEST_NAME})
+
 	endfunction()
 	
 	list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
