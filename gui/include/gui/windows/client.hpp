@@ -20,6 +20,7 @@
 #include "gui/windows/plots/calibration.hpp"
 #include "gui/windows/measure.hpp"
 #include "gui/windows/plots/measurement.hpp"
+#include "gui/windows/file_manager.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -31,6 +32,7 @@ namespace GUI {
             Windows::Plots::Calibration calibration_plots_window;
             Windows::Measure measure_window;
             Windows::Plots::Measurement measurement_plots_window;
+            Windows::FileManager file_manager_window;
             Windows::Captures::Measurement configure_captures;
             std::vector<AD5933::Data> raw_calibration;
             std::vector<AD5933::Calibration<float>> calibration;

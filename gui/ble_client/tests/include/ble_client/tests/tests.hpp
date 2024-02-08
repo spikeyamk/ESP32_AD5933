@@ -2,9 +2,23 @@
 
 namespace BLE_Client {
     namespace Tests {
-        int basic();
-        int debug_program_debug_dump();
-        int sync_scan_connect();
-        int async_scan_connect();
+        namespace Connect {
+            int sync_scan();
+            int async_scan();
+        }
+
+        namespace Debug {
+            int dump();
+            int program_and_dump();
+        }
+
+        namespace File {
+            int free();
+            int list_count();
+            int list();
+            int size();
+            int remove();
+            int download();
+        }
     }
 }

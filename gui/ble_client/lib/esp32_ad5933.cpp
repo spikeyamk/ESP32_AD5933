@@ -52,11 +52,11 @@ namespace BLE_Client {
 
     void ESP32_AD5933::setup_subscriptions() {
         const std::string tmp_address { get_address_without_semicolons(peripheral) };
-        peripheral.indicate(
+        peripheral.notify(
             service.uuid(),
             service.body_composition_measurement.uuid(),
             [&](SimpleBLE::ByteArray captured_payload) {
-                child_shm->console.log("BLE_Client::SimpleBLE::Peripheral::body_composition_measurement::indicate_callback\n");
+                child_shm->console.log("BLE_Client::SimpleBLE::Peripheral::body_composition_measurement::notify_callback\n");
                 Magic::T_MaxPacket raw_bytes;
                 std::copy(captured_payload.begin(), captured_payload.end(), raw_bytes.begin());
                 const Magic::InComingPacket<Magic::Events::Results::Variant, Magic::Events::Results::Map> incoming_packet { raw_bytes };
@@ -67,11 +67,11 @@ namespace BLE_Client {
             }
         );
 
-        peripheral.indicate(
+        peripheral.notify(
             service.uuid(),
             service.hid_information.uuid(),
             [&](SimpleBLE::ByteArray captured_payload) {
-                child_shm->console.log("BLE_Client::SimpleBLE::Peripheral::hid_information::indicate_callback\n");
+                child_shm->console.log("BLE_Client::SimpleBLE::Peripheral::hid_information::notify_callback\n");
                 Magic::T_MaxPacket raw_bytes;
                 std::copy(captured_payload.begin(), captured_payload.end(), raw_bytes.begin());
                 const Magic::InComingPacket<Magic::Events::Results::Variant, Magic::Events::Results::Map> incoming_packet { raw_bytes };
@@ -114,7 +114,7 @@ namespace BLE_Client {
             static const auto is_characteristic_body_composition_measurement = [&](SimpleBLE::Characteristic &characteristic) {
                 if(
                     (characteristic.uuid() == BODY_COMPOSITION_MEASUREMENT_UUID)
-                    && characteristic.can_indicate()
+                    && characteristic.can_notify()
                 ) {
                     return true;
                 } else {
@@ -147,7 +147,7 @@ namespace BLE_Client {
             static const auto is_hid_information = [&](SimpleBLE::Characteristic &characteristic) {
                 if(
                     (characteristic.uuid() == HID_INFORMATION_UUID)
-                    && characteristic.can_indicate()
+                    && characteristic.can_notify()
                 ) {
                     return true;
                 } else {

@@ -27,8 +27,10 @@
 #include "ble/server/server.hpp"
 
 extern "C" void app_main() {
-	TRIELO_VOID(Util::restart_button());
-	spi_sd_card_test();
+	Trielo::trielo<Util::restart_button>();
+	Trielo::trieloxit<SD_Card::init>(Trielo::OkErrCode(0));
+	Trielo::trielo<SD_Card::create_test_files>();
+	Trielo::trielo<SD_Card::print_test_files>();
 	I2C::Bus i2c_bus {};
 	while(i2c_bus.device_add(AD5933::SLAVE_ADDRESS) == false) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -38,4 +40,5 @@ extern "C" void app_main() {
 	while(1) {
 		std::this_thread::sleep_for(std::chrono::seconds(10));
 	}
+	Trielo::trielo<SD_Card::deinit>();
 }

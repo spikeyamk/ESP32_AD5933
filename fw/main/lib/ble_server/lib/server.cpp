@@ -25,6 +25,7 @@
 
 #include "ble/server/server.hpp"
 #include "magic/packets/incoming.hpp"
+#include "util.hpp"
 
 #include "ad5933/driver/driver.hpp"
 #include "ad5933/extension/extension.hpp"
@@ -292,18 +293,14 @@ namespace BLE {
                 if(event_variant.has_value()) {
                     std::visit([](auto &&arg) {
                         using T_Decay = std::decay_t<decltype(arg)>;
-                        static constexpr auto print_current_time = []() {
-                            const time_t current_time = std::chrono::high_resolution_clock::to_time_t(std::chrono::high_resolution_clock::now());
-                            std::cout << "BLE_Server::time_update_control_point_characteristic_access_cb: Current time is: " << std::ctime(&current_time) << std::endl;
-                        };
-                        if constexpr (std::is_same_v<T_Decay, Magic::Events::Commands::Time::UpdateTimeval>) {
+                       if constexpr (std::is_same_v<T_Decay, Magic::Events::Commands::Time::UpdateTimeval>) {
                             settimeofday(&arg.tv, nullptr);
                             std::printf("BLE_Server::time_update_control_point_characteristic_access_cb: Updated timeval\n");
-                            print_current_time();
+                            Util::print_current_time();
                         } else if constexpr (std::is_same_v<T_Decay, Magic::Events::Commands::Time::UpdateTimezone>) {
                             settimeofday(nullptr, &arg.tz);
                             std::printf("BLE_Server::time_update_control_point_characteristic_access_cb: Updated timezone\n");
-                            print_current_time();
+                            Util::print_current_time();
                         }
                     }, incoming_packet.to_event_variant().value());
                 }
@@ -520,7 +517,7 @@ namespace BLE {
                 .access_cb = body_composition_measurement_characteristic_access_cb,
                 .arg = nullptr,  // Replace with your actual argument.
                 .descriptors = nullptr,
-                .flags = BLE_GATT_CHR_F_INDICATE,
+                .flags = BLE_GATT_CHR_F_NOTIFY,
                 .min_key_size = 0,  // Replace with your minimum key size.
                 .val_handle = &body_composition_measurement_characteristic_handle,  // The value handle will be filled in at registration time.
             };
@@ -542,7 +539,7 @@ namespace BLE {
                 .access_cb = hid_control_information_characteristic_access_cb,
                 .arg = nullptr,  // Replace with your actual argument.
                 .descriptors = nullptr,
-                .flags = BLE_GATT_CHR_F_INDICATE,  // Replace with your flags.
+                .flags = BLE_GATT_CHR_F_NOTIFY,  // Replace with your flags.
                 .min_key_size = 0,  // Replace with your minimum key size.
                 .val_handle = &hid_control_information_characteristic_handle,  // The value handle will be filled in at registration time.
             };
@@ -582,38 +579,38 @@ namespace BLE {
     }
 
     namespace Server {
-        bool indicate_hid_information(const std::span<uint8_t, std::dynamic_extent>& message) {
+        bool notify_hid_information(const std::span<uint8_t, std::dynamic_extent>& message) {
             assert(message.size() <= Magic::MTU);
             struct os_mbuf *txom = ble_hs_mbuf_from_flat(message.data(), message.size());
             if(txom == nullptr) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ");
-                std::cout << "BLE::Server::indicate_hid_information: failed to ble_hs_mbuf_from_flat\n";
+                std::cout << "BLE::Server::notify_hid_information: failed to ble_hs_mbuf_from_flat\n";
                 return false;
             }
-            const int ret = ble_gatts_indicate_custom(conn_handle, hid_control_information_characteristic_handle, txom);
+            const int ret = ble_gatts_notify_custom(conn_handle, hid_control_information_characteristic_handle, txom);
             if(ret == 0) {
                 return true;
             } else {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ");
-                std::cout << "BLE::Server::indicate_hid_information: failed to ble_gatts_indicate_custom: " << ret << std::endl;
+                std::cout << "BLE::Server::notify_hid_information: failed to ble_gatts_notify_custom: " << ret << std::endl;
                 return false;
             }
         }
 
-        bool indicate_body_composition_measurement(const std::span<uint8_t, std::dynamic_extent>& message) {
+        bool notify_body_composition_measurement(const std::span<uint8_t, std::dynamic_extent>& message) {
             assert(message.size() <= Magic::MTU);
             struct os_mbuf *txom = ble_hs_mbuf_from_flat(message.data(), message.size());
             if(txom == nullptr) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ");
-                std::cout << "BLE::Server::indicate_body_composition_measurement: failed to ble_hs_mbuf_from_flat\n";
+                std::cout << "BLE::Server::notify_body_composition_measurement: failed to ble_hs_mbuf_from_flat\n";
                 return false;
             }
-            const int ret = ble_gatts_indicate_custom(conn_handle, body_composition_measurement_characteristic_handle, txom);
+            const int ret = ble_gatts_notify_custom(conn_handle, body_composition_measurement_characteristic_handle, txom);
             if(ret == 0) {
                 return true;
             } else {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ");
-                std::cout << "BLE::Server::indicate_body_composition_measurement: failed to ble_gatts_indicate_custom: " << ret << std::endl;
+                std::cout << "BLE::Server::notify_body_composition_measurement: failed to ble_gatts_notify_custom: " << ret << std::endl;
                 return false;
             }
         }

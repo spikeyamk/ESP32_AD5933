@@ -90,4 +90,5 @@ namespace Util {
 	}
 
 	void restart_button();
+    void print_current_time();
 }

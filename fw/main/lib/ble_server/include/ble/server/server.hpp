@@ -25,7 +25,7 @@ namespace BLE {
         void inject(const i2c_master_dev_handle_t handle);
         void advertise();
         void stop();
-		bool indicate_hid_information(const std::span<uint8_t, std::dynamic_extent>& message);
+		bool notify_hid_information(const std::span<uint8_t, std::dynamic_extent>& message);
     }
 
     namespace Server {
@@ -35,9 +35,9 @@ namespace BLE {
             Sender() = default;
 
 			template<typename T_OutComingPacket>
-			inline bool indicate_hid_information(const T_OutComingPacket& event) const {
+			inline bool notify_hid_information(const T_OutComingPacket& event) const {
 				auto tmp_array { event.get_raw_data() };
-				return BLE::Server::indicate_hid_information(std::span(tmp_array.begin(), tmp_array.end()));
+				return BLE::Server::notify_hid_information(std::span(tmp_array.begin(), tmp_array.end()));
             }
         };
     }
@@ -57,6 +57,7 @@ namespace BLE {
 			struct configuring {};
 			struct running {};
 		}
+		struct file {};
 	}
 
 	namespace Events {
@@ -117,6 +118,16 @@ namespace BLE {
 			void run(std::atomic<bool> &processing, Server::Sender &sender, AD5933::Extension &ad5933);
 			void end();
 		}
+
+		namespace File {
+			void free(Server::Sender &sender);
+			void list_count(Server::Sender &sender);
+			void list(Server::Sender &sender);
+			void size(const Magic::Events::Commands::File::Size& event, Server::Sender &sender);
+			void remove(const Magic::Events::Commands::File::Remove& event);
+			void download(const Magic::Events::Commands::File::Download& event, Server::Sender &sender);
+			void upload(const Magic::Events::Commands::File::Upload& event);
+		}
 	}
 
 	namespace Guards {
@@ -169,6 +180,7 @@ namespace BLE {
 			auto ret = make_transition_table(
 				*state<States::off>        + event<Events::turn_on>      	     / function{Actions::turn_on}      		       = state<States::on>,
 				state<States::on>          + event<Events::advertise>													       = state<States::advertise>,
+
 				state<States::advertise>										 / function{Actions::advertise}    		       = state<States::advertising>,
 				state<States::advertising> + event<Events::advertise>			 / function{Actions::advertising}    	       = state<States::advertise>,
 				state<States::advertising> + event<Events::disconnect>			 / function{Actions::disconnect}    	       = state<States::advertise>,
@@ -180,6 +192,7 @@ namespace BLE {
 				state<States::connected>   + event<Events::disconnect>   		 / function{Actions::disconnect}   		   	   = state<States::advertise>,
 				state<States::connected>   + event<Magic::Events::Commands::Debug::Start> / function{Actions::Debug::start}    = state<States::debug>,
 				state<States::connected>   + event<Magic::Events::Commands::Sweep::Configure> / function{Actions::FreqSweep::configure} = state<States::FreqSweep::configuring>,
+				state<States::connected>   + event<Magic::Events::Commands::File::Start>									   = state<States::file>,
 
 				state<States::debug> + event<Events::disconnect>     / function{Actions::disconnect}     = state<States::advertise>,
 				state<States::debug> + event<Events::Debug::end>     / function{Actions::Debug::end}     = state<States::connected>,
@@ -197,7 +210,18 @@ namespace BLE {
 				state<States::FreqSweep::running> + event<Magic::Events::Commands::Sweep::Run>       [function{Guards::processing}] 	   / function{Actions::FreqSweep::run}       = state<States::FreqSweep::running>,
 				state<States::FreqSweep::running> + event<Magic::Events::Commands::Sweep::Configure> [function{Guards::processing}] 	   / function{Actions::FreqSweep::configure} = state<States::FreqSweep::configuring>,
 				state<States::FreqSweep::running> + event<Magic::Events::Commands::Sweep::Configure> [function{Guards::neg_processing}] / function{Actions::unexpected} 			 = state<States::error>,
-				state<States::FreqSweep::running> + event<Magic::Events::Commands::Sweep::Run>       [function{Guards::neg_processing}] / function{Actions::unexpected} 			 = state<States::error>
+				state<States::FreqSweep::running> + event<Magic::Events::Commands::Sweep::Run>       [function{Guards::neg_processing}] / function{Actions::unexpected} 			 = state<States::error>,
+
+				// for file commands
+				state<States::file> + event<Events::disconnect> / function{Actions::disconnect} = state<States::advertise>,
+				state<States::file> + event<Magic::Events::Commands::File::End> = state<States::connected>,
+				state<States::file> + event<Magic::Events::Commands::File::Free> / function{Actions::File::free} = state<States::file>,
+				state<States::file> + event<Magic::Events::Commands::File::ListCount> / function{Actions::File::list_count} = state<States::file>,
+				state<States::file> + event<Magic::Events::Commands::File::List> / function{Actions::File::list} = state<States::file>,
+				state<States::file> + event<Magic::Events::Commands::File::Size> / function{Actions::File::size} = state<States::file>,
+				state<States::file> + event<Magic::Events::Commands::File::Remove> / function{Actions::File::remove} = state<States::file>,
+				state<States::file> + event<Magic::Events::Commands::File::Download> / function{Actions::File::download} = state<States::file>,
+				state<States::file> + event<Magic::Events::Commands::File::Upload> / function{Actions::File::upload} = state<States::file>
 			);
 			return ret;
 		}

@@ -10,12 +10,11 @@
 #include <cstdint>
 #include <numeric>
 
-#include "esp_task_wdt.h"
-#include "trielo/trielo.hpp"
-#include "freertos/FreeRTOS.h"
-
+#include <esp_task_wdt.h>
+#include <freertos/FreeRTOS.h>
 #include <inttypes.h>
-#include "driver/gpio.h"
+#include <driver/gpio.h>
+#include <trielo/trielo.hpp>
 
 #include "ad5933/driver/driver.hpp"
 
@@ -307,5 +306,10 @@ namespace Util {
 		TRIELO_EQ(ESP_OK, gpio_isr_handler_add(button, blinky_button_isr_handler, nullptr));
 		Trielo::trielo<gpio_intr_enable>(Trielo::OkErrCode(ESP_OK), button);
 	}
+
+    void print_current_time() {
+        const time_t current_time = std::chrono::high_resolution_clock::to_time_t(std::chrono::high_resolution_clock::now());
+        std::cout << "BLE_Server::time_update_control_point_characteristic_access_cb: Current time is: " << std::ctime(&current_time) << std::endl;
+    };
 }
 

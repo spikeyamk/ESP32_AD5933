@@ -191,7 +191,7 @@ namespace Magic {
                         return List {};
                     }
                 };
-                struct FileSize {
+                struct Size {
                     static constexpr Header header { Header::FileSize };
                     T_MaxDataSlice path { 0 };
                     using T_RawData = T_MaxPacket;
@@ -200,10 +200,10 @@ namespace Magic {
                         std::copy(path.begin(), path.end(), ret.begin() + 1);
                         return ret;
                     }
-                    static inline constexpr FileSize from_raw_data(const T_RawData& raw_data) {
+                    static inline constexpr Size from_raw_data(const T_RawData& raw_data) {
                         decltype(path) tmp;
                         std::copy(raw_data.begin() + 1, raw_data.end(), tmp.begin());
-                        return FileSize { tmp };
+                        return Size { tmp };
                     }
                 };
                 struct Remove {
@@ -341,7 +341,7 @@ namespace Magic {
                 File::Free,
                 File::ListCount,
                 File::List,
-                File::FileSize,
+                File::Size,
                 File::Remove,
                 File::Download,
                 File::Upload,
@@ -371,7 +371,7 @@ namespace Magic {
                     File::Free{},
                     File::ListCount{},
                     File::List{},
-                    File::FileSize{},
+                    File::Size{},
                     File::Remove{},
                     File::Download{},
                     File::Upload{},

@@ -16,7 +16,8 @@ namespace GUI {
             calibrate_window { index, parent_shm },
             calibration_plots_window { index },
             measure_window { index, parent_shm },
-            measurement_plots_window { index }
+            measurement_plots_window { index },
+            file_manager_window { index, parent_shm }
         {}
 
         void client1(const int i, ImGuiID center_id, Client &client, MenuBarEnables &enables, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
@@ -74,7 +75,7 @@ namespace GUI {
                     debug(i, dockspace_id, enables.debug, client, shm);
                     client.calibrate_window.draw(enables.calibrate, dockspace_id);
                     client.measure_window.draw(enables.measure, dockspace_id);
-                    file_manager(i, dockspace_id, enables.file_manager, client, shm);
+                    client.file_manager_window.draw(enables.file_manager, dockspace_id);
                     first++;
                     ImGui::DockBuilderFinish(dockspace_id);
                 } else {
@@ -96,7 +97,7 @@ namespace GUI {
                         client.measure_window.draw(enables.measure, ImGui::GetID(static_cast<void*>(nullptr)));
                     }
                     if(enables.file_manager) {
-                        file_manager(i, ImGui::GetID(static_cast<void*>(nullptr)), enables.file_manager, client, shm);
+                        client.file_manager_window.draw(enables.file_manager, ImGui::GetID(static_cast<void*>(nullptr)));
                     }
                 }
             }

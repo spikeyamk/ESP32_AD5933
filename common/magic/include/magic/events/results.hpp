@@ -65,35 +65,32 @@ namespace Magic {
             namespace File {
                 struct Free {
                     static constexpr Header header { Header::FileFree };
-                    uint64_t bytes_used;
                     uint64_t bytes_free;
-                    using T_RawData = std::array<uint8_t, 17>;
+                    uint64_t bytes_total;
+                    using T_RawData = std::array<uint8_t, 1 + sizeof(bytes_free) + sizeof(bytes_total)>;
                     inline constexpr T_RawData to_raw_data() const {
                         T_RawData ret { static_cast<uint8_t>(header) };
-                        std::generate(ret.begin() + 1, ret.end(), [index = 0, this]() mutable {
-                            return static_cast<uint8_t>((bytes_used >> (8 * index++)) & 0xFF);
-                        });
-                        std::generate(ret.begin() + 1 + 8, ret.end(), [index = 0, this]() mutable {
+                        std::generate(ret.begin() + 1, ret.begin() + 1 + sizeof(bytes_free), [index = 0, this]() mutable {
                             return static_cast<uint8_t>((bytes_free >> (8 * index++)) & 0xFF);
+                        });
+                        std::generate(ret.begin() + 1 + sizeof(bytes_free), ret.end(), [index = 0, this]() mutable {
+                            return static_cast<uint8_t>((bytes_total >> (8 * index++)) & 0xFF);
                         });
                         return ret;
                     }
                     static inline constexpr Free from_raw_data(const T_RawData& raw_data) {
-                        uint64_t bytes_used;
-                        std::for_each(raw_data.begin() + 1 + 0, raw_data.end(), [&](const uint8_t e) {
-                            bytes_used = (bytes_used << 8) | e;
-                        });
-                        uint64_t bytes_free;
-                        std::for_each(raw_data.begin() + 1 + 8, raw_data.end(), [&](const uint8_t e) {
-                            bytes_free = (bytes_free << 8) | e;
-                        });
-                        return Free { bytes_used, bytes_free };
+                        const decltype(bytes_free)* tmp_bytes_free = reinterpret_cast<const decltype(bytes_free)*>(raw_data.data() + 1);
+                        const decltype(bytes_total)* tmp_bytes_total = reinterpret_cast<const decltype(bytes_total)*>(raw_data.data() + 1 + sizeof(bytes_free));
+                        return Free { 
+                            .bytes_free = *tmp_bytes_free, 
+                            .bytes_total = *tmp_bytes_total,
+                        };
                     }
-                };
+               };
                 struct ListCount {
                     static constexpr Header header { Header::FileListCount };
                     uint64_t num_of_files;
-                    using T_RawData = std::array<uint8_t, 9>;
+                    using T_RawData = std::array<uint8_t, 1 + sizeof(num_of_files)>;
                     inline constexpr T_RawData to_raw_data() const {
                         T_RawData ret { static_cast<uint8_t>(header) };
                         std::generate(ret.begin() + 1, ret.end(), [index = 0, this]() mutable {
@@ -102,11 +99,8 @@ namespace Magic {
                         return ret;
                     }
                     static inline constexpr ListCount from_raw_data(const T_RawData& raw_data) {
-                        uint64_t num_of_files;
-                        std::for_each(raw_data.begin() + 1 + 0, raw_data.end(), [&](const uint8_t e) {
-                            num_of_files = (num_of_files << 8) | e;
-                        });
-                        return ListCount { num_of_files };
+                        const decltype(num_of_files)* tmp_num_of_files = reinterpret_cast<const decltype(num_of_files)*>(raw_data.data() + 1);
+                        return ListCount { *tmp_num_of_files };
                     }
                 };
                 struct List {
@@ -124,10 +118,10 @@ namespace Magic {
                         return List{ tmp };
                     }
                 };
-                struct FileSize {
+                struct Size {
                     static constexpr Header header { Header::FileSize };
                     uint64_t num_of_bytes;
-                    using T_RawData = std::array<uint8_t, 9>;
+                    using T_RawData = std::array<uint8_t, 1 + sizeof(num_of_bytes)>;
                     inline constexpr T_RawData to_raw_data() const {
                         T_RawData ret { static_cast<uint8_t>(header) };
                         std::generate(ret.begin() + 1, ret.end(), [index = 0, this]() mutable {
@@ -135,12 +129,9 @@ namespace Magic {
                         });
                         return ret;
                     }
-                    static inline constexpr FileSize from_raw_data(const T_RawData& raw_data) {
-                        uint64_t num_of_bytes;
-                        std::for_each(raw_data.begin() + 1 + 0, raw_data.end(), [&](const uint8_t e) {
-                            num_of_bytes = (num_of_bytes << 8) | e;
-                        });
-                        return FileSize { num_of_bytes };
+                    static inline constexpr Size from_raw_data(const T_RawData& raw_data) {
+                        const decltype(num_of_bytes)* tmp_num_of_bytes = reinterpret_cast<const decltype(num_of_bytes)*>(raw_data.data() + 1);
+                        return Size { *tmp_num_of_bytes };
                     }
                 };
                 struct Download {
@@ -186,7 +177,7 @@ namespace Magic {
                 File::Free,
                 File::ListCount,
                 File::List,
-                File::FileSize,
+                File::Size,
                 File::Download,
                 File::Upload
             >;
@@ -203,7 +194,7 @@ namespace Magic {
                     File::Free{},
                     File::ListCount{},
                     File::List{},
-                    File::FileSize{},
+                    File::Size{},
                     File::Download{},
                     File::Upload{}
                 };
