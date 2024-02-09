@@ -67,12 +67,13 @@ namespace BLE {
     }
 
     namespace Server {
-        Server::Sender sender {};
+        std::shared_ptr<Server::Sender> sender { std::make_shared<Server::Sender>() };
         AD5933::Driver dummy_driver {};
-        AD5933::Extension dummy_extension {dummy_driver};
+        AD5933::Extension dummy_extension { dummy_driver };
         std::atomic<bool> processing = false;
         my_logger logger {};
-        T_StateMachine dummy_state_machine { logger, sender, dummy_extension, processing };
+        StopSources stop_sources {};
+        T_StateMachine dummy_state_machine { logger, sender, dummy_extension, processing, stop_sources };
     }
 
     namespace Server {

@@ -10,6 +10,7 @@
 #include <array>
 #include <atomic>
 #include <span>
+#include <memory>
 
 #include <boost/sml.hpp>
 #include "driver/i2c_master.h"
@@ -26,7 +27,13 @@ namespace BLE {
         void advertise();
         void stop();
 		bool notify_hid_information(const std::span<uint8_t, std::dynamic_extent>& message);
+        bool notify_body_composition_measurement(const std::span<uint8_t, std::dynamic_extent>& message);
     }
+
+	struct StopSources {
+		bool save { false };
+		bool send { false };
+	};
 
     namespace Server {
         class Sender {
@@ -38,6 +45,12 @@ namespace BLE {
 			inline bool notify_hid_information(const T_OutComingPacket& event) const {
 				auto tmp_array { event.get_raw_data() };
 				return BLE::Server::notify_hid_information(std::span(tmp_array.begin(), tmp_array.end()));
+            }
+
+			template<typename T_OutComingPacket>
+			inline bool notify_body_composition_measurement(const T_OutComingPacket& event) const {
+				auto tmp_array { event.get_raw_data() };
+				return BLE::Server::notify_body_composition_measurement(std::span(tmp_array.begin(), tmp_array.end()));
             }
         };
     }
@@ -58,6 +71,10 @@ namespace BLE {
 			struct running {};
 		}
 		struct file {};
+		namespace Auto {
+			struct save {};
+			struct send {};
+		}
 	}
 
 	namespace Events {
@@ -106,7 +123,7 @@ namespace BLE {
 		namespace Debug {
 			void start();
 			void end();
-			void dump(Server::Sender &sender, AD5933::Extension &ad5933);
+			void dump(std::shared_ptr<Server::Sender> &sender, AD5933::Extension &ad5933);
 			void program(AD5933::Extension &ad5933, const Magic::Events::Commands::Debug::Program& program_event);
 			void command(AD5933::Extension &ad5933, const Magic::Events::Commands::Debug::CtrlHB &ctrl_HB_event);
 		}
@@ -115,18 +132,25 @@ namespace BLE {
 			//static void configure(bool &processing, AD5933::Extension &ad5933, const Events::FreqSweep::configure &configure_event, boost::sml::back::process<Events::FreqSweep::Private::configure_complete> process_event) {
 			void configure(std::atomic<bool> &processing, AD5933::Extension &ad5933, const Magic::Events::Commands::Sweep::Configure &configure_event);
 			//static void run(Sender &sender, AD5933::Extension &ad5933, boost::sml::back::process<Events::FreqSweep::Private::sweep_complete> process_event) {
-			void run(std::atomic<bool> &processing, Server::Sender &sender, AD5933::Extension &ad5933);
+			void run(std::atomic<bool> &processing, std::shared_ptr<Server::Sender>& sender, AD5933::Extension &ad5933);
 			void end();
 		}
 
 		namespace File {
-			void free(Server::Sender &sender);
-			void list_count(Server::Sender &sender);
-			void list(Server::Sender &sender);
-			void size(const Magic::Events::Commands::File::Size& event, Server::Sender &sender);
+			void free(std::shared_ptr<Server::Sender>& sender);
+			void list_count(std::shared_ptr<Server::Sender>& sender);
+			void list(std::shared_ptr<Server::Sender>& sender);
+			void size(const Magic::Events::Commands::File::Size& event, std::shared_ptr<Server::Sender>& sender);
 			void remove(const Magic::Events::Commands::File::Remove& event);
-			void download(const Magic::Events::Commands::File::Download& event, Server::Sender &sender);
+			void download(const Magic::Events::Commands::File::Download& event, std::shared_ptr<Server::Sender>& sender);
 			void upload(const Magic::Events::Commands::File::Upload& event);
+		}
+
+		namespace Auto {
+			void start_saving(std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933);
+			void start_sending(std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933);
+			void stop_saving(StopSources& stop_sources);
+			void stop_sending(StopSources& stop_sources);
 		}
 	}
 
@@ -193,6 +217,8 @@ namespace BLE {
 				state<States::connected>   + event<Magic::Events::Commands::Debug::Start> / function{Actions::Debug::start}    = state<States::debug>,
 				state<States::connected>   + event<Magic::Events::Commands::Sweep::Configure> / function{Actions::FreqSweep::configure} = state<States::FreqSweep::configuring>,
 				state<States::connected>   + event<Magic::Events::Commands::File::Start>									   = state<States::file>,
+				state<States::connected>   + event<Magic::Events::Commands::Auto::Save>	/ function{Actions::Auto::start_saving}  = state<States::Auto::save>,
+				state<States::connected>   + event<Magic::Events::Commands::Auto::Send>	/ function{Actions::Auto::start_sending} = state<States::Auto::send>,
 
 				state<States::debug> + event<Events::disconnect>     / function{Actions::disconnect}     = state<States::advertise>,
 				state<States::debug> + event<Events::Debug::end>     / function{Actions::Debug::end}     = state<States::connected>,
@@ -221,7 +247,15 @@ namespace BLE {
 				state<States::file> + event<Magic::Events::Commands::File::Size> / function{Actions::File::size} = state<States::file>,
 				state<States::file> + event<Magic::Events::Commands::File::Remove> / function{Actions::File::remove} = state<States::file>,
 				state<States::file> + event<Magic::Events::Commands::File::Download> / function{Actions::File::download} = state<States::file>,
-				state<States::file> + event<Magic::Events::Commands::File::Upload> / function{Actions::File::upload} = state<States::file>
+				state<States::file> + event<Magic::Events::Commands::File::Upload> / function{Actions::File::upload} = state<States::file>,
+
+				// for auto save commands
+				state<States::Auto::save>  + event<Events::disconnect> / function{Actions::Auto::stop_saving} = state<States::advertise>,
+				state<States::Auto::save>  + event<Magic::Events::Commands::Auto::End> / function{Actions::Auto::stop_saving} = state<States::connected>,
+
+				// for auto send commands
+				state<States::Auto::send>  + event<Events::disconnect> / function{Actions::Auto::stop_sending} = state<States::advertise>,
+				state<States::Auto::send>  + event<Magic::Events::Commands::Auto::End> / function{Actions::Auto::stop_sending} = state<States::connected>
 			);
 			return ret;
 		}

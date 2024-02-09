@@ -92,8 +92,10 @@ set(GUI_SRCS
 	lib/gui/windows/file_manager.cpp
 	lib/gui/windows/client.cpp
 	lib/gui/windows/debug.cpp
+	lib/gui/windows/auto.cpp
 	lib/gui/windows/plots/measurement.cpp
 	lib/gui/windows/plots/calibration.cpp
+	lib/gui/windows/plots/auto.cpp
 	lib/json/conversion.cpp
 	${IMGUI_SRCS}
 	${IMPLOT_SRCS}

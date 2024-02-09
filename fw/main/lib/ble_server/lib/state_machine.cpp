@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <cstdio>
+#include <thread>
 
 #include <dirent.h>
 #include <sys/stat.h>
@@ -17,6 +18,10 @@
 #include "magic/events/commands.hpp"
 #include "magic/packets/outcoming.hpp"
 #include "sd_card.hpp"
+#include "ad5933/config/config.hpp"
+#include "ad5933/data/data.hpp"
+#include "ad5933/calibration/calibration.hpp"
+#include "ad5933/measurement/measurement.hpp"
 
 namespace BLE {
 	namespace Events {
@@ -61,20 +66,19 @@ namespace BLE {
 		}
 
 		namespace Debug {
-			static const char *namespace_name = "Debug::";
 			void start() {
 			}
 
 			void end() {
 			}
 
-			void dump(Server::Sender &sender, AD5933::Extension &ad5933) {
-				std::unique_lock lock(sender.mutex);
+			void dump(std::shared_ptr<Server::Sender> &sender, AD5933::Extension &ad5933) {
+				std::unique_lock lock(sender->mutex);
 				const auto ret { ad5933.driver.dump_all_registers() };
 				if(ret.has_value()) {
 					const Magic::Events::Results::Debug::Dump dump_event { ret.value() };
 					const Magic::OutComingPacket<Magic::Events::Results::Debug::Dump> dump_packet { dump_event };
-					sender.notify_hid_information(dump_packet);
+					sender->notify_hid_information(dump_packet);
 				}
 			}
 
@@ -97,7 +101,6 @@ namespace BLE {
 		}
 
 		namespace FreqSweep {
-			static const char *namespace_name = "FreqSweep::";
 			//static void configure(bool &processing, AD5933::Extension &ad5933, const Events::FreqSweep::configure &configure_event, boost::sml::back::process<Events::FreqSweep::Private::configure_complete> process_event) {
 			void configure(std::atomic<bool> &processing, AD5933::Extension &ad5933, const Magic::Events::Commands::Sweep::Configure &configure_event) {
 				processing = true;
@@ -114,8 +117,8 @@ namespace BLE {
 			}
 
 			//static void run(Sender &sender, AD5933::Extension &ad5933, boost::sml::back::process<Events::FreqSweep::Private::sweep_complete> process_event) {
-			void run(std::atomic<bool> &processing, Server::Sender &sender, AD5933::Extension &ad5933) {
-				std::unique_lock lock(sender.mutex);
+			void run(std::atomic<bool> &processing, std::shared_ptr<Server::Sender> &sender, AD5933::Extension &ad5933) {
+				std::unique_lock lock(sender->mutex);
 				processing = true;
 				ad5933.reset();
 				ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::StandbyMode);
@@ -129,7 +132,7 @@ namespace BLE {
 					if(data.has_value()) {
 						const Magic::Events::Results::Sweep::ValidData valid_data_event { data.value() };
 						const Magic::OutComingPacket<Magic::Events::Results::Sweep::ValidData> valid_data_packet { valid_data_event };
-						sender.notify_hid_information(valid_data_packet);
+						sender->notify_hid_information(valid_data_packet);
 					}
 					ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::IncFreq);
 				} while(ad5933.has_status_condition(AD5933::Masks::Or::Status::FreqSweepComplete) == false);
@@ -143,14 +146,14 @@ namespace BLE {
 		}
 
 		namespace File {
-			void free(Server::Sender &sender) {
+			void free(std::shared_ptr<Server::Sender> &sender) {
 				uint64_t bytes_total;
 				uint64_t bytes_free;
 				if(Trielo::trielo<esp_vfs_fat_info>(Trielo::OkErrCode(ESP_OK), SD_Card::mount_point.data(), &bytes_total, &bytes_free) == ESP_OK) {
 					std::cout << "BLE::Actions::File::free: \n\tbytes_total: " << bytes_total << "\n\tbytes_free: " << bytes_free << std::endl;
 					const Magic::Events::Results::File::Free file_free_event { .bytes_free = bytes_free, .bytes_total = bytes_total };
 					const Magic::OutComingPacket<Magic::Events::Results::File::Free> file_free_packet { file_free_event };
-					sender.notify_hid_information(file_free_packet);
+					sender->notify_hid_information(file_free_packet);
 				}
 			}
 
@@ -172,19 +175,19 @@ namespace BLE {
 				return num_of_files;
 			}
 
-			void list_count(Server::Sender &sender) {
+			void list_count(std::shared_ptr<Server::Sender> &sender) {
 				try {
 					const uint64_t num_of_files = get_num_of_files();
 					std::cout << "BLE::Actions::File::list_count: \n\tnum_of_files: " << num_of_files << std::endl;
 					const Magic::Events::Results::File::ListCount list_count_event { .num_of_files = num_of_files };
 					const Magic::OutComingPacket<Magic::Events::Results::File::ListCount> list_count_packet { list_count_event };
-					sender.notify_hid_information(list_count_packet);
+					sender->notify_hid_information(list_count_packet);
 				} catch(...) {
 
 				}
 			}
 
-			void list(Server::Sender &sender) {
+			void list(std::shared_ptr<Server::Sender> &sender) {
 				try {
 					DIR *dir;
 					if((dir = opendir(SD_Card::mount_point.data())) == NULL) {
@@ -199,7 +202,7 @@ namespace BLE {
 							std::copy(filepath.begin(), filepath.end(), tmp_path.begin());
 							const Magic::Events::Results::File::List list_event { .path = tmp_path };
 							const Magic::OutComingPacket<Magic::Events::Results::File::List> list_packet { list_event };
-							sender.notify_hid_information(list_packet);
+							sender->notify_hid_information(list_packet);
 						}
 					}
 				} catch(...) {
@@ -218,7 +221,7 @@ namespace BLE {
 				return static_cast<uint64_t>(st.st_size);
 			}
 
-			void size(const Magic::Events::Commands::File::Size& event, Server::Sender &sender) {
+			void size(const Magic::Events::Commands::File::Size& event, std::shared_ptr<Server::Sender> &sender) {
 				try {
 					const auto num_of_bytes { get_num_of_bytes(event) };
 					if(num_of_bytes.has_value() == false) {
@@ -228,7 +231,7 @@ namespace BLE {
 						.num_of_bytes = num_of_bytes.value()
 					};
 					const Magic::OutComingPacket<Magic::Events::Results::File::Size> size_packet { size_event };
-					sender.notify_hid_information(size_packet);
+					sender->notify_hid_information(size_packet);
 				} catch(...) {
 
 				}
@@ -241,7 +244,7 @@ namespace BLE {
 				unlink(path.data());
 			}
 
-			void download(const Magic::Events::Commands::File::Download& event, Server::Sender &sender) {
+			void download(const Magic::Events::Commands::File::Download& event, std::shared_ptr<Server::Sender> &sender) {
 				try {
 					std::array<char, SD_Card::mount_point_prefix.size() + sizeof(Magic::T_MaxDataSlice)> path;
 					std::copy(SD_Card::mount_point_prefix.begin(), SD_Card::mount_point_prefix.end(), path.begin());
@@ -257,7 +260,7 @@ namespace BLE {
 						const Magic::Events::Results::File::Download download_event { .slice = tmp_slice };
 						const Magic::OutComingPacket<Magic::Events::Results::File::Download> download_packet { download_event };
 						std::cout << "BLE::Actions::File::download: tmp_slice: \n\t" << std::string_view{ reinterpret_cast<const char*>(tmp_slice.data()), tmp_slice.size() } << std::endl;
-						sender.notify_hid_information(download_packet);
+						sender->notify_hid_information(download_packet);
 						tmp_slice = Magic::T_MaxDataSlice { 0 };
 						std::this_thread::sleep_for(std::chrono::milliseconds(100));
 					}
@@ -270,6 +273,69 @@ namespace BLE {
 
 			void upload(const Magic::Events::Commands::File::Upload& event) {
 
+			}
+		}
+
+		namespace Auto {
+			static constexpr AD5933::Config default_config {};
+			static constexpr std::array<AD5933::Calibration<float>, 3> default_calibration {
+				AD5933::Calibration<float> { 9806023.0f, -1.2272441387176514f },
+				AD5933::Calibration<float> { 9813488.0f, -1.2278409004211426f },
+				AD5933::Calibration<float> { 9811605.0f, -1.2277723550796509f },
+			};
+
+			void start_saving(std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933) {
+				std::jthread t1([sender, &ad5933](StopSources& stop_sources) {
+					stop_sources.save = true;
+					ad5933.driver.program_all_registers(default_config.to_raw_array());
+					while(stop_sources.save == true) {
+						std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
+					}
+				}, std::ref(stop_sources));
+				t1.detach();
+			}
+
+			void start_sending(std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933) {
+				std::jthread t1([sender, &ad5933](StopSources& stop_sources) {
+					stop_sources.send = true;
+					ad5933.driver.program_all_registers(default_config.to_raw_array());
+					while(stop_sources.send == true) {
+						ad5933.reset();
+						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::StandbyMode);
+						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::InitStartFreq);
+						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::StartFreqSweep);
+						do {
+							while(ad5933.has_status_condition(AD5933::Masks::Or::Status::ValidData) == false) {
+								std::this_thread::sleep_for(std::chrono::milliseconds(1));
+							}
+							const auto raw_data { ad5933.read_impe_data() };
+							if(raw_data.has_value() && ad5933.has_status_condition(AD5933::Masks::Or::Status::FreqSweepComplete)) {
+								const AD5933::Data data { raw_data.value() };
+								const AD5933::Measurement measurement { data, default_calibration[2] };
+								const Magic::Events::Results::Auto::Point point {
+									.status = static_cast<uint8_t>(Magic::Events::Results::Auto::Point::Status::Valid),
+									.impedance = measurement.get_magnitude(),
+									.phase = measurement.get_phase(),
+								};
+								static constexpr size_t test = sizeof(Magic::Events::Results::Auto::Point);
+								const Magic::T_OutComingPacket<Magic::Events::Results::Auto::Point, 10> point_packet { point };
+								sender->notify_body_composition_measurement(point_packet);
+							}
+							ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::IncFreq);
+						} while(ad5933.has_status_condition(AD5933::Masks::Or::Status::FreqSweepComplete) == false);
+
+						std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
+					}
+				}, std::ref(stop_sources));
+				t1.detach();
+			}
+
+			void stop_saving(StopSources& stop_sources) {
+				stop_sources.save = false;
+			}
+
+			void stop_sending(StopSources& stop_sources) {
+				stop_sources.send = false;
 			}
 		}
 	}

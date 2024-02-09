@@ -63,9 +63,11 @@ namespace GUI {
                     ImGui::MenuItem("Calibrate", nullptr, &menu_bar_enables.calibrate);
                     ImGui::MenuItem("Measure", nullptr, &menu_bar_enables.measure);
                     ImGui::MenuItem("Debug", nullptr, &menu_bar_enables.debug);
+                    ImGui::MenuItem("Auto", nullptr, &menu_bar_enables.auto_window);
                     ImGui::MenuItem("File Manager", nullptr, &menu_bar_enables.file_manager);
                     ImGui::MenuItem("Measurement Plots", nullptr, &menu_bar_enables.measurement_plots);
                     ImGui::MenuItem("Calibration Plots", nullptr, &menu_bar_enables.calibration_plots);
+                    ImGui::MenuItem("Auto Plots", nullptr, &menu_bar_enables.auto_plots);
                     ImGui::EndMenu();
                 }
                 if(ImGui::BeginMenu("Help")) {

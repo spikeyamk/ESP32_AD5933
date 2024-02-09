@@ -10,6 +10,7 @@
 #include <future>
 #include <functional>
 #include <span>
+#include <iostream>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/FreeRTOSConfig.h"
@@ -25,6 +26,7 @@
 #include "sd_card.hpp"
 
 #include "ble/server/server.hpp"
+#include "magic/events/results.hpp"
 
 extern "C" void app_main() {
 	Trielo::trielo<Util::restart_button>();

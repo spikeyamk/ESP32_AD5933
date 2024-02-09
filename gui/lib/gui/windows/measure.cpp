@@ -61,16 +61,6 @@ namespace GUI {
                 }
             }
 
-            if(status != Status::MeasurementDone) {
-                ImGui::BeginDisabled();
-                ImGui::Button("Save");
-                ImGui::EndDisabled();
-            } else if(status == Status::MeasurementDone) {
-                if(ImGui::Button("Save")) {
-                    save();
-                }
-            }
-
             ImGui::End();
         }
 
@@ -291,10 +281,6 @@ namespace GUI {
             if(ImGui::SliderInt("Settling Time Cycles Number", &inputs.numeric.settling_number, 1, 511)) {
                 configs.measurement.set_settling_time_cycles_number(AD5933::uint9_t { static_cast<uint16_t>(inputs.numeric.settling_number) });
             }
-        }
-    
-        void Measure::save() const {
-
         }
     }
 }

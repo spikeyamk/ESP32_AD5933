@@ -32,25 +32,48 @@ namespace GUI {
                 }
 
                 if(ImGui::BeginTabBar("MEASUREMENT_PLOTS")) {
-                    if(ImGui::BeginTabItem("RAW_DATA")) {
-                        draw_raw_data();
+                    if(ImGui::BeginTabItem("SINGLE")) {
+                        if(ImGui::BeginTabBar("SINGLE_TAB_BAR")) {
+                            if(ImGui::BeginTabItem("RAW_DATA")) {
+                                draw_raw_data();
+                                ImGui::EndTabItem();
+                            }
+                            if(ImGui::BeginTabItem("CALCULATED_DATA")) {
+                                draw_calculated_data();
+                                ImGui::EndTabItem();
+                            }
+                            if(ImGui::BeginTabItem("CORRECTED_GON_DATA")) {
+                                draw_corrected_gon_data();
+                                ImGui::EndTabItem();
+                            }
+                            if(ImGui::BeginTabItem("CORRECTED_ALG_DATA")) {
+                                draw_corrected_alg_data();
+                                ImGui::EndTabItem();
+                            }
+                            ImGui::EndTabBar();
+                        }
                         ImGui::EndTabItem();
                     }
-                    if(ImGui::BeginTabItem("CALCULATED_DATA")) {
-                        draw_calculated_data();
-                        ImGui::EndTabItem();
-                    }
-                    if(ImGui::BeginTabItem("CORRECTED_GON_DATA")) {
-                        draw_corrected_gon_data();
-                        ImGui::EndTabItem();
-                    }
-                    if(ImGui::BeginTabItem("CORRECTED_ALG_DATA")) {
-                        draw_corrected_alg_data();
+                    if(ImGui::BeginTabItem("PERIODIC")) {
+                        if(ImGui::BeginTabBar("PERIODIC_TAB_BAR")) {
+                            if(ImGui::BeginTabItem("RAW_DATA")) {
+                                ImGui::EndTabItem();
+                            }
+                            if(ImGui::BeginTabItem("CALCULATED_DATA")) {
+                                ImGui::EndTabItem();
+                            }
+                            if(ImGui::BeginTabItem("CORRECTED_GON_DATA")) {
+                                ImGui::EndTabItem();
+                            }
+                            if(ImGui::BeginTabItem("CORRECTED_ALG_DATA")) {
+                                ImGui::EndTabItem();
+                            }
+                            ImGui::EndTabBar();
+                        }
                         ImGui::EndTabItem();
                     }
                     ImGui::EndTabBar();
                 }
-
                 ImGui::End();
             }
 

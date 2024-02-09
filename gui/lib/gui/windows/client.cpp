@@ -18,7 +18,9 @@ namespace GUI {
             measure_window { index, parent_shm },
             measurement_plots_window { index },
             file_manager_window { index, parent_shm },
-            debug_window { index, parent_shm }
+            debug_window { index, parent_shm },
+            auto_window { index, parent_shm },
+            auto_plots_window { index }
         {}
 
         void client1(const int i, ImGuiID center_id, Client &client, MenuBarEnables &enables, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
@@ -73,10 +75,12 @@ namespace GUI {
                     ImGuiID right_id = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.2f, nullptr, &dockspace_id);
                     client.measurement_plots_window.draw(enables.measurement_plots, right_id);
                     client.calibration_plots_window.draw(enables.calibration_plots, right_id);
+                    client.auto_plots_window.draw(enables.auto_plots, right_id);
                     client.debug_window.draw(enables.debug, dockspace_id);
                     client.calibrate_window.draw(enables.calibrate, dockspace_id);
                     client.measure_window.draw(enables.measure, dockspace_id);
                     client.file_manager_window.draw(enables.file_manager, dockspace_id);
+                    client.auto_window.draw(enables.auto_window, dockspace_id);
                     first++;
                     ImGui::DockBuilderFinish(dockspace_id);
                 } else {
@@ -87,6 +91,9 @@ namespace GUI {
                     if(enables.calibration_plots) {
                         client.calibration_plots_window.update_vectors(client.calibrate_window.config, client.calibrate_window.raw_calibration, client.calibrate_window.calibration);
                         client.calibration_plots_window.draw(enables.calibration_plots, ImGui::GetID(static_cast<void*>(nullptr)));
+                    }
+                    if(enables.auto_plots) {
+                        client.auto_plots_window.draw(enables.auto_plots, ImGui::GetID(static_cast<void*>(nullptr)));
                     }
                     if(enables.debug) {
                         client.debug_window.draw(enables.debug, ImGui::GetID(static_cast<void*>(nullptr)));
@@ -99,6 +106,9 @@ namespace GUI {
                     }
                     if(enables.file_manager) {
                         client.file_manager_window.draw(enables.file_manager, ImGui::GetID(static_cast<void*>(nullptr)));
+                    }
+                    if(enables.auto_window) {
+                        client.auto_window.draw(enables.auto_window, ImGui::GetID(static_cast<void*>(nullptr)));
                     }
                 }
             }

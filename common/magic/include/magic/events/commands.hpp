@@ -7,7 +7,6 @@
 #include <bitset>
 
 #include "magic/misc/gettimeofday.hpp"
-
 #include "magic/events/common.hpp"
 
 namespace Magic {
@@ -40,6 +39,11 @@ namespace Magic {
                 /* Time Commands */
                 TimeUpdateTimeval,
                 TimeUpdateTimezone,
+
+                /* Auto Commands */
+                AutoSave,
+                AutoSend,
+                AutoEnd,
             };
 
             namespace Debug {
@@ -292,8 +296,8 @@ namespace Magic {
                     }
 
                     static inline constexpr UpdateTimeval from_raw_data(const T_RawData& raw_data) {
-                        const decltype(timeval::tv_sec)* tmp_sec = reinterpret_cast<const decltype(timeval::tv_sec)*>(raw_data.data() + 1);
-                        const decltype(timeval::tv_usec)* tmp_usec = reinterpret_cast<const decltype(timeval::tv_usec)*>(raw_data.data() + 1 + sizeof(decltype(timeval::tv_sec)));
+                        const decltype(mytimeval64_t::tv_sec)* tmp_sec = reinterpret_cast<const decltype(mytimeval64_t::tv_sec)*>(raw_data.data() + 1);
+                        const decltype(mytimeval64_t::tv_usec)* tmp_usec = reinterpret_cast<const decltype(mytimeval64_t::tv_usec)*>(raw_data.data() + 1 + sizeof(decltype(mytimeval64_t::tv_sec)));
                         return UpdateTimeval { timeval { *tmp_sec, *tmp_usec } };
                     }
                 };
@@ -322,6 +326,45 @@ namespace Magic {
                     }
                 };
             }
+            
+            namespace Auto {
+                struct Save {
+                    static constexpr Header header { Header::AutoSave };
+                    using T_RawData = std::array<uint8_t, 1>;
+                    inline constexpr T_RawData to_raw_data() const {
+                        return std::array<uint8_t, 1> { static_cast<uint8_t>(header) };
+                    }
+                    static inline constexpr Save from_raw_data(const T_RawData& raw_data) {
+                        (void)raw_data;
+                        return Save {};
+                    }
+                };
+
+                struct Send {
+                    static constexpr Header header { Header::AutoSend };
+                    using T_RawData = std::array<uint8_t, 1>;
+                    inline constexpr T_RawData to_raw_data() const {
+                        return std::array<uint8_t, 1> { static_cast<uint8_t>(header) };
+                    }
+                    static inline constexpr Send from_raw_data(const T_RawData& raw_data) {
+                        (void)raw_data;
+                        return Send {};
+                    }
+                };
+
+                struct End {
+                    static constexpr Header header { Header::AutoEnd };
+                    using T_RawData = std::array<uint8_t, 1>;
+                    inline constexpr T_RawData to_raw_data() const {
+                        return T_RawData { static_cast<uint8_t>(header) };
+                    }
+                    static inline constexpr End from_raw_data(const T_RawData& raw_data) {
+                        (void)raw_data;
+                        return End {};
+                    }
+                };
+            }
+
             using Variant = std::variant<
                 /* Debug Commands */
                 Debug::Start,
@@ -348,11 +391,16 @@ namespace Magic {
 
                 /* Time Commands */
                 Time::UpdateTimeval,
-                Time::UpdateTimezone
+                Time::UpdateTimezone,
+
+                /* Auto Commands */
+                Auto::Save,
+                Auto::Send,
+                Auto::End
             >;
 
             struct Map {
-                static constexpr std::array<Variant, 19> map {
+                static constexpr std::array<Variant, 22> map {
                     /* Debug Commands */
                     Debug::Start{},
                     Debug::Dump{},
@@ -379,6 +427,11 @@ namespace Magic {
                     /* Time Commands */
                     Time::UpdateTimeval{},
                     Time::UpdateTimezone{},
+
+                    /* Auto Commands */
+                    Auto::Save{},
+                    Auto::Send{},
+                    Auto::End{},
                 };
             };
         }
