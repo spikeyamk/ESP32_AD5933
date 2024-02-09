@@ -42,11 +42,13 @@ namespace GUI {
                         status = Status::Loaded;
                     }
                 }
+                ImGui::BeginDisabled();
                 ImGui::Button("Measure");
                 if(status == Status::Measuring) {
                     ImGui::SameLine();
                     Spinner::Spinner("Measuring", 5.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                 }
+                ImGui::EndDisabled();
             } else {
                 draw_input_elements();
                 if(ImGui::Button("Load")) {
