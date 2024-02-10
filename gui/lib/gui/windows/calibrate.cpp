@@ -63,8 +63,8 @@ namespace GUI {
 
         void Calibrate::update_num_of_inc_valid() {
             try {
-                const uint32_t tmp_freq_inc = std::stoul(std::string(inputs.gui.freq_inc));
-                const uint16_t tmp_num_of_inc = std::stoul(std::string(inputs.gui.num_of_inc));
+                const uint32_t tmp_freq_inc = static_cast<uint32_t>(std::stoul(std::string(inputs.gui.freq_inc)));
+                const uint16_t tmp_num_of_inc = static_cast<uint16_t>(std::stoul(std::string(inputs.gui.num_of_inc)));
                 if(
                     tmp_num_of_inc > max_9bit
                     || tmp_num_of_inc < 1
@@ -92,7 +92,7 @@ namespace GUI {
 
         void Calibrate::update_settling_number_valid() {
             try {
-                const uint16_t tmp_settling_number = std::stoul(std::string(inputs.gui.settling_number));
+                const uint16_t tmp_settling_number = static_cast<uint16_t>(std::stoul(std::string(inputs.gui.settling_number)));
                 if(tmp_settling_number > max_9bit) {
                     valid_fields.settling_number = false;
                     return;
@@ -337,7 +337,7 @@ namespace GUI {
         void Calibrate::save() const {
             nfdchar_t* outPath = nullptr;
             const std::array<nfdfilteritem_t, 1> filterItem { { "Calibration", "json" } };
-            nfdresult_t result = NFD::SaveDialog(outPath, filterItem.data(), filterItem.size(), nullptr, "calibration.json");
+            nfdresult_t result = NFD::SaveDialog(outPath, filterItem.data(), static_cast<nfdfiltersize_t>(filterItem.size()), nullptr, "calibration.json");
             if(result == NFD_OKAY) {
                 const ns::CalibrationFile calibration_file { inputs.numeric_values.impedance, config, calibration };
                 const json j = calibration_file;

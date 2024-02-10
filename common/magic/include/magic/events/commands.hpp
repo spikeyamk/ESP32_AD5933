@@ -273,32 +273,27 @@ namespace Magic {
                     using T_RawData = std::array<uint8_t, 1 + sizeof(mytimeval64_t)>;
                     mytimeval64_t tv;
                     inline constexpr T_RawData to_raw_data() const {
-                        return T_RawData {
+                        T_RawData ret {
                             static_cast<uint8_t>(header),
-                            static_cast<uint8_t>((tv.tv_sec >> (0 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_sec >> (1 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_sec >> (2 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_sec >> (3 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_sec >> (4 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_sec >> (5 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_sec >> (6 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_sec >> (7 * 8)) & 0xFF),
-
-                            static_cast<uint8_t>((tv.tv_usec >> (0 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_usec >> (1 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_usec >> (2 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_usec >> (3 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_usec >> (4 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_usec >> (5 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_usec >> (6 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_usec >> (7 * 8)) & 0xFF),
                         };
+
+                        std::generate(ret.begin() + 1, ret.begin() + sizeof(decltype(mytimeval64_t::tv_sec)), [index = 0, this]() mutable {
+                            return static_cast<uint8_t>((tv.tv_sec >> (index++ * 8)) & 0xFF);
+                        });
+
+                        std::generate(ret.begin() + sizeof(decltype(mytimeval64_t::tv_sec)), ret.end(), [index = 0, this]() mutable {
+                            return static_cast<uint8_t>((tv.tv_usec >> (index++ * 8)) & 0xFF);
+                        });
+
+                        return ret;
                     }
 
                     static inline constexpr UpdateTimeval from_raw_data(const T_RawData& raw_data) {
-                        const decltype(mytimeval64_t::tv_sec)* tmp_sec = reinterpret_cast<const decltype(mytimeval64_t::tv_sec)*>(raw_data.data() + 1);
-                        const decltype(mytimeval64_t::tv_usec)* tmp_usec = reinterpret_cast<const decltype(mytimeval64_t::tv_usec)*>(raw_data.data() + 1 + sizeof(decltype(mytimeval64_t::tv_sec)));
-                        return UpdateTimeval { timeval { *tmp_sec, *tmp_usec } };
+                        const decltype(mytimeval64_t::tv_sec)* tmp_sec = static_cast<const decltype(mytimeval64_t::tv_sec)*>(static_cast<const void*>(raw_data.data() + 1));
+                        const decltype(mytimeval64_t::tv_usec)* tmp_usec = static_cast<const decltype(mytimeval64_t::tv_usec)*>(static_cast<const void*>(raw_data.data() + 1 + sizeof(decltype(mytimeval64_t::tv_sec))));
+                        return UpdateTimeval {
+                            mytimeval64_t { *tmp_sec, *tmp_usec }
+                        };
                     }
                 };
 
@@ -307,22 +302,26 @@ namespace Magic {
                     using T_RawData = std::array<uint8_t, 1 + sizeof(timezone)>;
                     struct timezone tz { 0, 0 };
                     inline constexpr T_RawData to_raw_data() const {
-                        return T_RawData {
+                        T_RawData ret {
                             static_cast<uint8_t>(header),
-                            static_cast<uint8_t>((tz.tz_minuteswest >> (0 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tz.tz_minuteswest >> (1 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tz.tz_minuteswest >> (2 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tz.tz_minuteswest >> (3 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tz.tz_dsttime >> (0 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tz.tz_dsttime >> (1 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tz.tz_dsttime >> (2 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tz.tz_dsttime >> (3 * 8)) & 0xFF),
                         };
+
+                        std::generate(ret.begin() + 1, ret.begin() + 1 + sizeof(decltype(timezone::tz_minuteswest)), [index = 0, this]() mutable {
+                            return static_cast<uint8_t>((tz.tz_minuteswest >> (index++ * 8)) & 0xFF);
+                        });
+
+                        std::generate(ret.begin() + 1 + sizeof(decltype(timezone::tz_minuteswest)), ret.end(), [index = 0, this]() mutable {
+                            return static_cast<uint8_t>((tz.tz_dsttime >> (index++ * 8)) & 0xFF);
+                        });
+
+                        return ret;
                     }
                     static inline constexpr UpdateTimezone from_raw_data(const T_RawData& raw_data) {
-                        const decltype(timezone::tz_minuteswest)* tmp_minutewest = reinterpret_cast<const decltype(timezone::tz_minuteswest)*>(raw_data.data() + 1);
-                        const decltype(timezone::tz_dsttime)* tmp_dsttime = reinterpret_cast<const decltype(timezone::tz_dsttime)*>(raw_data.data() + 1 + sizeof(decltype(timezone::tz_minuteswest)));
-                        return UpdateTimezone { *tmp_minutewest, *tmp_dsttime };
+                        const decltype(timezone::tz_minuteswest)* tmp_minutewest = static_cast<const decltype(timezone::tz_minuteswest)*>(static_cast<const void*>(raw_data.data() + 1));
+                        const decltype(timezone::tz_dsttime)* tmp_dsttime = static_cast<const decltype(timezone::tz_dsttime)*>(static_cast<const void*>(raw_data.data() + 1 + sizeof(decltype(timezone::tz_minuteswest))));
+                        return UpdateTimezone {
+                            *tmp_minutewest, *tmp_dsttime
+                        };
                     }
                 };
             }

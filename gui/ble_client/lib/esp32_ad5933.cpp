@@ -207,7 +207,7 @@ namespace BLE_Client {
                 *it_time_update_control_point.value(),
                 *it_hid_information.value()
             };
-        } catch(const std::exception& e) {
+        } catch(...) {
             //shm->console.log(std::string("ERROR: BLE_Client::ESP32_AD5933::find_services_characteristics: exception: ") + e.what() + "\n");
             return std::nullopt;
         }

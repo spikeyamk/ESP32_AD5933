@@ -40,7 +40,7 @@ namespace BLE_Client {
                         shm->init_device(Events::connect{ it->address() });
                         auto tmp_esp32_ad5933 { std::make_shared<BLE_Client::ESP32_AD5933>(*it, ret.value(), shm->active_devices.back().measurement, shm->active_devices.back().information, shm) };
                         tmp_esp32_ad5933->setup_subscriptions();
-                        tmp_esp32_ad5933->update_time();
+                        //tmp_esp32_ad5933->update_time();
                         BLE_Client::StateMachines::Logger logger {};
                         connections.push_back(new decltype(BLE_Client::StateMachines::Connection::Dummy<int>::sm){ tmp_esp32_ad5933, logger, shm });
                         return true;

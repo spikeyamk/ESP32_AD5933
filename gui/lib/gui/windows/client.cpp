@@ -23,7 +23,7 @@ namespace GUI {
             auto_plots_window { index }
         {}
 
-        void client1(const int i, ImGuiID center_id, Client &client, MenuBarEnables &enables, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
+        void client1(const size_t i, ImGuiID center_id, Client &client, MenuBarEnables &enables, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
             if(client.enable == false) {
                 return;
             }

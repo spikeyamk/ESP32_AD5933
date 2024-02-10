@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <string_view>
+#include <cctype>
 
 namespace BLE_Client {
     namespace Discovery {
@@ -28,6 +29,19 @@ namespace BLE_Client {
 
             std::string_view get_address() const {
                 return get_string_view(p_address);
+            }
+
+            std::string get_uppercase_address() const {
+                std::string ret { get_address() };
+                std::transform(
+                    ret.begin(),
+                    ret.end(),
+                    ret.begin(),
+                    [](const unsigned char c){
+                        return std::toupper(c);
+                    }
+                );
+                return ret;
             }
 
             std::string get_address_with_dots_instead_of_colons() const {

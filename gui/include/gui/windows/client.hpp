@@ -58,7 +58,7 @@ namespace GUI {
         };
 
         void client1(
-            const int i,
+            const size_t i,
             ImGuiID center_id,
             Client &client,
             MenuBarEnables &enables,
