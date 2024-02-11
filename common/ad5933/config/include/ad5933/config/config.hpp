@@ -310,7 +310,7 @@ namespace AD5933 {
 					inc_freq = get_inc_freq(),
 					n = static_cast<T>(0.0f)
 				] () mutable {
-					return static_cast<float>(start_freq.unwrap() + ((n++) * inc_freq.unwrap()));
+					return static_cast<T>(start_freq.unwrap() + ((n++) * inc_freq.unwrap()));
 				}
 			);
 			return ret;

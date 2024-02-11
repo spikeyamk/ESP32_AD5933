@@ -28,7 +28,6 @@ namespace Magic {
 
                 /* Auto Results */
                 AutoTimeval,
-                AutoTimezone,
                 AutoPoint,
             };
 
@@ -85,8 +84,8 @@ namespace Magic {
                         return ret;
                     }
                     static inline constexpr Free from_raw_data(const T_RawData& raw_data) {
-                        const decltype(bytes_free)* tmp_bytes_free = reinterpret_cast<const decltype(bytes_free)*>(raw_data.data() + 1);
-                        const decltype(bytes_total)* tmp_bytes_total = reinterpret_cast<const decltype(bytes_total)*>(raw_data.data() + 1 + sizeof(bytes_free));
+                        const decltype(bytes_free)* tmp_bytes_free = static_cast<const decltype(bytes_free)*>(static_cast<const void*>(raw_data.data() + 1));
+                        const decltype(bytes_total)* tmp_bytes_total = static_cast<const decltype(bytes_total)*>(static_cast<const void*>(raw_data.data() + 1 + sizeof(bytes_free)));
                         return Free { 
                             .bytes_free = *tmp_bytes_free, 
                             .bytes_total = *tmp_bytes_total,
@@ -105,8 +104,10 @@ namespace Magic {
                         return ret;
                     }
                     static inline constexpr ListCount from_raw_data(const T_RawData& raw_data) {
-                        const decltype(num_of_files)* tmp_num_of_files = reinterpret_cast<const decltype(num_of_files)*>(raw_data.data() + 1);
-                        return ListCount { *tmp_num_of_files };
+                        const decltype(num_of_files)* tmp_num_of_files = static_cast<const decltype(num_of_files)*>(static_cast<const void*>(raw_data.data() + 1));
+                        return ListCount {
+                            *tmp_num_of_files
+                        };
                     }
                 };
                 struct List {
@@ -136,8 +137,10 @@ namespace Magic {
                         return ret;
                     }
                     static inline constexpr Size from_raw_data(const T_RawData& raw_data) {
-                        const decltype(num_of_bytes)* tmp_num_of_bytes = reinterpret_cast<const decltype(num_of_bytes)*>(raw_data.data() + 1);
-                        return Size { *tmp_num_of_bytes };
+                        const decltype(num_of_bytes)* tmp_num_of_bytes = static_cast<const decltype(num_of_bytes)*>(static_cast<const void*>(raw_data.data() + 1));
+                        return Size {
+                            *tmp_num_of_bytes
+                        };
                     }
                 };
                 struct Download {
@@ -178,56 +181,27 @@ namespace Magic {
                     using T_RawData = std::array<uint8_t, 1 + sizeof(mytimeval64_t)>;
                     mytimeval64_t tv;
                     inline constexpr T_RawData to_raw_data() const {
-                        return T_RawData {
+                        T_RawData ret {
                             static_cast<uint8_t>(header),
-                            static_cast<uint8_t>((tv.tv_sec >> (0 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_sec >> (1 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_sec >> (2 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_sec >> (3 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_sec >> (4 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_sec >> (5 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_sec >> (6 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_sec >> (7 * 8)) & 0xFF),
-
-                            static_cast<uint8_t>((tv.tv_usec >> (0 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_usec >> (1 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_usec >> (2 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_usec >> (3 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_usec >> (4 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_usec >> (5 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_usec >> (6 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_usec >> (7 * 8)) & 0xFF),
                         };
+
+                        std::generate(ret.begin() + 1, ret.begin() + sizeof(decltype(mytimeval64_t::tv_sec)), [index = 0, this]() mutable {
+                            return static_cast<uint8_t>((tv.tv_sec >> (index++ * 8)) & 0xFF);
+                        });
+
+                        std::generate(ret.begin() + sizeof(decltype(mytimeval64_t::tv_sec)), ret.end(), [index = 0, this]() mutable {
+                            return static_cast<uint8_t>((tv.tv_usec >> (index++ * 8)) & 0xFF);
+                        });
+
+                        return ret;
                     }
 
                     static inline constexpr Timeval from_raw_data(const T_RawData& raw_data) {
-                        const decltype(mytimeval64_t::tv_sec)* tmp_sec = reinterpret_cast<const decltype(mytimeval64_t::tv_sec)*>(raw_data.data() + 1);
-                        const decltype(mytimeval64_t::tv_usec)* tmp_usec = reinterpret_cast<const decltype(mytimeval64_t::tv_usec)*>(raw_data.data() + 1 + sizeof(decltype(mytimeval64_t::tv_sec)));
-                        return Timeval { mytimeval64_t { *tmp_sec, *tmp_usec } };
-                    }
-                };
-
-                struct Timezone {
-                    static constexpr Header header { Header::AutoTimezone };
-                    using T_RawData = std::array<uint8_t, 1 + sizeof(timezone)>;
-                    struct timezone tz { 0, 0 };
-                    inline constexpr T_RawData to_raw_data() const {
-                        return T_RawData {
-                            static_cast<uint8_t>(header),
-                            static_cast<uint8_t>((tz.tz_minuteswest >> (0 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tz.tz_minuteswest >> (1 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tz.tz_minuteswest >> (2 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tz.tz_minuteswest >> (3 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tz.tz_dsttime >> (0 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tz.tz_dsttime >> (1 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tz.tz_dsttime >> (2 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tz.tz_dsttime >> (3 * 8)) & 0xFF),
+                        const decltype(mytimeval64_t::tv_sec)* tmp_sec = static_cast<const decltype(mytimeval64_t::tv_sec)*>(static_cast<const void*>(raw_data.data() + 1));
+                        const decltype(mytimeval64_t::tv_usec)* tmp_usec = static_cast<const decltype(mytimeval64_t::tv_usec)*>(static_cast<const void*>(raw_data.data() + 1 + sizeof(decltype(mytimeval64_t::tv_sec))));
+                        return Timeval {
+                            mytimeval64_t { *tmp_sec, *tmp_usec }
                         };
-                    }
-                    static inline constexpr Timezone from_raw_data(const T_RawData& raw_data) {
-                        const decltype(timezone::tz_minuteswest)* tmp_minutewest = reinterpret_cast<const decltype(timezone::tz_minuteswest)*>(raw_data.data() + 1);
-                        const decltype(timezone::tz_dsttime)* tmp_dsttime = reinterpret_cast<const decltype(timezone::tz_dsttime)*>(raw_data.data() + 1 + sizeof(decltype(timezone::tz_minuteswest)));
-                        return Timezone { *tmp_minutewest, *tmp_dsttime };
                     }
                 };
 
@@ -238,23 +212,28 @@ namespace Magic {
                         Short,
                         Valid,
                     };
+                    enum class Config {
+                        Default,
+                    };
                     uint8_t status;
+                    uint8_t config;
                     float impedance;
                     float phase;
-                    using T_RawData = std::array<uint8_t, 1 + sizeof(status) + sizeof(impedance) + sizeof(phase)>;
+                    using T_RawData = std::array<uint8_t, 1 + sizeof(status) + sizeof(config) + sizeof(impedance) + sizeof(phase)>;
                     inline constexpr T_RawData to_raw_data() const {
                         T_RawData ret {
                             static_cast<uint8_t>(header),
-                            static_cast<uint8_t>(status)
+                            static_cast<uint8_t>(status),
+                            static_cast<uint8_t>(config),
                         };
 
-                        const int32_t* tmp_impedance = reinterpret_cast<const int32_t*>(&impedance);
-                        std::generate(ret.begin() + 2, ret.begin() + 2 + sizeof(impedance), [index = 0, tmp_impedance]() mutable {
+                        const int32_t* tmp_impedance = static_cast<const int32_t*>(static_cast<const void*>(&impedance));
+                        std::generate(ret.begin() + 3, ret.begin() + 3 + sizeof(impedance), [index = 0, tmp_impedance]() mutable {
                             return static_cast<uint8_t>(*tmp_impedance >> (8 * index++)) & 0xFF;
                         });
 
-                        const int32_t* tmp_phase = reinterpret_cast<const int32_t*>(&phase);
-                        std::generate(ret.begin() + 2 + sizeof(impedance), ret.begin() + 2 + sizeof(impedance) + sizeof(phase), [index = 0, tmp_phase]() mutable {
+                        const int32_t* tmp_phase = static_cast<const int32_t*>(static_cast<const void*>(&phase));
+                        std::generate(ret.begin() + 3 + sizeof(impedance), ret.begin() + 3 + sizeof(impedance) + sizeof(phase), [index = 0, tmp_phase]() mutable {
                             return static_cast<uint8_t>(*tmp_phase >> (8 * index++)) & 0xFF;
                         });
 
@@ -262,10 +241,12 @@ namespace Magic {
                     }
                     static inline constexpr Point from_raw_data(const T_RawData& raw_data) {
                         const uint8_t tmp_status = raw_data[1];
-                        const float* tmp_impedance = reinterpret_cast<const float*>(raw_data.data() + 2);
-                        const float* tmp_phase = reinterpret_cast<const float*>(raw_data.data() + 2 + sizeof(impedance));
+                        const uint8_t tmp_config = raw_data[2];
+                        const float* tmp_impedance = static_cast<const float*>(static_cast<const void*>(raw_data.data() + 3));
+                        const float* tmp_phase = static_cast<const float*>(static_cast<const void*>(raw_data.data() + 3 + sizeof(impedance)));
                         return Point {
                             .status = tmp_status,
+                            .config = tmp_config,
                             .impedance = *tmp_impedance,
                             .phase = *tmp_phase,
                         };
@@ -290,12 +271,11 @@ namespace Magic {
 
                 /* Auto Results */
                 Auto::Timeval,
-                Auto::Timezone,
                 Auto::Point
             >;
 
             struct Map {
-                static constexpr std::array<Variant, 11> map {
+                static constexpr std::array<Variant, 10> map {
                     /* Debug Results */
                     Debug::Dump{},
 
@@ -312,7 +292,6 @@ namespace Magic {
 
                     /* Auto Results */
                     Auto::Timeval{},
-                    Auto::Timezone{},
                     Auto::Point{},
                 };
             };

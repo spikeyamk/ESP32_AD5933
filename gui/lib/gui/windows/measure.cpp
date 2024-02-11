@@ -77,7 +77,7 @@ namespace GUI {
         bool Measure::load() {
             nfdchar_t *outPath = nullptr;
             const std::array<nfdfilteritem_t, 1> filterItem { { "Calibration", "json" } };
-            switch(NFD::OpenDialog(outPath, filterItem.data(), filterItem.size())) {
+            switch(NFD::OpenDialog(outPath, filterItem.data(), static_cast<nfdfiltersize_t>(filterItem.size()))) {
                 case NFD_CANCEL:
                     std::printf("GUI::Windows::Measure::load(): NFD_CANCEL: User pressed cancel!\n");
                     if(outPath != nullptr) {
