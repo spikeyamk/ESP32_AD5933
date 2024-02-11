@@ -1,4 +1,10 @@
+#include <iostream>
+#include <thread>
+
 #include "imgui_internal.h"
+
+#include "misc/variant_tester.hpp"
+#include "magic/misc/gettimeofday.hpp"
 
 #include "gui/windows/auto.hpp"
 
@@ -22,27 +28,84 @@ namespace GUI {
                 return;
             }
 
+            if(status == Status::Off) {
+                if(ImGui::Button("Start Sending")) {
+                    start_sending();
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Start Saving")) {
+                    start_saving();
+                }
+                ImGui::BeginDisabled();
+                ImGui::SameLine();
+                ImGui::Button("Stop");
+                ImGui::EndDisabled();
+            } else if(status == Status::Sending || status == Status::Saving) {
+                ImGui::BeginDisabled();
+                ImGui::Button("Start Sending");
+                ImGui::SameLine();
+                ImGui::Button("Start Saving")
+                ImGui::EndDisabled();
+                ImGui::SameLine();
+                if(ImGui::Button("Stop")) {
+                    stop();
+                }
+            }
+
             ImGui::End();
         }
 
         void Auto::start_saving() {
-
+            status = Status::Saving;
         }
 
         void Auto::start_sending() {
-
+            std::jthread t1(sending_cb, std::ref(*this));
+            stop_source = t1.get_stop_source();
+            t1.detach();
         }
 
         void Auto::stop() {
-
+            stop_source.request_stop();
         }
 
-        void Auto::stop_saving() {
+        void Auto::sending_cb(std::stop_token st, Auto& self) {
+            self.status = Status::Sending;
+            self.shm->cmd.send(
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
+                    self.index,
+                    Magic::Events::Commands::Auto::Send{}
+                }
+            );
+            while(st.stop_requested() == false) {
+                const auto rx_payload { self.shm->active_devices[self.index].measurement->read_for(boost::posix_time::milliseconds(10'000)) };
+                if(rx_payload.has_value() == false) {
+                    std::cout << "ERROR: GUI::Windows::Auto::sending_cb: rx_payload: timeout\n";
+                    self.status = Status::Error;
+                    return;
+                }
 
-        }
+                if(variant_tester<Magic::Events::Results::Auto::Point>(rx_payload.value()) == false) {
+                    std::cout << "ERROR: GUI::Windows::Auto::sending_cb: rx_payload: bad variant type\n";
+                    self.status = Status::Error;
+                    return;
+                }
 
-        void Auto::stop_sending() {
-
+                std::visit([&self](auto&& event) {
+                    if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Events::Results::Auto::Point>) {
+                        mytimeval64_t tv;
+                        gettimeofday(&tv, nullptr);
+                        const double seconds = static_cast<double>(tv.tv_sec);
+                        const double useconds_to_seconds = static_cast<double>(tv.tv_usec) / 1000000.0;
+                        const Point point {
+                            .time = seconds + useconds_to_seconds,
+                            .auto_meas = event,
+                        };
+                        self.send_points.push(point);
+                    }
+                }, rx_payload.value());
+            }
+            self.status = Status::Off;
         }
     }
 }

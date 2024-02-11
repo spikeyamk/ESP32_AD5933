@@ -85,14 +85,26 @@ namespace GUI {
                     ImGui::DockBuilderFinish(dockspace_id);
                 } else {
                     if(enables.measurement_plots) {
-                        client.measurement_plots_window.update_vectors(client.measure_window.measurement_vectors.freq_float, client.measure_window.measurement_vectors.raw_measurement, client.measure_window.measurement_vectors.measurement);
+                        if(client.measure_window.single_plotted == false) {
+                            client.measurement_plots_window.update_single_vectors(client.measure_window.single_vectors.freq_float, client.measure_window.single_vectors.raw_measurement, client.measure_window.single_vectors.measurement);
+                            client.measure_window.single_plotted = true;
+                        }
+                        if(client.measure_window.periodic_vectors.periodic_points.empty() == false) {
+                            client.measurement_plots_window.update_periodic_vectors(client.measure_window.periodic_vectors.freq_float, client.measure_window.periodic_vectors.periodic_points);
+                        }
                         client.measurement_plots_window.draw(enables.measurement_plots, ImGui::GetID(static_cast<void*>(nullptr)));
                     }
                     if(enables.calibration_plots) {
-                        client.calibration_plots_window.update_vectors(client.calibrate_window.config, client.calibrate_window.raw_calibration, client.calibrate_window.calibration);
+                        if(client.calibrate_window.plotted == false) {
+                            client.calibration_plots_window.update_vectors(client.calibrate_window.config, client.calibrate_window.raw_calibration, client.calibrate_window.calibration);
+                            client.calibrate_window.plotted = true;
+                        }
                         client.calibration_plots_window.draw(enables.calibration_plots, ImGui::GetID(static_cast<void*>(nullptr)));
                     }
                     if(enables.auto_plots) {
+                        if(client.auto_window.send_points.empty() == false) {
+                            client.auto_plots_window.update_send_vectors(client.auto_window.send_points);
+                        }
                         client.auto_plots_window.draw(enables.auto_plots, ImGui::GetID(static_cast<void*>(nullptr)));
                     }
                     if(enables.debug) {

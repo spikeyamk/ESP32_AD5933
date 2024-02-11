@@ -12,6 +12,7 @@
 #include "imgui_custom/spinner.hpp"
 #include "imgui_custom/input_items.hpp"
 #include "imgui_custom/char_filters.hpp"
+#include "magic/misc/gettimeofday.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -43,12 +44,18 @@ namespace GUI {
                     }
                 }
                 ImGui::BeginDisabled();
-                ImGui::Button("Measure");
+                ImGui::Button("Single");
+                ImGui::Button("Periodic");
                 if(status == Status::Measuring) {
                     ImGui::SameLine();
                     Spinner::Spinner("Measuring", 5.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                 }
                 ImGui::EndDisabled();
+                if(periodically_sweeping) {
+                    if(ImGui::Button("Stop")) {
+                        stop();
+                    }
+                }
             } else {
                 draw_input_elements();
                 if(ImGui::Button("Load")) {
@@ -56,8 +63,11 @@ namespace GUI {
                         status = Status::Loaded;
                     }
                 }
-                if(ImGui::Button("Measure")) {
-                    measure();
+                if(ImGui::Button("Single")) {
+                    single();
+                }
+                if(ImGui::Button("Periodic")) {
+                    periodic();
                 }
             }
 
@@ -111,7 +121,11 @@ namespace GUI {
             }
         }
 
-        void Measure::measure_cb(std::stop_token st, Measure& self) {
+        void Measure::stop() {
+            periodically_sweeping = false;
+        }
+
+        void Measure::single_cb(std::stop_token st, Measure& self) {
             const auto freq_start_it { std::find(self.calibration_vectors.freq_float.begin(), self.calibration_vectors.freq_float.end(), static_cast<float>(self.configs.measurement.get_start_freq().unwrap())) };
             if(freq_start_it == self.calibration_vectors.freq_float.end()) {
                 self.status = Status::Failed;
@@ -171,13 +185,13 @@ namespace GUI {
                     const auto rx_payload { self.shm->active_devices[self.index].information->read_for(boost_timeout_ms) };
                     if(rx_payload.has_value() == false) {
                         self.status = Status::Failed;
-                        std::cout << "ERROR: GUI::Windows::Measure::measure_cb: sweep: timeout\n";
+                        std::cout << "ERROR: GUI::Windows::Measure::single_cb: sweep: timeout\n";
                         return;
                     }
 
                     if(st.stop_requested()) {
                         self.status = Status::Failed;
-                        std::cout << "INFO: GUI::Windows::Measure::measure_cb: stopping measurement\n";
+                        std::cout << "INFO: GUI::Windows::Measure::single_cb: stopping measurement\n";
                         return;
                     }
 
@@ -200,16 +214,16 @@ namespace GUI {
 
                     if(is_valid_data == false) {
                         self.status = Status::Failed;
-                        std::cout << "ERROR: GUI::Windows::Measure::measure_cb: measure received wrong event result packet\n";
+                        std::cout << "ERROR: GUI::Windows::Measure::single_cb: measure received wrong event result packet\n";
                         return;
                     }
                     self.progress_bar_fraction += progress_bar_step;
                 } while(tmp_measurement.size() != wished_size);
 
-                self.measurement_vectors.raw_measurement = tmp_raw_measurement;
-                self.measurement_vectors.measurement = tmp_measurement;
+                self.single_vectors.raw_measurement = tmp_raw_measurement;
+                self.single_vectors.measurement = tmp_measurement;
                 if(first_iteration) {
-                    self.measurement_vectors.freq_float = tmp_freq;
+                    self.single_vectors.freq_float = tmp_freq;
                     first_iteration = false;
                 }
             } while(self.periodically_sweeping);
@@ -220,12 +234,145 @@ namespace GUI {
                     Magic::Events::Commands::Sweep::End{}
                 }
             );
-            self.status = Status::MeasurementDone;
+            self.status = Status::Loaded;
+            self.single_plotted = false;
         }
 
-        void Measure::measure() {
+        void Measure::single() {
             status = Status::Measuring;
-            std::jthread t1(measure_cb, std::ref(*this));
+            std::jthread t1(single_cb, std::ref(*this));
+            stop_source = t1.get_stop_source();
+            t1.detach();
+        }
+
+        void Measure::periodic_cb(std::stop_token st, Measure& self) {
+            const auto freq_start_it { std::find(self.calibration_vectors.freq_float.begin(), self.calibration_vectors.freq_float.end(), static_cast<float>(self.configs.measurement.get_start_freq().unwrap())) };
+            if(freq_start_it == self.calibration_vectors.freq_float.end()) {
+                self.status = Status::Failed;
+                return;
+            }
+
+            const auto freq_end_it { std::find(self.calibration_vectors.freq_float.begin(), self.calibration_vectors.freq_float.end(), static_cast<float>(self.configs.measurement.get_freq_end())) };
+            if(freq_end_it == self.calibration_vectors.freq_float.end()) {
+                self.status = Status::Failed;
+                return;
+            }
+
+            const std::vector<float> tmp_freq(freq_start_it, freq_end_it + 1);
+
+            const size_t freq_start_distance = std::distance(self.calibration_vectors.freq_float.begin(), freq_start_it);
+            const size_t freq_end_distance = std::distance(self.calibration_vectors.freq_float.begin(), freq_end_it);
+            const auto cal_start_it = self.calibration_vectors.calibration.begin() + freq_start_distance;
+            const auto cal_end_it = self.calibration_vectors.calibration.begin() + freq_end_distance;
+
+            const std::vector<AD5933::Calibration<float>> tmp_calibration(cal_start_it, cal_end_it + 1);
+
+            self.shm->cmd.send(
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
+                    self.index,
+                    Magic::Events::Commands::Sweep::Configure{
+                        self.configs.measurement.to_raw_array()
+                    }
+                }
+            );
+
+            const uint16_t wished_size = self.configs.measurement.get_num_of_inc().unwrap() + 1;
+            assert(wished_size <= self.calibration_vectors.calibration.size());
+            const float progress_bar_step = 1.0f / static_cast<float>(wished_size);
+            const float timeout_ms =
+                (1.0f / static_cast<float>(self.configs.measurement.get_start_freq().unwrap())) 
+                * static_cast<float>(self.configs.measurement.get_settling_time_cycles_number().unwrap())
+                * AD5933::Masks::Or::SettlingTimeCyclesHB::get_multiplier_float(self.configs.measurement.get_settling_time_cycles_multiplier())
+                * 1'000'000.0f
+                * 10.0f;
+            const auto boost_timeout_ms { boost::posix_time::milliseconds(static_cast<size_t>(timeout_ms)) };
+
+            bool first_iteration { true };
+            do {
+                self.progress_bar_fraction = 0.0f;
+                std::vector<AD5933::Data> tmp_raw_measurement;
+                tmp_raw_measurement.reserve(wished_size);
+                std::vector<AD5933::Measurement<float>> tmp_measurement;
+                tmp_measurement.reserve(wished_size);
+
+                self.shm->cmd.send(
+                    BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
+                        self.index,
+                        Magic::Events::Commands::Sweep::Run{}
+                    }
+                );
+                do {
+                    const auto rx_payload { self.shm->active_devices[self.index].information->read_for(boost_timeout_ms) };
+                    if(rx_payload.has_value() == false) {
+                        self.status = Status::Failed;
+                        std::cout << "ERROR: GUI::Windows::Measure::single_cb: sweep: timeout\n";
+                        return;
+                    }
+
+                    if(st.stop_requested()) {
+                        self.status = Status::Failed;
+                        std::cout << "INFO: GUI::Windows::Measure::single_cb: stopping measurement\n";
+                        return;
+                    }
+
+                    bool is_valid_data = false;
+                    std::visit([&is_valid_data, &tmp_raw_measurement, &tmp_measurement, &tmp_calibration](auto&& event) {
+                        using T_Decay = std::decay_t<decltype(event)>;
+                        if constexpr(std::is_same_v<T_Decay, Magic::Events::Results::Sweep::ValidData>) {
+                            std::array<uint8_t, 4> raw_array;
+                            std::copy(event.real_imag_registers_data.begin(), event.real_imag_registers_data.end(), raw_array.begin());
+
+                            const AD5933::Data tmp_data { raw_array };
+                            tmp_raw_measurement.push_back(tmp_data);
+
+                            const AD5933::Measurement<float> tmp_meas { tmp_data, tmp_calibration[tmp_measurement.size()] };
+                            tmp_measurement.push_back(tmp_meas);
+
+                            is_valid_data = true;
+                        }
+                    }, rx_payload.value());
+
+                    if(is_valid_data == false) {
+                        self.status = Status::Failed;
+                        std::cout << "ERROR: GUI::Windows::Measure::single_cb: measure received wrong event result packet\n";
+                        return;
+                    }
+                    self.progress_bar_fraction += progress_bar_step;
+                } while(tmp_measurement.size() != wished_size);
+                
+                mytimeval64_t tv;
+                gettimeofday(&tv, nullptr);
+                const double seconds = static_cast<double>(tv.tv_sec);
+                const double useconds_to_seconds = static_cast<double>(tv.tv_usec) / 1000000.0;
+
+                const PeriodicPoint tmp_periodic_point {
+                    .time_point = seconds + useconds_to_seconds,
+                    .raw_measurement = tmp_raw_measurement,
+                    .measurement = tmp_measurement,
+                };
+
+                self.periodic_vectors.periodic_points.push(tmp_periodic_point);
+
+                if(first_iteration) {
+                    self.periodic_vectors.freq_float = tmp_freq;
+                    first_iteration = false;
+                }
+            } while(self.periodically_sweeping);
+
+            self.shm->cmd.send(
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
+                    self.index,
+                    Magic::Events::Commands::Sweep::End{}
+                }
+            );
+            self.status = Status::Loaded;
+            self.single_plotted = false;
+        }
+
+        void Measure::periodic() {
+            status = Status::Measuring;
+            periodically_sweeping = true;
+            std::jthread t1(periodic_cb, std::ref(*this));
             stop_source = t1.get_stop_source();
             t1.detach();
         }

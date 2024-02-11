@@ -325,6 +325,7 @@ namespace GUI {
             );
 
             calibrate_window.status = Status::Calibrated;
+            calibrate_window.plotted = false;
         }
         
         void Calibrate::calibrate() {

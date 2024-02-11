@@ -5,8 +5,10 @@
 #include <string>
 #include <stop_token>
 #include <vector>
+#include <queue>
 #include <span>
 #include <array>
+#include <chrono>
 
 #include "ad5933/masks/maps.hpp"
 #include "imgui.h"
@@ -63,9 +65,9 @@ namespace GUI {
                 Loaded,
                 Measuring,
                 Failed,
-                MeasurementDone
             };
             Status status { Status::NotLoaded };
+            bool single_plotted { false };
             struct Configs {
                 AD5933::Config calibration;
                 AD5933::Config measurement;
@@ -77,23 +79,35 @@ namespace GUI {
                 std::vector<float> freq_float;
             };
             CalibrationVectors calibration_vectors {};
-            struct MeasurementVectors {
+            struct SingleVectors {
                 std::vector<AD5933::Data> raw_measurement;
                 std::vector<AD5933::Measurement<float>> measurement;
                 std::vector<float> freq_float;
             };
-            MeasurementVectors measurement_vectors;
+            SingleVectors single_vectors;
+            struct PeriodicPoint {
+                double time_point;
+                std::vector<AD5933::Data> raw_measurement;
+                std::vector<AD5933::Measurement<float>> measurement;
+            };
+            struct PeriodicVectors {
+                std::vector<float> freq_float;
+                std::queue<PeriodicPoint> periodic_points;
+            };
+            PeriodicVectors periodic_vectors;
             std::stop_source stop_source;
         public:
             Measure() = default;
             Measure(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm);
             void draw(bool &enable, const ImGuiID side_id);
-            bool load();
-            static void measure_cb(std::stop_token st, Measure& self);
-            void measure();
         private:
+            static void single_cb(std::stop_token st, Measure& self);
+            void single();
+            static void periodic_cb(std::stop_token st, Measure& self);
+            void periodic();
+            void stop();
+            bool load();
             void draw_input_elements(); 
-            void save() const;
         };
     }
 }
