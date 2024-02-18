@@ -44,7 +44,7 @@ namespace GUI {
                 ImGui::BeginDisabled();
                 ImGui::Button("Start Sending");
                 ImGui::SameLine();
-                ImGui::Button("Start Saving")
+                ImGui::Button("Start Saving");
                 ImGui::EndDisabled();
                 ImGui::SameLine();
                 if(ImGui::Button("Stop")) {
