@@ -12,6 +12,9 @@
 #include "imgui_custom/input_items.hpp"
 #include "imgui_custom/char_filters.hpp"
 #include "magic/misc/gettimeofday.hpp"
+#include "gui/boilerplate.hpp"
+
+#include "gui/windows/measure.hpp"
 
 namespace GUI {
     namespace Windows {
