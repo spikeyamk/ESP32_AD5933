@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "imgui.h"
+#include <SDL3/SDL.h>
 
 #include "ad5933/data/data.hpp"
 #include "ad5933/measurement/measurement.hpp"

@@ -8,10 +8,12 @@
 
 #include "json/conversion.hpp"
 #include <sys/types.h>
-#include "gui/windows/measure.hpp"
 #include "imgui_custom/spinner.hpp"
 #include "imgui_custom/input_items.hpp"
 #include "imgui_custom/char_filters.hpp"
+#include "gui/boilerplate.hpp"
+
+#include "gui/windows/measure.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -46,7 +48,8 @@ namespace GUI {
                 ImGui::Button("Measure");
                 if(status == Status::Measuring) {
                     ImGui::SameLine();
-                    Spinner::Spinner("Measuring", 5.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                    const float scale = GUI::Boilerplate::get_scale();
+                    Spinner::Spinner("Measuring", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                 }
                 ImGui::EndDisabled();
             } else {

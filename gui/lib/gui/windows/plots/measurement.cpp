@@ -1,9 +1,11 @@
 #include <algorithm>
 
-#include "gui/windows/plots/measurement.hpp"
-
 #include "imgui_internal.h"
 #include "implot.h"
+
+#include "gui/boilerplate.hpp"
+
+#include "gui/windows/plots/measurement.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -18,6 +20,11 @@ namespace GUI {
                 if(first) {
                     ImGui::DockBuilderDockWindow(name.c_str(), side_id);
                     ImPlot::CreateContext();
+                    /*
+                    const float scale = Boilerplate::get_scale();
+                    ImPlot::GetStyle().PlotDefaultSize.x *= scale;
+                    ImPlot::GetStyle().PlotDefaultSize.y *= scale;
+                    */
                 }
 
                 if(ImGui::Begin(name.c_str(), &enable) == false) {

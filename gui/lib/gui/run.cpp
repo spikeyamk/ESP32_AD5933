@@ -12,7 +12,6 @@
 #include "gui/boilerplate.hpp"
 #include "gui/windows/console.hpp"
 #include "gui/windows/client.hpp"
-#include "gui/windows/ble_client.hpp"
 
 #include "gui/run.hpp"
 
@@ -68,6 +67,7 @@ namespace GUI {
                     ImGui::MenuItem("Measurement Plots", nullptr, &menu_bar_enables.measurement_plots);
                     ImGui::MenuItem("Calibration Plots", nullptr, &menu_bar_enables.calibration_plots);
                     ImGui::MenuItem("Auto Plots", nullptr, &menu_bar_enables.auto_plots);
+                    ImGui::MenuItem("Demo", nullptr, &menu_bar_enables.demo);
                     ImGui::EndMenu();
                 }
                 if(ImGui::BeginMenu("Help")) {
@@ -109,7 +109,7 @@ namespace GUI {
 
         const ImVec4 clear_color { 0.45f, 0.55f, 0.60f, 1.00f };
 
-        Boilerplate::process_events(done);
+        Boilerplate::process_events(done, window, renderer);
         Boilerplate::start_new_frame();
         MenuBarEnables menu_bar_enables;
         ImGuiID top_id = top_with_dock_space(done, menu_bar_enables);
@@ -117,7 +117,8 @@ namespace GUI {
         std::vector<Windows::Client> client_windows;
         int selected = -1;
 
-        Windows::ble_client(menu_bar_enables.ble_client, top_ids.left, selected, shm, client_windows);
+        Windows::BLE_Connector ble_connector { shm, client_windows };
+        ble_connector.draw(menu_bar_enables.ble_client, top_ids.left);
         Console console { menu_bar_enables.console };
         std::jthread stdout_reader(
             [](Console& console, boost::process::child& ble_client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
@@ -136,14 +137,14 @@ namespace GUI {
         Boilerplate::render(renderer, clear_color);
 
         while(done == false && ble_client.running()) {
-            Boilerplate::process_events(done);
+            Boilerplate::process_events(done, window, renderer);
             Boilerplate::start_new_frame();
             top_id = top_with_dock_space(done, menu_bar_enables);
-
-            Windows::ble_client(menu_bar_enables.ble_client, top_ids.left, selected, shm, client_windows);
+            
+            ble_connector.draw(menu_bar_enables.ble_client, top_ids.left);
             console.draw();
             for(size_t i = 0; i < client_windows.size(); i++) {
-                Windows::client1(i, top_ids.center, client_windows[i], menu_bar_enables, shm);
+                client_windows[i].draw(top_ids.center, menu_bar_enables);
             }
 
             const auto remove_it {
@@ -165,9 +166,17 @@ namespace GUI {
                 client_windows.erase(remove_it);
             }
 
+            if(menu_bar_enables.demo) {
+                ImGui::ShowDemoWindow();
+            }
+
             Boilerplate::render(renderer, clear_color);
         }
         Boilerplate::shutdown(renderer, window);
+
+        if(ble_client.running() == false) {
+            std::cout << "ERROR: GUI::Windows::run: ble_client exited before gui\n";
+        }
 
         for(size_t i = 0; i < shm->active_devices.size(); i++) {
             shm->cmd.send(BLE_Client::StateMachines::Connection::Events::disconnect{i});

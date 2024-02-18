@@ -25,6 +25,7 @@ namespace GUI {
         bool calibration_plots { true };
         bool auto_plots { true };
         bool console { false };
+        bool demo { false };
     };
 
     void run(

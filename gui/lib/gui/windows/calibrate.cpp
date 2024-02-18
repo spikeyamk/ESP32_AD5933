@@ -6,6 +6,7 @@
 #include "imgui_internal.h"
 
 #include "gui/windows/calibrate.hpp"
+#include "gui/boilerplate.hpp"
 #include "ad5933/masks/maps.hpp"
 #include "imgui_custom/spinner.hpp"
 #include "imgui_custom/input_items.hpp"
@@ -225,7 +226,8 @@ namespace GUI {
 
             if(status == Status::Calibrating) {
                 ImGui::SameLine();
-                Spinner::Spinner("Scanning", 5.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                const float scale = GUI::Boilerplate::get_scale();
+                Spinner::Spinner("Scanning", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
             }
 
             if(status != Status::Calibrated) {

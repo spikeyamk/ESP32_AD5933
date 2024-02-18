@@ -25,6 +25,9 @@ std::ostream& operator<<(std::ostream& os, SimpleBLE::Service& service) {
     os << "SimpleBLE: Service Information:" << std::endl;
     os << "\tService UUID: " << service.uuid() << std::endl;
     os << "\tService data: " << service.data() << std::endl;
+    for(auto& e: service.characteristics()) {
+        os << e << std::endl;
+    }
     return os;
 }
 

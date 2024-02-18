@@ -8,6 +8,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	add_compile_options(-Wall -Wextra -Wpedantic)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+	# Makes UTF-8 glyphs work
+	add_compile_options("/utf-8")
 endif()
 
 set(TRIELO_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/trielo_wrapper/trielo)
@@ -88,7 +91,6 @@ set(GUI_SRCS
 	lib/gui/windows/console.cpp
 	lib/gui/windows/calibrate.cpp
 	lib/gui/windows/measure.cpp
-	lib/gui/windows/ble_client.cpp
 	lib/gui/windows/file_manager.cpp
 	lib/gui/windows/client.cpp
 	lib/gui/windows/debug.cpp

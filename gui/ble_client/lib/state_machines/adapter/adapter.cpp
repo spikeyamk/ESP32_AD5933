@@ -1,4 +1,6 @@
 #include "ble_client/state_machines/adapter/adapter.hpp"
+#include "ble_client/ostream_overloads.hpp"
+#include "ble_client/esp32_ad5933.hpp"
 #include "ble_client/init.hpp"
 
 namespace BLE_Client {
@@ -33,6 +35,17 @@ namespace BLE_Client {
                     return true;
                 }
 
+                static bool is_esp32_ad5933_before_attempting_connect(SimpleBLE::Peripheral& peripheral) {
+                    for(const auto& e: peripheral.manufacturer_data()) {
+                        static constexpr uint16_t manufacturer_data_first_two_bytes_magic_dont_ask_dont_tell_its_terrible_i_hate_this_abusing_manufacturer_data_advertising_field = 26990;
+                        if(e.first == manufacturer_data_first_two_bytes_magic_dont_ask_dont_tell_its_terrible_i_hate_this_abusing_manufacturer_data_advertising_field) {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }
+
                 bool discovery_available(SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm) {
                     try {
                         adapter.set_callback_on_scan_start([shm]() {
@@ -46,13 +59,19 @@ namespace BLE_Client {
                                 shm->console.log("BLE_Client::callback_on_scan_found: inside std::find_if\n");
                                 return e.get_address() == found_peripheral.address();
                             }) == shm->discovery_devices->end()) {
-                                shm->discovery_devices->push_back(
-                                    BLE_Client::Discovery::Device{
-                                        found_peripheral.identifier(), 
-                                        found_peripheral.address(),
-                                        found_peripheral.is_connected()
+                                if(is_esp32_ad5933_before_attempting_connect(found_peripheral)) {
+                                    for(auto service: found_peripheral.services()) {
+                                        std::cout << service << std::endl;
                                     }
-                                );
+
+                                    shm->discovery_devices->push_back(
+                                        BLE_Client::Discovery::Device{
+                                            found_peripheral.identifier(), 
+                                            found_peripheral.address(),
+                                            found_peripheral.is_connected()
+                                        }
+                                    );
+                                }
                             }
                         });
                         
@@ -63,13 +82,19 @@ namespace BLE_Client {
                             });
 
                             if(it == shm->discovery_devices->end()) {
-                                shm->discovery_devices->push_back(
-                                    BLE_Client::Discovery::Device{
-                                        found_peripheral.identifier(), 
-                                        found_peripheral.address(),
-                                        found_peripheral.is_connected()
+                                if(is_esp32_ad5933_before_attempting_connect(found_peripheral)) {
+                                    for(auto service: found_peripheral.services()) {
+                                        std::cout << service << std::endl;
                                     }
-                                );
+
+                                    shm->discovery_devices->push_back(
+                                        BLE_Client::Discovery::Device{
+                                            found_peripheral.identifier(), 
+                                            found_peripheral.address(),
+                                            found_peripheral.is_connected()
+                                        }
+                                    );
+                                }
                             } else {
                                 *it = BLE_Client::Discovery::Device {
                                     found_peripheral.identifier(), 

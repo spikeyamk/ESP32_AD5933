@@ -501,7 +501,13 @@ namespace BLE_Client {
 
                     SimpleBLE::Peripheral nimble_peripheral;
                     for(size_t i = 0; i <= 3'000; i++) {
-                        static constexpr std::string_view nimble_address { "40:4C:CA:43:11:B2" };
+                        static constexpr std::string_view nimble_address {
+                            #ifdef _MSC_VER
+                            "40:4c:ca:43:11:b2"
+                            #else
+                            "40:4C:CA:43:11:B2"
+                            #endif
+                        };
                         auto nimble_it {
                             std::find_if(discovered_devices.begin(), discovered_devices.end(), [&](BLE_Client::Discovery::Device& e) {
                                 return (

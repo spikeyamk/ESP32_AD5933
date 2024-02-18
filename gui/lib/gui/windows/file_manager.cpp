@@ -10,6 +10,7 @@
 #include "imgui_custom/input_items.hpp"
 #include "imgui_custom/spinner.hpp"
 #include "misc/variant_tester.hpp"
+#include "gui/boilerplate.hpp"
 
 #include "gui/windows/file_manager.hpp"
 
@@ -47,7 +48,8 @@ namespace GUI {
                 ImGui::Button("List");
                 ImGui::EndDisabled();
                 ImGui::SameLine();
-                Spinner::Spinner("Processing", 5.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                const float scale = GUI::Boilerplate::get_scale();
+                Spinner::Spinner("Processing", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
             } else {
                 if(ImGui::Button("List")) {
                     list();

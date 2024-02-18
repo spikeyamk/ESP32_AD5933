@@ -4,10 +4,16 @@
 #include <nfd.hpp>
 #include "imgui.h"
 #include "imgui_internal.h"
+#include "implot.h"
+
 #include "backends/imgui_impl_sdl3.h"
 #include "backends/imgui_impl_sdlrenderer3.h"
 
 #include "gui/boilerplate.hpp"
+
+#ifdef _MSC_VER
+    #pragma execution_character_set("utf-8")
+#endif
 
 namespace GUI {
     namespace Boilerplate {
@@ -26,9 +32,32 @@ namespace GUI {
             }
         }
 
+        static constexpr ImWchar font_ranges_magic_load_all_utf8_glyphs[] {
+            0x20, 0xFFFF, 0 
+        };
+
+        static constexpr float font_size_pixels_base = 13.0f;
+        float get_scale() {
+            return ImGui::GetIO().Fonts->ConfigData[0].SizePixels / font_size_pixels_base;
+        }
+
+        static inline void set_scale(SDL_Window* window) {
+            #ifdef _MSC_VER // I hate Windows, also fuck Bill Gates
+                ImGui_ImplSDLRenderer3_DestroyFontsTexture();
+                ImGuiIO& io = ImGui::GetIO();
+                io.Fonts->Clear();
+                const float sdl_scale = SDL_GetWindowDisplayScale(window);
+                io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/Arial.ttf", font_size_pixels_base * sdl_scale, nullptr, font_ranges_magic_load_all_utf8_glyphs);
+                ImGuiStyle& style = ImGui::GetStyle();
+                style = ImGuiStyle();
+                style.ScaleAllSizes(sdl_scale);
+            #endif
+        }
+
         std::tuple<SDL_Window*, SDL_Renderer*> init() {
             Trielo::trieloxit_lambda<SDL_Init>(Trielo::OkErrCode(0), sdl_error_lambda, SDL_INIT_VIDEO);
             Trielo::trielo_lambda<SDL_SetHint>(Trielo::OkErrCode(SDL_bool{SDL_TRUE}), sdl_error_lambda, SDL_HINT_IME_SHOW_UI, "1");
+
             Trielo::trielo<NFD::Init>(Trielo::OkErrCode(NFD_OKAY));
 
             static constexpr Uint32 window_flags = (
@@ -68,6 +97,8 @@ namespace GUI {
                 std::printf("Current SDL_Renderer: %s\n", info.name);
             }
 
+            Trielo::trielo_lambda<SDL_SetHint>(Trielo::OkErrCode(SDL_bool{SDL_TRUE}), sdl_error_lambda, SDL_HINT_VIDEO_X11_SCALING_FACTOR, std::to_string(SDL_GetWindowDisplayScale(window)).c_str());
+
             Trielo::trieloxit<ImGui::DebugCheckVersionAndDataLayout>(
                 Trielo::OkErrCode(true),
                 IMGUI_VERSION,
@@ -81,7 +112,7 @@ namespace GUI {
             Trielo::trieloxit<ImGui::CreateContext>(Trielo::FailErrCode(static_cast<ImGuiContext*>(nullptr)), static_cast<ImFontAtlas*>(nullptr));
 
             ImGuiIO& io = ImGui::GetIO();
-            io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_DockingEnable | ImGuiConfigFlags_ViewportsEnable;     // Enable Keyboard Controls
+            io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_DockingEnable;
 
             ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
             ImGui_ImplSDLRenderer3_Init(renderer);
@@ -92,9 +123,9 @@ namespace GUI {
             return std::tuple { window, renderer };
         } 
 
-        void process_events(bool &done) {
+        void process_events(bool &done, SDL_Window* window, SDL_Renderer* renderer) {
             SDL_Event event;
-            while(SDL_PollEvent(&event)) {
+            if(SDL_PollEvent(&event)) {
                 ImGui_ImplSDL3_ProcessEvent(&event);
                 switch(event.type) {
                     case SDL_EVENT_QUIT:
@@ -102,7 +133,10 @@ namespace GUI {
                         return;
                     case SDL_EVENT_SYSTEM_THEME_CHANGED:
                         switch_imgui_theme();
-                    break; 
+                        break; 
+                    case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
+                        set_scale(window);
+                        break; 
                 }
             }
         }
