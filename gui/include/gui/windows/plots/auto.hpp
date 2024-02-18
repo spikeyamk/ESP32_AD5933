@@ -5,6 +5,8 @@
 
 #include "imgui.h"
 
+#include "gui/windows/auto.hpp"
+
 namespace GUI {
     namespace Windows {
         namespace Plots {
@@ -16,9 +18,18 @@ namespace GUI {
                 Auto() = default;
                 Auto(const size_t index);
                 void draw(bool& enable, const ImGuiID side_id);
+                void update_send_vectors(std::queue<Windows::Auto::Point>& send_points);
             private:
-                void draw_corrected_gon_data();
-                void draw_corrected_alg_data();
+                struct Vectors {
+                    std::vector<double> time;
+                    std::vector<double> impedance;
+                    std::vector<double> phase;
+                    std::vector<double> resistance;
+                    std::vector<double> reactance;
+                };
+                Vectors send_vectors {};
+                void draw_send_corrected_gon_data();
+                void draw_send_corrected_alg_data();
             };
         }
     }

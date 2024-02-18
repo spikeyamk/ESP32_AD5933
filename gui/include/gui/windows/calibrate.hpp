@@ -76,6 +76,7 @@ namespace GUI {
                 Calibrating,
                 Failed,
                 Calibrated,
+                Plotted,
             };
         private:
             std::stop_source stop_source;
@@ -89,6 +90,7 @@ namespace GUI {
             Calibrate(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm);
             void draw(bool& enable, const ImGuiID side_id);
             Status get_status() const;
+            bool plotted { false };
         private:
             void update_freq_start_valid();
             void update_freq_inc_valid();

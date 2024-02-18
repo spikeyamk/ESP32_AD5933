@@ -42,5 +42,4 @@ extern "C" void app_main() {
 	while(1) {
 		std::this_thread::sleep_for(std::chrono::seconds(10));
 	}
-	Trielo::trielo<SD_Card::deinit>();
 }
