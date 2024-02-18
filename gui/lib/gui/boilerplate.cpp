@@ -110,6 +110,7 @@ namespace GUI {
                 sizeof(ImDrawIdx)
             );
             Trielo::trieloxit<ImGui::CreateContext>(Trielo::FailErrCode(static_cast<ImGuiContext*>(nullptr)), static_cast<ImFontAtlas*>(nullptr));
+            Trielo::trieloxit<ImPlot::CreateContext>(Trielo::FailErrCode(static_cast<ImPlotContext*>(nullptr)));
 
             ImGuiIO& io = ImGui::GetIO();
             io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_DockingEnable;
@@ -136,6 +137,10 @@ namespace GUI {
                         break; 
                     case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
                         set_scale(window);
+                        const float scale = Boilerplate::get_scale();
+                        const auto default_style { ImPlotStyle() };
+                        ImPlot::GetStyle().PlotDefaultSize.x = default_style.PlotDefaultSize.x * scale;
+                        ImPlot::GetStyle().PlotDefaultSize.y = default_style.PlotDefaultSize.y * scale;
                         break; 
                 }
             }

@@ -115,7 +115,6 @@ namespace GUI {
         ImGuiID top_id = top_with_dock_space(done, menu_bar_enables);
         DockspaceIDs top_ids { split_left_center(top_id) };
         std::vector<Windows::Client> client_windows;
-        int selected = -1;
 
         Windows::BLE_Connector ble_connector { shm, client_windows };
         ble_connector.draw(menu_bar_enables.ble_client, top_ids.left);
