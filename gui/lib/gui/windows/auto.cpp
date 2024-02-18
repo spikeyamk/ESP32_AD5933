@@ -105,6 +105,12 @@ namespace GUI {
                     }
                 }, rx_payload.value());
             }
+            self.shm->cmd.send(
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
+                    self.index,
+                    Magic::Events::Commands::Auto::End{}
+                }
+            );
             self.status = Status::Off;
         }
     }
