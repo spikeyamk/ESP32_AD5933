@@ -10,9 +10,11 @@
 namespace GUI {
     namespace Windows {
         class FileManager {
+        public:
+            static constexpr std::u8string_view name_base { u8"File Manager##" };
         private:
             size_t index;
-            std::string window_name { "File Manager##" };
+            std::u8string name { name_base };
             bool first { true };
             std::shared_ptr<BLE_Client::SHM::ParentSHM> shm { nullptr };
         public:

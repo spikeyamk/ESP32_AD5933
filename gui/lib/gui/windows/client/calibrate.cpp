@@ -3,14 +3,16 @@
 #include <atomic>
 
 #include <nfd.hpp>
+#include <utf/utf.hpp>
 #include "imgui_internal.h"
 
-#include "gui/windows/calibrate.hpp"
 #include "gui/boilerplate.hpp"
 #include "ad5933/masks/maps.hpp"
 #include "imgui_custom/spinner.hpp"
 #include "imgui_custom/input_items.hpp"
 #include "imgui_custom/char_filters.hpp"
+
+#include "gui/windows/client/calibrate.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -18,7 +20,7 @@ namespace GUI {
             index { index },
             shm{ shm }
         {
-            window_name.append(std::to_string(index));
+            name.append(utf::as_u8(std::to_string(index)));
         }
 
         void Calibrate::update_freq_start_valid() {
@@ -111,10 +113,10 @@ namespace GUI {
 
         void Calibrate::draw(bool& enable, const ImGuiID side_id) {
             if(first) {
-                ImGui::DockBuilderDockWindow(window_name.c_str(), side_id);
+                ImGui::DockBuilderDockWindow((const char*) name.c_str(), side_id);
             }
 
-            if(ImGui::Begin(window_name.c_str(), &enable) == false) {
+            if(ImGui::Begin((const char*) name.c_str(), &enable) == false) {
                 ImGui::End();
                 return;
             }

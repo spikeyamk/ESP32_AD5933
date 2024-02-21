@@ -2,17 +2,21 @@
 
 #include <vector>
 #include <string>
+#include <string_view>
 
 #include "imgui.h"
 
-#include "gui/windows/auto.hpp"
+#include "gui/windows/client/auto.hpp"
 
 namespace GUI {
     namespace Windows {
         namespace Plots {
             class Auto {
+            public:
+                static constexpr std::u8string_view name_base { u8"Auto Plots##" };
+            private:
                 size_t index;
-                std::string name { "Auto Plots##" };
+                std::u8string name { name_base };
                 bool first { true };
             public:
                 Auto() = default;

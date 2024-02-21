@@ -1,20 +1,21 @@
 #include <thread>
+#include <cstdint>
 
-#include "ad5933/calibration/calibration.hpp"
 #include "imgui.h"
 #include "imgui_internal.h"
-#include <cstdint>
 #include <nfd.hpp>
+#include <sys/types.h>
+#include <utf/utf.hpp>
 
 #include "json/conversion.hpp"
-#include <sys/types.h>
+#include "ad5933/calibration/calibration.hpp"
 #include "imgui_custom/spinner.hpp"
 #include "imgui_custom/input_items.hpp"
 #include "imgui_custom/char_filters.hpp"
 #include "magic/misc/gettimeofday.hpp"
 #include "gui/boilerplate.hpp"
 
-#include "gui/windows/measure.hpp"
+#include "gui/windows/client/measure.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -22,16 +23,16 @@ namespace GUI {
             index { index },
             shm { shm }
         {
-            name.append(std::to_string(index));
+            name.append(utf::as_u8(std::to_string(index)));
         }
 
         void Measure::draw(bool &enable, const ImGuiID side_id) {
             if(first) {
-                ImGui::DockBuilderDockWindow(name.c_str(), side_id);
+                ImGui::DockBuilderDockWindow((const char*) name.c_str(), side_id);
                 first = false;
             }
 
-            if(ImGui::Begin(name.c_str(), &enable) == false) {
+            if(ImGui::Begin((const char*) name.c_str(), &enable) == false) {
                 ImGui::End();
                 return;
             }

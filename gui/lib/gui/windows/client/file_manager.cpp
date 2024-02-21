@@ -6,13 +6,14 @@
 
 #include "imgui_internal.h"
 #include <nfd.hpp>
+#include <utf/utf.hpp>
 
 #include "imgui_custom/input_items.hpp"
 #include "imgui_custom/spinner.hpp"
 #include "misc/variant_tester.hpp"
 #include "gui/boilerplate.hpp"
 
-#include "gui/windows/file_manager.hpp"
+#include "gui/windows/client/file_manager.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -24,15 +25,15 @@ namespace GUI {
             index { index },
             shm{ shm }
         {
-            window_name.append(std::to_string(index));
+            name.append(utf::as_u8(std::to_string(index)));
         }
 
         void FileManager::draw(bool& enable, const ImGuiID side_id) {
             if(first) {
-                ImGui::DockBuilderDockWindow(window_name.c_str(), side_id);
+                ImGui::DockBuilderDockWindow((const char*) name.c_str(), side_id);
             }
 
-            if(ImGui::Begin(window_name.c_str(), &enable) == false) {
+            if(ImGui::Begin((const char*) name.c_str(), &enable) == false) {
                 ImGui::End();
                 return;
             }

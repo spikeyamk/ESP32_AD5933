@@ -16,12 +16,12 @@
 #include "ad5933/calibration/calibration.hpp"
 #include "json/conversion.hpp"
 #include "ble_client/shm/parent/parent.hpp"
-#include "gui/channel.hpp"
-#include "json/conversion.hpp"
 
 namespace GUI {
     namespace Windows {
         class Calibrate {
+        public:
+            static constexpr std::u8string_view name_base { u8"Calibrate##" };
         private:
             static constexpr uint32_t min_freq = 1'000;
             static constexpr uint32_t max_freq = 100'000;
@@ -39,7 +39,7 @@ namespace GUI {
             };
             ValidTextInputs valid_fields {};
             size_t index;
-            std::string window_name { "Calibrate##" };
+            std::u8string name { name_base };
             bool first { true };
         private:
             struct GUI_ItemInputs {

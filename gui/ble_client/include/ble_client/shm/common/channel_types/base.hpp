@@ -10,7 +10,7 @@
 #include <boost/interprocess/sync/named_mutex.hpp>
 #include <boost/interprocess/sync/named_condition.hpp>
 
-#include "ble_client/shm/common/cleaner.hpp"
+#include "ble_client/shm/common/scoped_cleaner.hpp"
 #include "ble_client/shm/common/names.hpp"
 
 namespace BLE_Client {

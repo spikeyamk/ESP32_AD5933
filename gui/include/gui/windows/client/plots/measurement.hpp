@@ -3,21 +3,24 @@
 #include <string>
 #include <cstddef>
 #include <vector>
+#include <string_view>
 
 #include "imgui.h"
 #include <SDL3/SDL.h>
 
 #include "ad5933/data/data.hpp"
 #include "ad5933/measurement/measurement.hpp"
-#include "gui/windows/measure.hpp"
+#include "gui/windows/client/measure.hpp"
 
 namespace GUI {
     namespace Windows {
         namespace Plots {
             class Measurement {
+            public:
+                static constexpr std::u8string_view name_base { u8"Measurement Plots##" };
             private:
                 size_t index;
-                std::string name { "Measurement Plots##" };
+                std::u8string name { name_base };
                 bool first { true };
             private:
                 template<typename T>

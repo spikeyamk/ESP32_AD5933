@@ -1,13 +1,11 @@
 #include <cmath>
 
-#include "gui/windows/plots/auto.hpp"
-
 #include "imgui_internal.h"
 #include "implot.h"
+#include <utf/utf.hpp>
 
 #include "gui/boilerplate.hpp"
-
-#include "gui/windows/plots/auto.hpp"
+#include "gui/windows/client/plots/auto.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -15,16 +13,16 @@ namespace GUI {
             Auto::Auto(const size_t index) :
                 index { index }
             {
-                name.append(std::to_string(index));
+                name.append(utf::as_u8(std::to_string(index)));
             }
 
             void Auto::draw(bool& enable, const ImGuiID side_id) {
                 if(first) {
-                    ImGui::DockBuilderDockWindow(name.c_str(), side_id);
+                    ImGui::DockBuilderDockWindow((const char*) name.c_str(), side_id);
                     ImPlot::CreateContext();
                }
 
-                if(ImGui::Begin(name.c_str(), &enable) == false) {
+                if(ImGui::Begin((const char*) name.c_str(), &enable) == false) {
                     ImGui::End();
                     return;
                 }

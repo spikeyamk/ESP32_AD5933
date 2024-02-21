@@ -37,6 +37,8 @@ set(AD5933_DEBUG_DATA_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/ad5933/debug_data)
 set(BLE_CLIENT_DIR ${CMAKE_CURRENT_LIST_DIR}/ble_client)
 set(JSON_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/json)
 set(NATIVE_FILE_DIALOG_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/nativefiledialog-extended)
+set(SEMVER_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/semver)
+set(UTFCONV_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/utfconv)
 
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_LIBS ON)
@@ -72,6 +74,11 @@ add_subdirectory(${AD5933_TEMPERATURE_DIR} ${CMAKE_BINARY_DIR}/AD5933_temperatur
 add_subdirectory(${AD5933_DEBUG_DATA_DIR} ${CMAKE_BINARY_DIR}/AD5933_debug_data)
 add_subdirectory(${JSON_DIR})
 add_subdirectory(${NATIVE_FILE_DIALOG_DIR})
+# This ugly hack with external semver library lets us use the mbits libraries without needing to install
+add_subdirectory(${SEMVER_DIR})
+# This just creates an alias that the CMakeLists.txt inside the ${UTFCONV_DIR} is looking for
+add_library(mbits::semver ALIAS semver)
+add_subdirectory(${UTFCONV_DIR})
 
 set(BLE_CLIENT_TEST ON)
 list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
@@ -80,24 +87,34 @@ add_subdirectory(${BLE_CLIENT_DIR})
 
 set(GUI_SRCS
 	main.cpp
-	ble_client/lib/shm/common/cleaner.cpp
+	ble_client/lib/shm/common/scoped_cleaner.cpp
 	ble_client/lib/shm/parent/specialized.cpp
 	ble_client/lib/shm/parent/parent.cpp
-	lib/gui/run.cpp
-	lib/gui/boilerplate.cpp
 	lib/imgui_custom/spinner.cpp
 	lib/imgui_custom/input_items.cpp
 	lib/imgui_custom/char_filters.cpp
+	lib/imgui_custom/markdown.cpp
+
+	lib/gui/run.cpp
+	lib/gui/boilerplate.cpp
+
+	# singleton windows
 	lib/gui/windows/console.cpp
-	lib/gui/windows/calibrate.cpp
-	lib/gui/windows/measure.cpp
-	lib/gui/windows/file_manager.cpp
-	lib/gui/windows/client.cpp
-	lib/gui/windows/debug.cpp
-	lib/gui/windows/auto.cpp
-	lib/gui/windows/plots/measurement.cpp
-	lib/gui/windows/plots/calibration.cpp
-	lib/gui/windows/plots/auto.cpp
+	lib/gui/windows/ble_adapter.cpp
+
+	# dynamic windows
+	lib/gui/windows/client/client.cpp
+	lib/gui/windows/client/calibrate.cpp
+	lib/gui/windows/client/measure.cpp
+	lib/gui/windows/client/file_manager.cpp
+	lib/gui/windows/client/debug.cpp
+	lib/gui/windows/client/auto.cpp
+
+	# dynamic windows plots
+	lib/gui/windows/client/plots/measurement.cpp
+	lib/gui/windows/client/plots/calibration.cpp
+	lib/gui/windows/client/plots/auto.cpp
+
 	lib/json/conversion.cpp
 	${IMGUI_SRCS}
 	${IMPLOT_SRCS}
@@ -126,6 +143,7 @@ set(GUI_LINK_LIBRARIES
 	nfd
 	nlohmann_json 
 	ble_client
+	utfconv
 )
 
 add_executable(${CURRENT_PROJECT_NAME}
@@ -148,7 +166,7 @@ set(SHM_CLEANER shm_cleaner)
 
 add_executable(${SHM_CLEANER}
 	misc/shm_cleaner.cpp
-	ble_client/lib/shm/common/cleaner.cpp
+	ble_client/lib/shm/common/scoped_cleaner.cpp
 )
 
 target_link_libraries(${SHM_CLEANER} PRIVATE
@@ -162,3 +180,7 @@ target_include_directories(${SHM_CLEANER} PRIVATE
 	${CMAKE_CURRENT_LIST_DIR}/ble_client/include
     ${Boost_INCLUDE_DIRS}
 )
+
+if(WIN32)
+	target_compile_definitions(${SHM_CLEANER} PRIVATE _WIN32_WINNT=0x0A00)
+endif()

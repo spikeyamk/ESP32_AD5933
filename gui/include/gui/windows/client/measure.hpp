@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <stop_token>
 #include <vector>
 #include <queue>
@@ -22,10 +23,12 @@
 namespace GUI {
     namespace Windows {
         class Measure {
+        public:
+            static constexpr std::u8string_view name_base { u8"Measure##" };
         private:
             bool first { true };
             size_t index;
-            std::string name { "Measure##" };
+            std::u8string name { name_base };
             std::shared_ptr<BLE_Client::SHM::ParentSHM> shm { nullptr };
 
             static constexpr uint32_t res_freq = 1;

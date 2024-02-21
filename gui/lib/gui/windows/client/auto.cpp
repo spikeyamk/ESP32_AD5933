@@ -2,11 +2,12 @@
 #include <thread>
 
 #include "imgui_internal.h"
+#include <utf/utf.hpp>
 
 #include "misc/variant_tester.hpp"
 #include "magic/misc/gettimeofday.hpp"
 
-#include "gui/windows/auto.hpp"
+#include "gui/windows/client/auto.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -14,16 +15,16 @@ namespace GUI {
             index { index },
             shm { shm }
         {
-            name.append(std::to_string(index));
+            name.append(utf::as_u8(std::to_string(index)));
         }
 
         void Auto::draw(bool &enable, const ImGuiID side_id) {
             if(first) {
-                ImGui::DockBuilderDockWindow(name.c_str(), side_id);
+                ImGui::DockBuilderDockWindow((const char*) name.c_str(), side_id);
                 first = false;
             }
 
-            if(ImGui::Begin(name.c_str(), &enable) == false) {
+            if(ImGui::Begin((const char*) name.c_str(), &enable) == false) {
                 ImGui::End();
                 return;
             }

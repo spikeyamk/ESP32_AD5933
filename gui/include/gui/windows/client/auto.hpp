@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <memory>
 #include <queue>
 #include <stop_token>
@@ -13,10 +14,12 @@
 namespace GUI {
     namespace Windows {
         class Auto {
+        public:
+            static constexpr std::u8string_view name_base { u8"Auto##" };
         private:
             bool first { true };
             size_t index;
-            std::string name { "Auto##" };
+            std::u8string name { name_base };
             std::shared_ptr<BLE_Client::SHM::ParentSHM> shm { nullptr };
         public:
             enum class Status {

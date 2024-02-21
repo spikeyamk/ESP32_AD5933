@@ -91,7 +91,8 @@ namespace Magic {
                             .bytes_total = *tmp_bytes_total,
                         };
                     }
-               };
+                };
+
                 struct ListCount {
                     static constexpr Header header { Header::FileListCount };
                     uint64_t num_of_files;
@@ -110,6 +111,7 @@ namespace Magic {
                         };
                     }
                 };
+
                 struct List {
                     static constexpr Header header { Header::FileList };
                     T_MaxDataSlice path { 0 };
@@ -125,6 +127,7 @@ namespace Magic {
                         return List{ tmp };
                     }
                 };
+
                 struct Size {
                     static constexpr Header header { Header::FileSize };
                     uint64_t num_of_bytes;
@@ -143,6 +146,7 @@ namespace Magic {
                         };
                     }
                 };
+
                 struct Download {
                     static constexpr Header header { Header::FileDownload };
                     T_MaxDataSlice slice { 0 };
@@ -158,6 +162,7 @@ namespace Magic {
                         return Download { tmp };
                     }
                 };
+
                 struct Upload {
                     static constexpr Header header { Header::FileUpload };
                     T_MaxDataSlice slice { 0 };

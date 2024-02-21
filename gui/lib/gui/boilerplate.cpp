@@ -11,17 +11,19 @@
 
 #include "gui/boilerplate.hpp"
 
-#ifdef _MSC_VER
-    #pragma execution_character_set("utf-8")
-#endif
-
 namespace GUI {
     namespace Boilerplate {
         static const auto sdl_error_lambda = []() {
             std::cout << SDL_GetError() << std::endl;
         };
 
-        void switch_imgui_theme() {
+        bool respect_system_theme { true };
+        Uint32 event_user_scale_event_type { (Uint32)(-1) };
+        inline void switch_imgui_theme() {
+            if(respect_system_theme == false) {
+                return;
+            }
+
             switch(SDL_GetSystemTheme()) {
                 case SDL_SYSTEM_THEME_DARK:
                     ImGui::StyleColorsDark();
@@ -32,26 +34,32 @@ namespace GUI {
             }
         }
 
-        static constexpr ImWchar font_ranges_magic_load_all_utf8_glyphs[] {
-            0x20, 0xFFFF, 0 
-        };
+        void set_scale(const float scale) {
+            #ifdef _MSC_VER // I hate Windows, also fuck Bill Gates
+                ImGui_ImplSDLRenderer3_DestroyFontsTexture();
+                ImGuiIO& io { ImGui::GetIO() };
+                io.Fonts->Clear();
+                static constexpr ImWchar font_ranges_magic_load_all_utf8_glyphs[] {
+                    0x20, 0xFFFF, 0 
+                };
+                io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/Arial.ttf", font_size_pixels_base * scale, nullptr, font_ranges_magic_load_all_utf8_glyphs);
+                ImGuiStyle& style = ImGui::GetStyle();
+                style = ImGuiStyle();
+                style.ScaleAllSizes(scale);
+            #endif
+        }
 
-        static constexpr float font_size_pixels_base = 13.0f;
         float get_scale() {
             return ImGui::GetIO().Fonts->ConfigData[0].SizePixels / font_size_pixels_base;
         }
 
-        static inline void set_scale(SDL_Window* window) {
-            #ifdef _MSC_VER // I hate Windows, also fuck Bill Gates
-                ImGui_ImplSDLRenderer3_DestroyFontsTexture();
-                ImGuiIO& io = ImGui::GetIO();
-                io.Fonts->Clear();
-                const float sdl_scale = SDL_GetWindowDisplayScale(window);
-                io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/Arial.ttf", font_size_pixels_base * sdl_scale, nullptr, font_ranges_magic_load_all_utf8_glyphs);
-                ImGuiStyle& style = ImGui::GetStyle();
-                style = ImGuiStyle();
-                style.ScaleAllSizes(sdl_scale);
-            #endif
+        bool respect_system_scale { true };
+        static inline void set_sdl_scale(const float sdl_scale) {
+            if(respect_system_scale == false) {
+                return;
+            }
+
+            set_scale(sdl_scale);
         }
 
         std::tuple<SDL_Window*, SDL_Renderer*> init() {
@@ -59,6 +67,7 @@ namespace GUI {
             Trielo::trielo_lambda<SDL_SetHint>(Trielo::OkErrCode(SDL_bool{SDL_TRUE}), sdl_error_lambda, SDL_HINT_IME_SHOW_UI, "1");
 
             Trielo::trielo<NFD::Init>(Trielo::OkErrCode(NFD_OKAY));
+            event_user_scale_event_type = SDL_RegisterEvents(1);
 
             static constexpr Uint32 window_flags = (
                 SDL_WINDOW_RESIZABLE
@@ -124,6 +133,13 @@ namespace GUI {
             return std::tuple { window, renderer };
         } 
 
+        void set_implot_scale() {
+            const float scale = Boilerplate::get_scale();
+            const auto default_style { ImPlotStyle() };
+            ImPlot::GetStyle().PlotDefaultSize.x = default_style.PlotDefaultSize.x * scale;
+            ImPlot::GetStyle().PlotDefaultSize.y = default_style.PlotDefaultSize.y * scale;
+        }
+
         void process_events(bool &done, SDL_Window* window, SDL_Renderer* renderer) {
             SDL_Event event;
             if(SDL_PollEvent(&event)) {
@@ -136,12 +152,13 @@ namespace GUI {
                         switch_imgui_theme();
                         break; 
                     case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
-                        set_scale(window);
-                        const float scale = Boilerplate::get_scale();
-                        const auto default_style { ImPlotStyle() };
-                        ImPlot::GetStyle().PlotDefaultSize.x = default_style.PlotDefaultSize.x * scale;
-                        ImPlot::GetStyle().PlotDefaultSize.y = default_style.PlotDefaultSize.y * scale;
+                        set_sdl_scale(SDL_GetWindowDisplayScale(window));
+                        set_implot_scale();
                         break; 
+                }
+                if(event.type == event_user_scale_event_type) {
+                    set_scale(*reinterpret_cast<const float*>(&event.user.code));
+                    set_implot_scale();
                 }
             }
         }

@@ -1,15 +1,15 @@
 #include <algorithm>
 
-#include "gui/windows/plots/measurement.hpp"
-#include "imgui_custom/input_items.hpp"
-#include "imgui_custom/char_filters.hpp"
-
 #include "imgui_internal.h"
 #include "implot.h"
+#include <utf/utf.hpp>
 
+#include "imgui_custom/input_items.hpp"
+#include "imgui_custom/char_filters.hpp"
 #include "gui/boilerplate.hpp"
+#include "json/graph.hpp"
 
-#include "gui/windows/plots/measurement.hpp"
+#include "gui/windows/client/plots/measurement.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -17,16 +17,16 @@ namespace GUI {
             Measurement::Measurement(size_t index) :
                 index { index }
             {
-                name.append(std::to_string(index));
+                name.append(utf::as_u8(std::to_string(index)));
             }
 
             void Measurement::draw(bool& enable, const ImGuiID side_id) {
                 if(first) {
-                    ImGui::DockBuilderDockWindow(name.c_str(), side_id);
+                    ImGui::DockBuilderDockWindow((const char*) name.c_str(), side_id);
                     ImPlot::CreateContext();
                 }
 
-                if(ImGui::Begin(name.c_str(), &enable) == false) {
+                if(ImGui::Begin((const char*) name.c_str(), &enable) == false) {
                     ImGui::End();
                     return;
                 }
@@ -124,6 +124,8 @@ namespace GUI {
                 }
             }
 
+
+
             void Measurement::draw_periodic_raw_data() {
                 draw_freq_input(periodic_freq_selects.raw, periodic_index_selects.raw);
                 if(ImPlot::BeginPlot("Timed Measurement Raw Real Data")) {
@@ -141,6 +143,33 @@ namespace GUI {
                         ImPlot::PlotLine("IMAG_DATA [1/Ohm]", periodic_vectors.time_points.data(), periodic_vectors.points[periodic_index_selects.raw].raw.imag_data.data(), std::min(periodic_vectors.time_points.size(), periodic_vectors.points[periodic_index_selects.raw].raw.imag_data.size()));
                     }
                     ImPlot::EndPlot();
+                }
+
+                if(ImGui::Button("Save")) {
+                    static constexpr char graph_file_name[] { "measurement_periodic_raw" };
+                    ns::RawDataGraph3D_File<graph_file_name, ns::Graph3D_Names::zfreq_raw_data, ns::Freq, double, ns::ValueNames::unix_timestamp> graph3D_file;
+                    const size_t wished_size { periodic_vectors.freq.size() };
+                    graph3D_file.graph_3D.points.reserve(wished_size);
+                    for(size_t i = 0; i < wished_size; i++) {
+                        graph3D_file.graph_3D.points.push_back(
+                            {
+                                periodic_vectors.freq[i],
+                            }
+                        );
+                        const size_t min { std::min(std::min(periodic_vectors.time_points.size(), periodic_vectors.points[i].raw.real_data.size()), periodic_vectors.points[i].raw.imag_data.size()) };
+                        graph3D_file.graph_3D.points[i].graph_2D.points.reserve(min);
+                        for(size_t j = 0; j < min; j++) {
+                            graph3D_file.graph_3D.points[i].graph_2D.points.push_back(
+                                {
+                                    periodic_vectors.time_points[j],
+                                    periodic_vectors.points[i].raw.real_data[j],
+                                    periodic_vectors.points[i].raw.imag_data[j],
+                                }
+                            );
+                        }
+                    }
+
+                    ns::save_to_fs(graph3D_file);
                 }
             }
 
@@ -162,6 +191,33 @@ namespace GUI {
                     }
                     ImPlot::EndPlot();
                 }
+
+                if(ImGui::Button("Save")) {
+                    static constexpr char graph_file_name[] { "measurement_periodic_calculated" };
+                    ns::CalculatedGraph3D_File<graph_file_name, ns::Graph3D_Names::zfreq_calculated, ns::Freq, double, ns::ValueNames::unix_timestamp> graph3D_file;
+                    const size_t wished_size { periodic_vectors.freq.size() };
+                    graph3D_file.graph_3D.points.reserve(wished_size);
+                    for(size_t i = 0; i < wished_size; i++) {
+                        graph3D_file.graph_3D.points.push_back(
+                            {
+                                periodic_vectors.freq[i],
+                            }
+                        );
+                        const size_t min { std::min(std::min(periodic_vectors.time_points.size(), periodic_vectors.points[i].raw.magnitude.size()), periodic_vectors.points[i].raw.phase.size()) };
+                        graph3D_file.graph_3D.points[i].graph_2D.points.reserve(min);
+                        for(size_t j = 0; j < min; j++) {
+                            graph3D_file.graph_3D.points[i].graph_2D.points.push_back(
+                                {
+                                    periodic_vectors.time_points[j],
+                                    periodic_vectors.points[i].raw.magnitude[j],
+                                    periodic_vectors.points[i].raw.phase[j],
+                                }
+                            );
+                        }
+                    }
+
+                    ns::save_to_fs(graph3D_file);
+                }
             }
 
             void Measurement::draw_periodic_corrected_gon_data() {
@@ -174,13 +230,40 @@ namespace GUI {
                     }
                     ImPlot::EndPlot();
                 }
-                if(ImPlot::BeginPlot("Timed Measurement Calculated Phase")) {
+                if(ImPlot::BeginPlot("Timed Measurement Corrected Phase")) {
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
                     //ImPlot::SetupAxes("f [Hz]", "CORRECTED_PHASE");
                     if(periodic_vectors.points.empty() == false) {
                         ImPlot::PlotLine("CORRECTED_PHASE [rad]", periodic_vectors.time_points.data(), periodic_vectors.points[periodic_index_selects.corrected_gon].corrected.phase.data(), std::min(periodic_vectors.time_points.size(), periodic_vectors.points[periodic_index_selects.corrected_gon].corrected.phase.size()));
                     }
                     ImPlot::EndPlot();
+                }
+
+                if(ImGui::Button("Save One")) {
+                    static constexpr char graph_file_name[] { "measurement_periodic_corrected_gon" };
+                    ns::CorrectedGonGraph3D_File<graph_file_name, ns::Graph3D_Names::zfreq_corrected_gon, ns::Freq, double, ns::ValueNames::unix_timestamp> graph3D_file;
+                    const size_t wished_size { periodic_vectors.freq.size() };
+                    graph3D_file.graph_3D.points.reserve(wished_size);
+                    for(size_t i = 0; i < wished_size; i++) {
+                        graph3D_file.graph_3D.points.push_back(
+                            {
+                                periodic_vectors.freq[i],
+                            }
+                        );
+                        const size_t min { std::min(std::min(periodic_vectors.time_points.size(), periodic_vectors.points[i].corrected.impedance.size()), periodic_vectors.points[i].corrected.phase.size()) };
+                        graph3D_file.graph_3D.points[i].graph_2D.points.reserve(min);
+                        for(size_t j = 0; j < min; j++) {
+                            graph3D_file.graph_3D.points[i].graph_2D.points.push_back(
+                                {
+                                    periodic_vectors.time_points[j],
+                                    periodic_vectors.points[i].corrected.impedance[j],
+                                    periodic_vectors.points[i].corrected.phase[j],
+                                }
+                            );
+                        }
+                    }
+
+                    ns::save_to_fs(graph3D_file);
                 }
             }
 
@@ -201,6 +284,33 @@ namespace GUI {
                         ImPlot::PlotLine("REACTANCE [Ohm]", periodic_vectors.time_points.data(), periodic_vectors.points[periodic_index_selects.corrected_alg].corrected.reactance.data(), std::min(periodic_vectors.time_points.size(), periodic_vectors.points[periodic_index_selects.corrected_alg].corrected.reactance.size()));
                     }
                     ImPlot::EndPlot();
+                }
+
+                if(ImGui::Button("Save")) {
+                    static constexpr char graph_file_name[] { "measurement_periodic_corrected_alg" };
+                    ns::CorrectedAlgGraph3D_File<graph_file_name, ns::Graph3D_Names::zfreq_corrected_alg, ns::Freq, double, ns::ValueNames::unix_timestamp> graph3D_file;
+                    const size_t wished_size { periodic_vectors.freq.size() };
+                    graph3D_file.graph_3D.points.reserve(wished_size);
+                    for(size_t i = 0; i < wished_size; i++) {
+                        graph3D_file.graph_3D.points.push_back(
+                            {
+                                periodic_vectors.freq[i],
+                            }
+                        );
+                        const size_t min { std::min(std::min(periodic_vectors.time_points.size(), periodic_vectors.points[i].corrected.resistance.size()), periodic_vectors.points[i].corrected.reactance.size()) };
+                        graph3D_file.graph_3D.points[i].graph_2D.points.reserve(min);
+                        for(size_t j = 0; j < min; j++) {
+                            graph3D_file.graph_3D.points[i].graph_2D.points.push_back(
+                                {
+                                    periodic_vectors.time_points[j],
+                                    periodic_vectors.points[i].corrected.resistance[j],
+                                    periodic_vectors.points[i].corrected.reactance[j],
+                                }
+                            );
+                        }
+                    }
+
+                    ns::save_to_fs(graph3D_file);
                 }
             }
 
@@ -244,7 +354,7 @@ namespace GUI {
                 std::transform(raw_measurement.begin(), raw_measurement.end(), single_vectors.raw.real_data.begin(), [](const AD5933::Data &e) { return static_cast<float>(e.get_real_data()); });
 
                 single_vectors.raw.imag_data.resize(raw_measurement.size());
-                std::transform(raw_measurement.begin(), raw_measurement.end(), single_vectors.raw.imag_data.begin(), [](const AD5933::Data &e) { return e.get_raw_magnitude<float>(); });
+                std::transform(raw_measurement.begin(), raw_measurement.end(), single_vectors.raw.imag_data.begin(), [](const AD5933::Data &e) { return static_cast<float>(e.get_imag_data()); });
 
                 single_vectors.raw.magnitude.resize(raw_measurement.size());
                 std::transform(raw_measurement.begin(), raw_measurement.end(), single_vectors.raw.magnitude.begin(), [](const AD5933::Data &e) { return e.get_raw_magnitude<float>(); });
@@ -276,6 +386,18 @@ namespace GUI {
                     ImPlot::PlotLine("IMAG_DATA [1/Ohm]", single_vectors.freq.data(), single_vectors.raw.imag_data.data(), std::min(single_vectors.freq.size(), single_vectors.raw.imag_data.size()));
                     ImPlot::EndPlot();
                 }
+
+                if(ImGui::Button("Save")) {
+                    static constexpr char graph_name[] { "measurement_single_raw" };
+                    ns::RawDataGraph2D_File<graph_name, float, ns::ValueNames::freq> graph_file {};
+                    ns::load_graph2D_file(
+                        single_vectors.freq,
+                        single_vectors.raw.real_data,
+                        single_vectors.raw.imag_data,
+                        graph_file
+                    );
+                    ns::save_to_fs(graph_file);
+                }
             }
 
             void Measurement::draw_single_calculated_data() {
@@ -288,6 +410,18 @@ namespace GUI {
                     ImPlot::SetupAxes("f [Hz]", "RAW_PHASE");
                     ImPlot::PlotLine("RAW_PHASE [rad]", single_vectors.freq.data(), single_vectors.raw.phase.data(), std::min(single_vectors.freq.size(), single_vectors.raw.phase.size()));
                     ImPlot::EndPlot();
+                }
+
+                if(ImGui::Button("Save")) {
+                    static constexpr char graph_name[] { "measurement_single_calculated" };
+                    ns::CalculatedGraph2D_File<graph_name, float, ns::ValueNames::freq> graph_file {};
+                    ns::load_graph2D_file(
+                        single_vectors.freq,
+                        single_vectors.raw.magnitude,
+                        single_vectors.raw.phase,
+                        graph_file
+                    );
+                    ns::save_to_fs(graph_file);
                 }
             }
 
@@ -302,6 +436,18 @@ namespace GUI {
                     ImPlot::PlotLine("CORRECTED_PHASE [rad]", single_vectors.freq.data(), single_vectors.corrected.phase.data(), std::min(single_vectors.freq.size(), single_vectors.corrected.phase.size()));
                     ImPlot::EndPlot();
                 }
+
+                if(ImGui::Button("Save")) {
+                    static constexpr char graph_name[] { "measurement_single_corrected_gon" };
+                    ns::CorrectedGonGraph2D_File<graph_name, float, ns::ValueNames::freq> graph_file {};
+                    ns::load_graph2D_file(
+                        single_vectors.freq,
+                        single_vectors.corrected.impedance,
+                        single_vectors.corrected.phase,
+                        graph_file
+                    );
+                    ns::save_to_fs(graph_file);
+                }
             }
 
             void Measurement::draw_single_corrected_alg_data() {
@@ -314,6 +460,18 @@ namespace GUI {
                     ImPlot::SetupAxes("f [Hz]", "REACTANCE");
                     ImPlot::PlotLine("REACTANCE [Ohm]", single_vectors.freq.data(), single_vectors.corrected.reactance.data(), std::min(single_vectors.freq.size(), single_vectors.corrected.reactance.size()));
                     ImPlot::EndPlot();
+                }
+
+                if(ImGui::Button("Save")) {
+                    static constexpr char graph_name[] { "measurement_single_corrected_alg" };
+                    ns::CorrectedAlgGraph2D_File<graph_name, float, ns::ValueNames::freq> graph_file {};
+                    ns::load_graph2D_file(
+                        single_vectors.freq,
+                        single_vectors.corrected.resistance,
+                        single_vectors.corrected.reactance,
+                        graph_file
+                    );
+                    ns::save_to_fs(graph_file);
                 }
             }
         }

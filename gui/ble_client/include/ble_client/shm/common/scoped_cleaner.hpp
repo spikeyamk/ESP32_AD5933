@@ -33,11 +33,11 @@ namespace ns {
 
 namespace BLE_Client {
     namespace SHM {
-        class Cleaner {
+        class ScopedCleaner {
         private:
             const std::optional<ns::SHM> read_json() const noexcept;
         public:
-            ~Cleaner() noexcept;
+            ~ScopedCleaner() noexcept;
         };
     }
 }

@@ -25,3 +25,9 @@
 [submodule "gui/lib/extern/json"]
 	path = gui/lib/extern/json
 	url = https://github.com/nlohmann/json.git
+[submodule "gui/lib/extern/utfconv"]
+	path = gui/lib/extern/utfconv
+	url = https://github.com/mbits-libs/utfconv.git
+[submodule "gui/lib/extern/semver"]
+	path = gui/lib/extern/semver
+	url = https://github.com/mbits-libs/semver.git

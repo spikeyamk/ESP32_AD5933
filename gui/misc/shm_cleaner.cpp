@@ -1,6 +1,6 @@
-#include "ble_client/shm/common/cleaner.hpp"
+#include "ble_client/shm/common/scoped_cleaner.hpp"
 
 int main() {
-    BLE_Client::SHM::Cleaner cleaner {};
+    BLE_Client::SHM::ScopedCleaner cleaner {};
     return 0;
 }
