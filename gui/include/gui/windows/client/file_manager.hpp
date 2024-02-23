@@ -2,7 +2,9 @@
 
 #include <memory>
 #include <vector>
+#include <filesystem>
 
+#include <nfd.hpp>
 #include "imgui.h"
 
 #include "ble_client/shm/parent/parent.hpp"
@@ -44,7 +46,7 @@ namespace GUI {
             void download();
         private:
             static void list_cb(FileManager& self);
-            static void download_cb(FileManager& self);
+            static void download_cb(FileManager& self, const std::filesystem::path outPath);
         };
     }
 }

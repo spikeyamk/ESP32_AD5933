@@ -124,8 +124,6 @@ namespace GUI {
                 }
             }
 
-
-
             void Measurement::draw_periodic_raw_data() {
                 draw_freq_input(periodic_freq_selects.raw, periodic_index_selects.raw);
                 if(ImPlot::BeginPlot("Timed Measurement Raw Real Data")) {

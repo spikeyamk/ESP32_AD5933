@@ -299,47 +299,6 @@ namespace ns {
     }
 }
 
-/*
-namespace ns {
-    template<typename T, typename T_Graph2D, const char* z_name>
-    struct DoublePoint3D {
-        Value<T, z_name> z;
-        T_Graph2D graph_2D;
-    };
-
-    template<typename T, typename T_Graph2D, const char* z_name>
-    void to_json(json& j, const DoublePoint3D<T, T_Graph2D, z_name>& p) {
-        j = json {
-            { p.z.name, p.z },
-            { p.graph_2D.name, p.graph_2D },
-        };
-    }
-
-    template<typename T, typename T_Graph2D, const char* z_name>
-    void from_json(const json& j, DoublePoint3D<T, T_Graph2D, z_name>& p) {
-        j.at(p.graph.name).get_to(p.graph);
-    }
-
-    template<typename T, typename T_Graph2D, const char* z_name, const char* in_name>
-    struct Graph3D {
-        static constexpr auto name { in_name };
-        std::vector<DoublePoint3D<T, T_Graph2D, z_name>> graph_3D;
-    };
-
-    template<typename T, typename T_Graph2D, const char* z_name, const char* in_name>
-    void to_json(json& j, const Graph3D<T, T_Graph2D, z_name, in_name>& p) {
-        j = json {
-            { p.name, p.graph_3D },
-        };
-    }
-
-    template<typename T, typename T_Graph2D, const char* z_name, const char* in_name>
-    void from_json(const json& j, Graph3D<T, T_Graph2D, z_name, in_name>& p) {
-        j.at(p.name).get_to(p.graph);
-    }
-}
-*/
-
 namespace ns {
     template<typename T_Graph2D_File, std::floating_point T>
     void load_graph2D_file(const std::vector<T> xs, const std::vector<T> ys1, const std::vector<T> ys2, T_Graph2D_File& out_graph_file) {
