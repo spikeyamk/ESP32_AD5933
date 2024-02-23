@@ -33,37 +33,14 @@
 
 namespace BLE {
     namespace Server {
-        #define APPEARANCE_GENERIC_SENSOR_UUID 0x0540
-        #define PROFILE_BODY_COMPOSITION_UUID 0x1014
-
-        #define CHARACTERISTIC_BODY_COMPOSITION_FEATURE_UUID 0x2A9B
-        #define CHARACTERISTIC_BODY_COMPOSITION_MEASUREMENT_UUID 0x2A9C
-
-        #define CHARACTERISTIC_TIME_UPDATE_CONTROL_POINT 0x2A16 
-        #define CHARACTERISTIC_TIME_UPDATE_STATE 0x2A17
-
-        #define CHARACTERISTIC_HID_CONTROL_POINT 0x2A4C
-        #define CHARACTERISTIC_HID_INFORMATION 0x2A4A
-
-        #define CONFIG_EXAMPLE_IO_TYPE 3
-
-        #define UNIT_ELECTRICAL_RESISTANCE_OHM_UUID 0x272A
-        #define UNIT_PLANE_ANGLE_DEGREE_UUID 0x2763
-        #define UNIT_PLANE_ANGLE_MINUTE_UUID 0x2764
-        #define UNIT_PLANE_ANGLE_RADIAN_UUID 0x2720
-        #define UNIT_PLANE_ANGLE_SECOND_UUID 0x2765
-        /* */
-
-        const uint8_t SERVICE_BODY_COMPOSITION_UUID[2] = { 0x18, 0x1B };
         static uint8_t own_addr_type;
-        static uint16_t body_composition_feature_characteristic_handle;
         static uint16_t conn_handle = 0;
-        static uint16_t body_composition_measurement_characteristic_handle = 0;
-        static uint16_t time_update_control_point_characteristic_handle;
-        static uint16_t hid_control_information_characteristic_handle;
-        std::atomic<bool> heartbeat_running = false;
-
-        char characteristic_received_value[500] { 0x00 };
+        namespace CharHandles {
+            static uint16_t body_composition_feature;
+            static uint16_t body_composition_measurement;
+            static uint16_t time_update_control_point;
+            static uint16_t hid_control_information;
+        }
     }
 
     namespace Server {
@@ -85,31 +62,6 @@ namespace BLE {
                 Trielo::trielo<nimble_port_deinit>(Trielo::OkErrCode(ESP_OK));
             }
             Trielo::trielo<esp_bt_controller_disable>(Trielo::OkErrCode(ESP_OK));
-        }
-
-        void heartbeat_cb() {
-            std::printf("BLE::Server::heartbeat_cb\n");
-            char write_buffer[20];
-            struct os_mbuf *txom;
-            while(heartbeat_running) {
-                std::printf("From heartbeat callback\n");
-                //const float temperature = AD5933_Tests::ad5933.load()->measure_temperature().value_or(0xFFFF'FFFF);
-                const float temperature = 0.0f;
-                std::sprintf(write_buffer, "%f °C", temperature);
-                std::printf("Heartbeat callback: write_buffer: %s\n", write_buffer);
-                txom = ble_hs_mbuf_from_flat(write_buffer, sizeof(write_buffer));
-                Trielo::trielo<&ble_gatts_indicate_custom>(Trielo::OkErrCode(0), conn_handle, body_composition_measurement_characteristic_handle, txom);
-                std::this_thread::sleep_for(std::chrono::seconds(1));
-            } 
-        }
-
-        void create_heartbeat_task() {
-            std::printf("BLE::Server::create_heartbeat_task\n");
-            if(heartbeat_running == true) {
-                return;
-            }
-            heartbeat_running = true;
-            std::thread(heartbeat_cb).detach();
         }
 
         static void wakeup_cb() {
@@ -145,18 +97,8 @@ namespace BLE {
             case BLE_GAP_EVENT_DISCONNECT:
                 MODLOG_DFLT(INFO, "disconnect; reason=%d ", event->disconnect.reason);
                 MODLOG_DFLT(INFO, "\n");
-
-                /* Connection terminated; resume advertising. */
-                /* Again commenting out intentionally disabling
-                if(heartbeat_running == true) {
-                    std::cout << "Deleting heartbeat task\n";
-                    heartbeat_running = false;
-                    heartbeat_thread.value().join();
-                } */ 
-
                 dummy_state_machine.process_event(BLE::Events::disconnect{});
                 break;
-
             case BLE_GAP_EVENT_CONN_UPDATE:
                 MODLOG_DFLT(INFO, "connection updated; status=%d ",
                             event->conn_update.status);
@@ -168,17 +110,10 @@ namespace BLE {
             case BLE_GAP_EVENT_ADV_COMPLETE:
                 MODLOG_DFLT(INFO, "advertise complete; reason=%d",
                             event->adv_complete.reason);
-                /* Commented out disabling heartbeat subscribe event
-                if(heartbeat_running == true) {
-                    std::cout << "Deleting heartbeat task\n";
-                    heartbeat_running = false;
-                    heartbeat_thread.value().join();
-                } */
                 if(event->adv_complete.reason == BLE_HS_ETIMEOUT) {
                     dummy_state_machine.process_event(BLE::Events::sleep{});
                 }
                 break;
-
             case BLE_GAP_EVENT_SUBSCRIBE:
                 MODLOG_DFLT(INFO,   "subscribe event; " "conn_handle=%d; " "attr_handle=%d;\n"
                                     "reason=%d; " "prev_notify=%d; " "cur_notify=%d;\n"
@@ -189,24 +124,12 @@ namespace BLE {
                             event->subscribe.reason,
                             event->subscribe.prev_notify,
                             event->subscribe.cur_notify,
-                            body_composition_measurement_characteristic_handle, //!! Client Subscribed to body_composition_measurement_characteristic_handle
+                            CharHandles::body_composition_measurement,
                             event->subscribe.prev_indicate,
                             event->subscribe.cur_indicate);
                 if(event->subscribe.cur_notify == 0 && event->subscribe.prev_notify == 1) {
-                    fmt::print(fmt::fg(fmt::color::purple), "WE HERE unsubscribin...\n");
                     dummy_state_machine.process_event(Events::disconnect{});
                 }
-                if(event->subscribe.attr_handle == body_composition_measurement_characteristic_handle) {
-                    if(event->subscribe.cur_indicate != 0) {
-                        //state_machine.change_to_state(static_cast<const States::bState*>(&States::subscribed));
-                        printf("\nSubscribed with body_composition_measurement_characteristic_handle =%d\n", event->subscribe.attr_handle);
-                    } else {
-                        if(heartbeat_running == true) {
-                            //state_machine.change_to_state(static_cast<const States::bState*>(&States::unsubscribe));
-                        }
-                    }
-                }
-
                 break;
 
             case BLE_GAP_EVENT_MTU:
@@ -322,16 +245,18 @@ namespace BLE {
         }
 
         void advertise() {
-            static constexpr ble_uuid16_t uuids16 {
+            static constexpr ble_uuid16_t profile_body_composition_uuid {
                 .u = BLE_UUID_TYPE_16,
-                .value = PROFILE_BODY_COMPOSITION_UUID,
+                .value = 0x1014,
             };
 
             static constexpr uint8_t name[] { 'n', 'i', 'm', 'b', 'l', 'e' };
+            static constexpr uint8_t mfg_data[] { 'n', 'i', 'm', 'b', 'l', 'e' };
+            static constexpr uint16_t appearance_generic_sensor_uuid = 0x0540;
 
             static constexpr ble_hs_adv_fields adv_fields {
                 .flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP,
-                .uuids16 = &uuids16,
+                .uuids16 = &profile_body_composition_uuid,
                 .num_uuids16 = 1,
                 .uuids16_is_complete = 1,
                 .uuids32 = nullptr,
@@ -350,7 +275,7 @@ namespace BLE {
                 .svc_data_uuid16_len = 0,
                 .public_tgt_addr = nullptr,
                 .num_public_tgt_addrs = 0,
-                .appearance = APPEARANCE_GENERIC_SENSOR_UUID,
+                .appearance = appearance_generic_sensor_uuid,
                 .appearance_is_present = 1,
                 .adv_itvl = 0,
                 .adv_itvl_is_present = 0,
@@ -360,8 +285,8 @@ namespace BLE {
                 .svc_data_uuid128_len = 0,
                 .uri = nullptr,
                 .uri_len = 0,
-                .mfg_data = nullptr,
-                .mfg_data_len = 0
+                .mfg_data = mfg_data,
+                .mfg_data_len = sizeof(mfg_data)
             };
 
             Trielo::trielo<&ble_gap_adv_set_fields>(Trielo::OkErrCode(0), &adv_fields);
@@ -395,7 +320,6 @@ namespace BLE {
 
         static void sync_cb() {
             std::printf("BLE::Server::sync_cb\n");
-            /* Generate a non-resolvable private address. */
             Trielo::trielo<&ble_hs_util_ensure_addr>(Trielo::OkErrCode(0), 0);
             Trielo::trielo<&ble_hs_id_infer_auto>(Trielo::OkErrCode(0), 0, &own_addr_type);
             dummy_state_machine.process_event(Events::advertise{});
@@ -467,7 +391,7 @@ namespace BLE {
             ble_hs_cfg.sync_cb = &sync_cb;
             ble_hs_cfg.gatts_register_cb = &gatt_register_cb;
             ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
-            ble_hs_cfg.sm_io_cap = CONFIG_EXAMPLE_IO_TYPE;
+            ble_hs_cfg.sm_io_cap = 3;
             ble_hs_cfg.sm_sc = 0;
 
             Trielo::trielo<ble_svc_gap_init>();
@@ -476,73 +400,69 @@ namespace BLE {
             static constexpr ble_uuid_any_t body_composition_feature_characteristic_uuid {
                 .u16 = {
                     .u = BLE_UUID_TYPE_16,
-                    .value = CHARACTERISTIC_BODY_COMPOSITION_FEATURE_UUID
+                    .value = 0x2A9B,
                 },
             };
 
             static constexpr ble_uuid_any_t body_composition_measurement_characteristic_uuid {
                 .u16 = {
                     .u = BLE_UUID_TYPE_16,
-                    .value = CHARACTERISTIC_BODY_COMPOSITION_MEASUREMENT_UUID
+                    .value = 0x2A9C,
                 }
             };
 
             static constexpr ble_uuid_any_t time_update_control_point_uuid {
                 .u16 = {
                     .u = BLE_UUID_TYPE_16,
-                    .value = CHARACTERISTIC_TIME_UPDATE_CONTROL_POINT
+                    .value = 0x2A16
                 }
             };
 
             static constexpr ble_uuid_any_t hid_control_information_uuid {
                 .u16 = {
                     .u = BLE_UUID_TYPE_16,
-                    .value = CHARACTERISTIC_HID_INFORMATION
+                    .value = 0x2A4A
                 }
             };
 
-            // Initialize your characteristic definition.
             static constexpr ble_gatt_chr_def body_composition_feature_characteristic {
                 .uuid = &body_composition_feature_characteristic_uuid.u,
                 .access_cb = body_composition_feature_characteristic_access_cb,
-                .arg = nullptr,  // Replace with your actual argument.
+                .arg = nullptr,
                 .descriptors = nullptr,
-                .flags = BLE_GATT_CHR_F_WRITE,  // Replace with your flags.
-                .min_key_size = 0,  // Replace with your minimum key size.
-                .val_handle = &body_composition_feature_characteristic_handle,  // The value handle will be filled in at registration time.
+                .flags = BLE_GATT_CHR_F_WRITE,
+                .min_key_size = 0,
+                .val_handle = &CharHandles::body_composition_feature,
             };
 
-            // Initialize your characteristic definition.
             static constexpr ble_gatt_chr_def body_composition_measurement_characteristic {
                 .uuid = &body_composition_measurement_characteristic_uuid.u,
                 .access_cb = body_composition_measurement_characteristic_access_cb,
-                .arg = nullptr,  // Replace with your actual argument.
+                .arg = nullptr,
                 .descriptors = nullptr,
                 .flags = BLE_GATT_CHR_F_NOTIFY,
-                .min_key_size = 0,  // Replace with your minimum key size.
-                .val_handle = &body_composition_measurement_characteristic_handle,  // The value handle will be filled in at registration time.
+                .min_key_size = 0,
+                .val_handle = &CharHandles::body_composition_measurement,
             };
 
-            // Initialize your characteristic definition.
             static constexpr ble_gatt_chr_def time_update_control_point_characteristic {
                 .uuid = &time_update_control_point_uuid.u,
                 .access_cb = time_update_control_point_characteristic_access_cb,
-                .arg = nullptr,  // Replace with your actual argument.
+                .arg = nullptr,
                 .descriptors = nullptr,
-                .flags = BLE_GATT_CHR_F_WRITE,  // Replace with your flags.
-                .min_key_size = 0,  // Replace with your minimum key size.
-                .val_handle = &time_update_control_point_characteristic_handle,  // The value handle will be filled in at registration time.
+                .flags = BLE_GATT_CHR_F_WRITE,
+                .min_key_size = 0,
+                .val_handle = &CharHandles::time_update_control_point,
             };
 
-            // Initialize your characteristic definition.
             static constexpr ble_gatt_chr_def hid_control_information_characteristic {
                 .uuid = &hid_control_information_uuid.u,
                 .access_cb = hid_control_information_characteristic_access_cb,
-                .arg = nullptr,  // Replace with your actual argument.
+                .arg = nullptr,
                 .descriptors = nullptr,
-                .flags = BLE_GATT_CHR_F_NOTIFY,  // Replace with your flags.
-                .min_key_size = 0,  // Replace with your minimum key size.
-                .val_handle = &hid_control_information_characteristic_handle,  // The value handle will be filled in at registration time.
+                .flags = BLE_GATT_CHR_F_NOTIFY,
+                .min_key_size = 0,
+                .val_handle = &CharHandles::hid_control_information,
             };
 
             static constexpr ble_uuid_any_t body_composition_service_uuid {
@@ -561,9 +481,9 @@ namespace BLE {
             };
 
             static constexpr ble_gatt_svc_def body_composition_service {
-                .type = BLE_GATT_SVC_TYPE_PRIMARY,  // Or BLE_GATT_SVC_TYPE_SECONDARY.
+                .type = BLE_GATT_SVC_TYPE_PRIMARY,
                 .uuid = &body_composition_service_uuid.u,
-                .includes = nullptr,  // If there are no included services.
+                .includes = nullptr,
                 .characteristics = body_composition_service_characteristics,
             };
 
@@ -588,7 +508,7 @@ namespace BLE {
                 std::cout << "BLE::Server::notify_hid_information: failed to ble_hs_mbuf_from_flat\n";
                 return false;
             }
-            const int ret = ble_gatts_notify_custom(conn_handle, hid_control_information_characteristic_handle, txom);
+            const int ret = ble_gatts_notify_custom(conn_handle, CharHandles::hid_control_information, txom);
             if(ret == 0) {
                 return true;
             } else {
@@ -606,7 +526,7 @@ namespace BLE {
                 std::cout << "BLE::Server::notify_body_composition_measurement: failed to ble_hs_mbuf_from_flat\n";
                 return false;
             }
-            const int ret = ble_gatts_notify_custom(conn_handle, body_composition_measurement_characteristic_handle, txom);
+            const int ret = ble_gatts_notify_custom(conn_handle, CharHandles::body_composition_measurement, txom);
             if(ret == 0) {
                 return true;
             } else {

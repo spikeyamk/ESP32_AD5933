@@ -13,6 +13,8 @@
 #include <filesystem>
 #include <string>
 
+#include <trielo/trielo.hpp>
+
 #include <esp_vfs_fat.h>
 #include <sdmmc_cmd.h>
 
@@ -23,10 +25,10 @@
 
 namespace SD_Card {
     namespace Pins {
-        static constexpr gpio_num_t miso { GPIO_NUM_2 };
-        static constexpr gpio_num_t mosi { GPIO_NUM_10 };
-        static constexpr gpio_num_t clk  { GPIO_NUM_11 };
         static constexpr gpio_num_t cs   { GPIO_NUM_3 };
+        static constexpr gpio_num_t mosi { GPIO_NUM_2 };
+        static constexpr gpio_num_t miso { GPIO_NUM_11 };
+        static constexpr gpio_num_t clk  { GPIO_NUM_10 };
     }
 
     static constexpr esp_vfs_fat_sdmmc_mount_config_t mount_config = {
@@ -42,7 +44,7 @@ namespace SD_Card {
     static constexpr sdmmc_host_t host {
         .flags = SDMMC_HOST_FLAG_SPI | SDMMC_HOST_FLAG_DEINIT_ARG,
         .slot = SDSPI_DEFAULT_HOST,
-        .max_freq_khz = 400, // Here the max_freq_khz is modifed to 400 kHz
+        .max_freq_khz = 20'000,
         .io_voltage = 3.3f,
         .init = &sdspi_host_init,
         .set_bus_width = NULL,
@@ -80,11 +82,11 @@ namespace SD_Card {
     };
 
     int init() {
-        if(spi_bus_initialize(slot_config.host_id, &bus_cfg, SDSPI_DEFAULT_DMA) != ESP_OK) {
+        if(Trielo::trielo<spi_bus_initialize>(Trielo::OkErrCode(ESP_OK), slot_config.host_id, &bus_cfg, SDSPI_DEFAULT_DMA) != ESP_OK) {
             return -1;
         }
 
-        if(esp_vfs_fat_sdspi_mount(mount_point.data(), &host, &slot_config, &mount_config, &card) != ESP_OK) {
+        if(Trielo::trielo<esp_vfs_fat_sdspi_mount>(Trielo::OkErrCode(ESP_OK), mount_point.data(), &host, &slot_config, &mount_config, &card) != ESP_OK) {
             return -2;
         }
         sdmmc_card_print_info(stdout, card);
@@ -140,8 +142,66 @@ namespace SD_Card {
         }
     }
 
-    void deinit() {
-        esp_vfs_fat_sdcard_unmount(mount_point.data(), card);
-        spi_bus_free(slot_config.host_id);
+    esp_err_t deinit() {
+        const esp_err_t ret { esp_vfs_fat_sdcard_unmount(mount_point.data(), card) };
+        if(ret != ESP_OK) {
+            return ret;
+        }
+
+        return spi_bus_free(slot_config.host_id);
+    }
+
+    int create_megabyte_test_file() {
+        const std::filesystem::path test_megabyte { std::filesystem::path(mount_point).append("test4") };
+        {
+            std::ofstream clearing_test_file(test_megabyte, std::ofstream::out | std::ofstream::trunc);
+        }
+
+        static constexpr size_t size_megabyte { 1 * 1024 * 1024 };
+
+        std::ofstream file(test_megabyte);
+        if(file.is_open() == false) {
+            return -1;
+        }
+        size_t i = 1;
+        try {
+            char c { 'a' };
+            for(; i <= size_megabyte; i++) {
+                file << c;
+                if(c == 'z') {
+                    c = 'a';
+                } else {
+                    c++;
+                }
+            }
+        } catch(const std::exception& e) {
+            return -2;
+        }
+
+        if(i < size_megabyte) {
+            return static_cast<int>(i);
+        }
+        return 0;
+    }
+
+    int print_megabyte_test_file() {
+        const std::filesystem::path test_megabyte { std::filesystem::path(mount_point).append("test4") };
+        static constexpr size_t size_megabyte { 1 * 1024 * 1024 };
+        std::ifstream file(test_megabyte);
+        if(file.is_open() == false) {
+            return -1;
+        }
+        char c;
+        size_t i = 1;
+        while(file.read(&c, sizeof(c))) {
+            std::printf("%c", c);
+            i++;
+        }
+        std::printf("\n");
+        if(i < size_megabyte) {
+            return static_cast<int>(i);
+        }
+
+        return 0;
     }
 }

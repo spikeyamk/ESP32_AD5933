@@ -284,11 +284,114 @@ namespace BLE {
 				AD5933::Calibration<float> { 9811605.0f, -1.2277723550796509f },
 			};
 
+			std::array<char, 20> get_record_file_name_zero_terminated() {
+				const time_t time { std::chrono::high_resolution_clock::to_time_t(std::chrono::high_resolution_clock::now()) };
+				const tm* tm { std::localtime(&time) };
+				std::array<char, 20> ret;
+				std::strftime(ret.data(), sizeof(ret), "%Y-%m-%d-%H_%M_%S", tm);
+				return ret;
+			}
+
 			void start_saving(std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933) {
 				std::jthread t1([sender, &ad5933](StopSources& stop_sources) {
 					stop_sources.save = true;
+
+					uint64_t bytes_total;
+					uint64_t bytes_free;
+					
+					{
+						const esp_err_t ret = esp_vfs_fat_info(SD_Card::mount_point.data(), &bytes_total, &bytes_free);
+						if(ret != ESP_OK) {
+							std::cout << "ERROR: BLE::Actions::Auto::start_saving: esp_vfs_fat_info failed: " << ret << std::endl;
+							return;
+						}
+					}
+
+					if(bytes_free < sizeof(Magic::Events::Results::Auto::Timeval::T_RawData) + sizeof(Magic::Events::Results::Auto::Point::T_RawData)) {
+						std::cout << "ERROR: BLE::Actions::Auto::start_saving: filesystem ain't got no space in it: bytes_free: " << bytes_free << std::endl;
+					}
+
+					const auto record_filepath {
+						[]() {
+							const std::array<char, 20> record_file_name { get_record_file_name_zero_terminated() };
+							std::array<char, SD_Card::mount_point_prefix.size() + record_file_name.size()> ret;
+							std::copy(SD_Card::mount_point_prefix.begin(), SD_Card::mount_point_prefix.end(), ret.begin());
+							std::copy(record_file_name.begin(), record_file_name.end(), ret.begin() + SD_Card::mount_point_prefix.size());
+							return record_file_name;
+						}()
+					};
+
+					{
+						// Removes the record file if it exists
+						FILE* file_to_remove = Trielo::trielo<std::fopen>(Trielo::FailErrCode<FILE*>(nullptr), record_filepath.data(), "r");
+						if(file_to_remove != nullptr) {
+							Trielo::trielo<std::fclose>(Trielo::OkErrCode(0), file_to_remove);
+							Trielo::trielo<unlink>(Trielo::OkErrCode(0), record_filepath.data());
+						}
+					}
+
+					{
+						FILE* file = Trielo::trielo<std::fopen>(Trielo::FailErrCode<FILE*>(nullptr), record_filepath.data(), "wb");
+						if(file == nullptr) {
+							std::cout << "ERROR: BLE::Actions::Auto::start_saving: Could not open file at first try\n";
+							return;
+						}
+						if(Trielo::trielo<std::fclose>(Trielo::OkErrCode(0), file) != 0) {
+							return;
+						}
+					}
+
 					ad5933.driver.program_all_registers(default_config.to_raw_array());
 					while(stop_sources.save == true) {
+						ad5933.reset();
+						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::StandbyMode);
+						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::InitStartFreq);
+						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::StartFreqSweep);
+						do {
+							while(ad5933.has_status_condition(AD5933::Masks::Or::Status::ValidData) == false) {
+								std::this_thread::sleep_for(std::chrono::milliseconds(1));
+							}
+							const auto raw_data { ad5933.read_impe_data() };
+							if(raw_data.has_value() && ad5933.has_status_condition(AD5933::Masks::Or::Status::FreqSweepComplete)) {
+								const AD5933::Data data { raw_data.value() };
+								const AD5933::Measurement measurement { data, default_calibration[2] };
+								const Magic::Events::Results::Auto::Point point {
+									.status = static_cast<uint8_t>(Magic::Events::Results::Auto::Point::Status::Valid),
+									.impedance = measurement.get_magnitude(),
+									.phase = measurement.get_phase(),
+								};
+								const Magic::T_OutComingPacket<Magic::Events::Results::Auto::Point, sizeof(Magic::Events::Results::Auto::Point::T_RawData)> point_packet { point };
+
+								FILE* file = std::fopen(record_filepath.data(), "wb");
+								if(file == nullptr) {
+									std::cout << "ERROR: BLE::Actions::Auto::start_saving: Could not open file for writing in the loop\n";
+									return;
+								}
+
+								const auto point_serialized { point.to_raw_data() };
+								const size_t point_written_size = std::fwrite(point_serialized.data(), sizeof(point_serialized[0]), point_serialized.size(), file);
+								if(point_written_size != point_serialized.size()) {
+									std::cout << "ERROR: BLE::Actions::Auto::start_saving: Could not open file for writing in the loop: point_written_size != point_serialized.size(): point_written_size: " << point_written_size << std::endl;
+									return;
+								}
+
+								Magic::Events::Results::Auto::Timeval timeval;
+								gettimeofday(&timeval.tv, nullptr);
+								const auto timeval_serialized { timeval.to_raw_data() };
+								const size_t timeval_written_size = std::fwrite(timeval_serialized.data(), sizeof(timeval_serialized[0]), timeval_serialized.size(), file);
+								if(timeval_written_size != timeval_serialized.size()) {
+									std::cout << "ERROR: BLE::Actions::Auto::start_saving: Could not open file for writing in the loop: timeval_written_size != timeval_serialized.size(): timeval_written_size: " << timeval_written_size << std::endl;
+									return;
+								}
+
+								if(std::fclose(file) != 0) {
+									std::cout << "ERROR: BLE::Actions::Auto::start_saving: Could not close the file\n";
+									return;
+								}
+							}
+							ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::IncFreq);
+						} while(ad5933.has_status_condition(AD5933::Masks::Or::Status::FreqSweepComplete) == false);
+
 						std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
 					}
 				}, std::ref(stop_sources));
@@ -317,8 +420,7 @@ namespace BLE {
 									.impedance = measurement.get_magnitude(),
 									.phase = measurement.get_phase(),
 								};
-								static constexpr size_t test = sizeof(Magic::Events::Results::Auto::Point);
-								const Magic::T_OutComingPacket<Magic::Events::Results::Auto::Point, 10> point_packet { point };
+								const Magic::T_OutComingPacket<Magic::Events::Results::Auto::Point, 11> point_packet { point };
 								sender->notify_body_composition_measurement(point_packet);
 							}
 							ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::IncFreq);

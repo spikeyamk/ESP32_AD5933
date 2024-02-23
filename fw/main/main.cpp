@@ -18,7 +18,7 @@
 #include "esp_log.h"
 #include "host/ble_gap.h"
 
-#include "trielo/trielo.hpp"
+#include <trielo/trielo.hpp>
 
 #include "util.hpp"
 #include "i2c/bus.hpp"
@@ -42,5 +42,4 @@ extern "C" void app_main() {
 	while(1) {
 		std::this_thread::sleep_for(std::chrono::seconds(10));
 	}
-	Trielo::trielo<SD_Card::deinit>();
 }

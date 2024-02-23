@@ -8,8 +8,10 @@ namespace SD_Card {
     constexpr std::string_view mount_point { "/sdcard" };
     constexpr std::string_view mount_point_prefix { "/sdcard/" };
     int init();
-    void deinit();
+    esp_err_t deinit();
     esp_err_t format();
     void create_test_files();
     void print_test_files();
+    int create_megabyte_test_file();
+    int print_megabyte_test_file();
 }
