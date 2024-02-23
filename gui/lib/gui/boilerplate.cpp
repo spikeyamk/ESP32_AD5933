@@ -42,7 +42,7 @@ namespace GUI {
                 static constexpr ImWchar font_ranges_magic_load_all_utf8_glyphs[] {
                     0x20, 0xFFFF, 0 
                 };
-                io.Fonts->AddFontFromFileTTF(font_path.c_str(), font_size_pixels_base * scale, nullptr, font_ranges_magic_load_all_utf8_glyphs);
+                io.Fonts->AddFontFromFileTTF(font_path.string().c_str(), font_size_pixels_base * scale, nullptr, font_ranges_magic_load_all_utf8_glyphs);
                 ImGuiStyle& style = ImGui::GetStyle();
                 style = ImGuiStyle();
                 style.ScaleAllSizes(scale);
