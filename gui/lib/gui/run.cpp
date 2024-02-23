@@ -108,6 +108,7 @@ namespace GUI {
                                 SDL_zero(event);
                                 event.type = SDL_EVENT_SYSTEM_THEME_CHANGED;
                                 SDL_PushEvent(&event);
+                                break;
                             case 1:
                                 ImGui::StyleColorsDark();
                                 break;
@@ -218,20 +219,21 @@ namespace GUI {
 namespace GUI {
     void run(
         bool &done,
+        const std::filesystem::path& font_path,
         boost::process::child& ble_client,
         std::shared_ptr<BLE_Client::SHM::ParentSHM> shm
     ) {
         SDL_Window* window;
         SDL_Renderer* renderer;
         {
-            const auto ret { Boilerplate::init() };
+            const auto ret { Boilerplate::init(font_path) };
             window = std::get<0>(ret);
             renderer = std::get<1>(ret);
         }
 
         const ImVec4 clear_color { 0.45f, 0.55f, 0.60f, 1.00f };
 
-        Boilerplate::process_events(done, window, renderer);
+        Boilerplate::process_events(done, window, renderer, font_path);
         Boilerplate::start_new_frame();
         MenuBarEnables menu_bar_enables;
         ImGuiID top_id = top_with_dock_space(done, menu_bar_enables);
@@ -258,7 +260,7 @@ namespace GUI {
         Boilerplate::render(renderer, clear_color);
 
         while(done == false && ble_client.running()) {
-            Boilerplate::process_events(done, window, renderer);
+            Boilerplate::process_events(done, window, renderer, font_path);
             Boilerplate::start_new_frame();
             top_id = top_with_dock_space(done, menu_bar_enables);
             

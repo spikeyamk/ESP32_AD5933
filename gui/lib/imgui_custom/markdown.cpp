@@ -1,5 +1,3 @@
-#pragma once
-
 /*
     https://gist.github.com/dougbinks/65d125e0c11fba81c5e78c546dcfe7af
     // Example use on Windows with links opening in a browser

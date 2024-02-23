@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
     boost::process::child ble_client { argv[0], ble_client_magic_key.data() };
 
     bool done { false };
-    GUI::run(done, ble_client, shm);
+    GUI::run(done, std::filesystem::path(argv[0]).replace_filename("UbuntuSans-Regular.ttf"), ble_client, shm);
 
     for(size_t i = 0; i < 60'000 && ble_client.running(); i++) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));

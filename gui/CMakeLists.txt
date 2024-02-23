@@ -47,6 +47,12 @@ find_package(Boost REQUIRED COMPONENTS date_time filesystem)
 set(BOOST_SML_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/sml_wrapper/sml)
 add_subdirectory(${BOOST_SML_DIR} ${CMAKE_BINARY_DIR}/sml)
 
+configure_file(
+	${CMAKE_CURRENT_LIST_DIR}/misc/UbuntuSans-Regular.ttf
+    ${CMAKE_BINARY_DIR}/UbuntuSans-Regular.ttf
+    COPYONLY
+)
+
 set(IMGUI_SRCS
 	${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp
 	${IMGUI_DIR}/backends/imgui_impl_sdlrenderer3.cpp

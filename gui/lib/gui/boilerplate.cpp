@@ -34,7 +34,7 @@ namespace GUI {
             }
         }
 
-        void set_scale(const float scale) {
+        void set_scale(const float scale, const std::filesystem::path& font_path) {
             #ifdef _MSC_VER // I hate Windows, also fuck Bill Gates
                 ImGui_ImplSDLRenderer3_DestroyFontsTexture();
                 ImGuiIO& io { ImGui::GetIO() };
@@ -42,7 +42,7 @@ namespace GUI {
                 static constexpr ImWchar font_ranges_magic_load_all_utf8_glyphs[] {
                     0x20, 0xFFFF, 0 
                 };
-                io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/Arial.ttf", font_size_pixels_base * scale, nullptr, font_ranges_magic_load_all_utf8_glyphs);
+                io.Fonts->AddFontFromFileTTF(font_path.c_str(), font_size_pixels_base * scale, nullptr, font_ranges_magic_load_all_utf8_glyphs);
                 ImGuiStyle& style = ImGui::GetStyle();
                 style = ImGuiStyle();
                 style.ScaleAllSizes(scale);
@@ -54,15 +54,15 @@ namespace GUI {
         }
 
         bool respect_system_scale { true };
-        static inline void set_sdl_scale(const float sdl_scale) {
+        static inline void set_sdl_scale(const float sdl_scale, const std::filesystem::path& font_path) {
             if(respect_system_scale == false) {
                 return;
             }
 
-            set_scale(sdl_scale);
+            set_scale(sdl_scale, font_path);
         }
 
-        std::tuple<SDL_Window*, SDL_Renderer*> init() {
+        std::tuple<SDL_Window*, SDL_Renderer*> init(const std::filesystem::path& font_path) {
             Trielo::trieloxit_lambda<SDL_Init>(Trielo::OkErrCode(0), sdl_error_lambda, SDL_INIT_VIDEO);
             Trielo::trielo_lambda<SDL_SetHint>(Trielo::OkErrCode(SDL_bool{SDL_TRUE}), sdl_error_lambda, SDL_HINT_IME_SHOW_UI, "1");
 
@@ -140,7 +140,7 @@ namespace GUI {
             ImPlot::GetStyle().PlotDefaultSize.y = default_style.PlotDefaultSize.y * scale;
         }
 
-        void process_events(bool &done, SDL_Window* window, SDL_Renderer* renderer) {
+        void process_events(bool &done, SDL_Window* window, SDL_Renderer* renderer, const std::filesystem::path& font_path) {
             SDL_Event event;
             if(SDL_PollEvent(&event)) {
                 ImGui_ImplSDL3_ProcessEvent(&event);
@@ -152,12 +152,12 @@ namespace GUI {
                         switch_imgui_theme();
                         break; 
                     case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
-                        set_sdl_scale(SDL_GetWindowDisplayScale(window));
+                        set_sdl_scale(SDL_GetWindowDisplayScale(window), font_path);
                         set_implot_scale();
                         break; 
                 }
                 if(event.type == event_user_scale_event_type) {
-                    set_scale(*reinterpret_cast<const float*>(&event.user.code));
+                    set_scale(*reinterpret_cast<const float*>(&event.user.code), font_path);
                     set_implot_scale();
                 }
             }
