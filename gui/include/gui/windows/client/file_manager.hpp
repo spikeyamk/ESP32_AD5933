@@ -2,7 +2,9 @@
 
 #include <memory>
 #include <vector>
+#include <filesystem>
 
+#include <nfd.hpp>
 #include "imgui.h"
 
 #include "ble_client/shm/parent/parent.hpp"
@@ -10,9 +12,11 @@
 namespace GUI {
     namespace Windows {
         class FileManager {
+        public:
+            static constexpr std::u8string_view name_base { u8"File Manager##" };
         private:
             size_t index;
-            std::string window_name { "File Manager##" };
+            std::u8string name { name_base };
             bool first { true };
             std::shared_ptr<BLE_Client::SHM::ParentSHM> shm { nullptr };
         public:
@@ -42,7 +46,7 @@ namespace GUI {
             void download();
         private:
             static void list_cb(FileManager& self);
-            static void download_cb(FileManager& self);
+            static void download_cb(FileManager& self, const std::filesystem::path outPath);
         };
     }
 }

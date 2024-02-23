@@ -15,7 +15,7 @@ namespace GUI {
     };
 
     struct MenuBarEnables {
-        bool ble_client { true };
+        bool ble_adapter { true };
         bool calibrate { true };
         bool measure { true };
         bool debug { true };
@@ -25,6 +25,7 @@ namespace GUI {
         bool calibration_plots { true };
         bool auto_plots { true };
         bool console { false };
+        bool demo { false };
     };
 
     void run(

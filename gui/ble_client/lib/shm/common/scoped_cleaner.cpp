@@ -12,7 +12,7 @@
 #include "ble_client/shm/common/names.hpp"
 #include "ble_client/shm/parent/specialized.hpp"
 
-#include "ble_client/shm/common/cleaner.hpp"
+#include "ble_client/shm/common/scoped_cleaner.hpp"
 
 namespace ns {
     void to_json(json& j, const Channel& p) {
@@ -46,7 +46,7 @@ namespace ns {
 
 namespace BLE_Client {
     namespace SHM {
-        Cleaner::~Cleaner() noexcept {
+        ScopedCleaner::~ScopedCleaner() noexcept {
             /* Top SHM segment */
             #ifdef _MSC_VER
                 /* Stupid Windows */
@@ -103,7 +103,7 @@ namespace BLE_Client {
             }
         }
 
-        const std::optional<ns::SHM> Cleaner::read_json() const noexcept {
+        const std::optional<ns::SHM> ScopedCleaner::read_json() const noexcept {
             try {
                 std::ifstream read_file { std::string(Names::shm).append(Names::json_postfix) };
                 if(read_file.is_open() == false) {
@@ -113,7 +113,7 @@ namespace BLE_Client {
                 read_file >> j;
                 return j;
             } catch(const std::exception& e) {
-                std::cout << "ERROR: BLE_Client::SHM::Cleaner::~Cleaner(): exception: " << e.what() << std::endl;
+                std::cout << "ERROR: BLE_Client::SHM::ScopedCleaner::~ScopedCleaner(): exception: " << e.what() << std::endl;
                 return std::nullopt;
             }
         }

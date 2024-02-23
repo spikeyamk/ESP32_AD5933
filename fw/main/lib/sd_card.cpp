@@ -17,6 +17,7 @@
 
 #include <esp_vfs_fat.h>
 #include <sdmmc_cmd.h>
+#include <trielo/trielo.hpp>
 
 #include "sd_card.hpp"
 
@@ -82,11 +83,15 @@ namespace SD_Card {
     };
 
     int init() {
-        if(Trielo::trielo<spi_bus_initialize>(Trielo::OkErrCode(ESP_OK), slot_config.host_id, &bus_cfg, SDSPI_DEFAULT_DMA) != ESP_OK) {
+        if(Trielo::trielo<spi_bus_initialize>(Trielo::OkErrCode(ESP_OK), slot_config.host_id, &bus_cfg, SDSPI_DEFAULT_DMA)) {
             return -1;
         }
-
-        if(Trielo::trielo<esp_vfs_fat_sdspi_mount>(Trielo::OkErrCode(ESP_OK), mount_point.data(), &host, &slot_config, &mount_config, &card) != ESP_OK) {
+        
+        const esp_err_t mount_rc = Trielo::trielo<esp_vfs_fat_sdspi_mount>(Trielo::OkErrCode(ESP_OK), mount_point.data(), &host, &slot_config, &mount_config, &card);
+        if(
+            mount_rc == ESP_ERR_NO_MEM
+            || mount_rc == ESP_FAIL
+        ) {
             return -2;
         }
         sdmmc_card_print_info(stdout, card);

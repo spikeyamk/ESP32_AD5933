@@ -5,13 +5,14 @@
 #include <cmath>
 
 #include "imgui_internal.h"
-#include <nfd.hpp>
+#include <utf/utf.hpp>
 
 #include "imgui_custom/input_items.hpp"
 #include "imgui_custom/spinner.hpp"
 #include "misc/variant_tester.hpp"
+#include "gui/boilerplate.hpp"
 
-#include "gui/windows/file_manager.hpp"
+#include "gui/windows/client/file_manager.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -23,15 +24,15 @@ namespace GUI {
             index { index },
             shm{ shm }
         {
-            window_name.append(std::to_string(index));
+            name.append(utf::as_u8(std::to_string(index)));
         }
 
         void FileManager::draw(bool& enable, const ImGuiID side_id) {
             if(first) {
-                ImGui::DockBuilderDockWindow(window_name.c_str(), side_id);
+                ImGui::DockBuilderDockWindow((const char*) name.c_str(), side_id);
             }
 
-            if(ImGui::Begin(window_name.c_str(), &enable) == false) {
+            if(ImGui::Begin((const char*) name.c_str(), &enable) == false) {
                 ImGui::End();
                 return;
             }
@@ -47,7 +48,8 @@ namespace GUI {
                 ImGui::Button("List");
                 ImGui::EndDisabled();
                 ImGui::SameLine();
-                Spinner::Spinner("Processing", 5.0f, 2.0f, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                const float scale = GUI::Boilerplate::get_scale();
+                Spinner::Spinner("Processing", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
             } else {
                 if(ImGui::Button("List")) {
                     list();
@@ -203,75 +205,70 @@ namespace GUI {
         }
 
         void FileManager::download() {
-            std::jthread t1(download_cb, std::ref(*this));
-            t1.detach();
+            nfdchar_t* path = nullptr;
+            const nfdresult_t result = NFD::SaveDialog(path, nullptr, 0, nullptr, std::string(list_table.paths[selected].path.begin(), list_table.paths[selected].path.end()).c_str());
+            if(result == NFD_OKAY) {
+                std::jthread t1(download_cb, std::ref(*this), std::filesystem::path(path));
+                if(path != nullptr) {
+                    NFD::FreePath(path);
+                    path = nullptr;
+                }
+            } else if(result == NFD_CANCEL) {
+                std::printf("User pressed cancel!\n");
+                if(path != nullptr) {
+                    NFD::FreePath(path);
+                    path = nullptr;
+                }
+                return;
+            } else {
+                std::printf("Error: %s\n", NFD::GetError());
+                if(path != nullptr) {
+                    NFD::FreePath(path);
+                    path = nullptr;
+                }
+                return;
+            }
         }
 
-        void FileManager::download_cb(FileManager& self) {
+        void FileManager::download_cb(FileManager& self, const std::filesystem::path path) {
             try {
-                nfdchar_t* outPath = nullptr;
-                //const std::array<nfdfilteritem_t, 1> filterItem { { "Calibration", "json" } };
-                //nfdresult_t result = NFD::SaveDialog(outPath, filterItem.data(), filterItem.size(), nullptr, "calibration.json");
-                const nfdresult_t result = NFD::SaveDialog(outPath, nullptr, 0, nullptr, std::string(self.list_table.paths[self.selected].path.begin(), self.list_table.paths[self.selected].path.end()).c_str());
-                if(result == NFD_OKAY) {
-                    self.status = Status::Downloading;
-                    self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Start{} });
-                    self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Download::from_raw_data(self.list_table.paths[self.selected].to_raw_data()) });
-                    std::vector<Magic::Events::Results::File::Download> download_slices;
-                    const size_t wished_size = static_cast<size_t>(std::ceil(static_cast<float>(self.list_table.sizes[self.selected].num_of_bytes) / static_cast<float>(sizeof(Magic::T_MaxDataSlice))));
-                    download_slices.reserve(wished_size);
-                    while(download_slices.size() < wished_size) {
-                        const auto download_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(5'000)) };
-                        if(download_payload.has_value() == false) {
-                            std::cout << "ERROR: GUI::Windows::FileManager::download_cb: failed to retreive download_payload: timeout\n";
-                            self.status = Status::Failed;
-                            return;
+                self.status = Status::Downloading;
+                self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Start{} });
+                self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Download::from_raw_data(self.list_table.paths[self.selected].to_raw_data()) });
+                std::vector<Magic::Events::Results::File::Download> download_slices;
+                const size_t wished_size = static_cast<size_t>(std::ceil(static_cast<float>(self.list_table.sizes[self.selected].num_of_bytes) / static_cast<float>(sizeof(Magic::T_MaxDataSlice))));
+                download_slices.reserve(wished_size);
+                while(download_slices.size() < wished_size) {
+                    const auto download_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(5'000)) };
+                    if(download_payload.has_value() == false) {
+                        std::cout << "ERROR: GUI::Windows::FileManager::download_cb: failed to retreive download_payload: timeout\n";
+                        self.status = Status::Failed;
+                        return;
+                    }
+
+                    if(variant_tester<Magic::Events::Results::File::Download>(download_payload.value()) == false) {
+                        std::cout << "ERROR: GUI::Windows::FileManager::download_cb: failed to retreive download_payload: wrong variant type\n";
+                        self.status = Status::Failed;
+                        return;
+                    }
+
+                    std::visit([&download_slices](auto&& event) {
+                        if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Events::Results::File::Download>) {
+                            download_slices.push_back(event);
                         }
-
-                        if(variant_tester<Magic::Events::Results::File::Download>(download_payload.value()) == false) {
-                            std::cout << "ERROR: GUI::Windows::FileManager::download_cb: failed to retreive download_payload: wrong variant type\n";
-                            self.status = Status::Failed;
-                            return;
-                        }
-
-                        std::visit([&download_slices](auto&& event) {
-                            if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Events::Results::File::Download>) {
-                                download_slices.push_back(event);
-                            }
-                        }, download_payload.value());
-                    }
-
-                    std::ofstream file(outPath, std::ios::binary);
-                    for(const auto& slice: download_slices) {
-                        for(const auto& e: slice.slice) {
-                            file << e;
-                        }
-                    }
-                    file.close();
-
-                    if(outPath != nullptr) {
-                        NFD::FreePath(outPath);
-                        outPath = nullptr;
-                    }
-
-                    self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::End{} });
-                    self.status = Status::Listed;
-                } else if(result == NFD_CANCEL) {
-                    std::printf("User pressed cancel!\n");
-                    if(outPath != nullptr) {
-                        NFD::FreePath(outPath);
-                        outPath = nullptr;
-                    }
-                    return;
-                } else {
-                    std::printf("Error: %s\n", NFD::GetError());
-                    if(outPath != nullptr) {
-                        NFD::FreePath(outPath);
-                        outPath = nullptr;
-                    }
-                    return;
+                    }, download_payload.value());
                 }
-            } catch(const std::exception& e) {
+
+                std::ofstream file(path, std::ios::out | std::ios::binary);
+                for(const auto& slice: download_slices) {
+                    for(const auto& e: slice.slice) {
+                        file << e;
+                    }
+                }
+
+                self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::End{} });
+                self.status = Status::Listed;
+           } catch(const std::exception& e) {
                 std::cout << "ERROR: GUI::Windows::FileManager::download_cb: exception: " << e.what() << std::endl;
                 self.status = Status::Failed;
             }

@@ -14,7 +14,7 @@ namespace BLE_Client {
     namespace SHM {
         class ParentSHM {
         private:
-            static constexpr size_t size = 2 << 20;
+            static constexpr size_t size = 2 << 24;
             boost::interprocess::managed_shared_memory segment;
         public:
             CMD_ChannelTX cmd;

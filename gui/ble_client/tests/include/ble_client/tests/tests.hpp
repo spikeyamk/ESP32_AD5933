@@ -3,6 +3,7 @@
 namespace BLE_Client {
     namespace Tests {
         namespace Connect {
+            int win_scan();
             int sync_scan();
             int async_scan();
         }

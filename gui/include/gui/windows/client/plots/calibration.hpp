@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <string_view>
 
 #include "imgui.h"
 
@@ -14,8 +15,11 @@ namespace GUI {
     namespace Windows {
         namespace Plots {
             class Calibration {
+            public:
+                static constexpr std::u8string_view name_base { u8"Calibration Plots##" };
+            private:
                 size_t index;
-                std::string name { "Calibration Plots##" };
+                std::u8string name { name_base };
                 struct Vectors {
                     std::vector<float> freq;
                     std::vector<float> raw_real_data;

@@ -22,6 +22,14 @@ namespace BLE_Client {
                         }
                         esp32_ad5933->remove_subscriptions();
                         esp32_ad5933->disconnect();
+
+                        const BLE_Client::Discovery::Device tmp_device { esp32_ad5933->peripheral.identifier(), esp32_ad5933->peripheral.address(), false };
+                        auto discovery_devices_update_it { std::find_if(shm->discovery_devices->begin(), shm->discovery_devices->end(), [&esp32_ad5933](const BLE_Client::Discovery::Device& e) {
+                            return e.get_address() == esp32_ad5933->peripheral.address();
+                        }) };
+                        if(discovery_devices_update_it != shm->discovery_devices->end()) {
+                            *discovery_devices_update_it = tmp_device;
+                        }
                     } catch(const SimpleBLE::Exception::BaseException& e) {
                         shm->console.log(std::string("ERROR: BLE_Client::StateMachines::Connection::Actions::disconnect: exception: ") + e.what() + "\n");
                     }

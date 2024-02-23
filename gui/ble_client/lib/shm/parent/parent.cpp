@@ -6,7 +6,7 @@
 namespace BLE_Client {
     namespace SHM {
         ParentSHM::ParentSHM() :
-            segment{boost::interprocess::create_only, Names::shm, size},
+            segment{ boost::interprocess::create_only, Names::shm, size },
             cmd{ Names::cmd_postfix, segment },
             console{ Names::log_postfix, segment },
             discovery_devices{ segment.construct<DiscoveryDevices>(Names::discovery_devices)(segment.get_segment_manager()) },

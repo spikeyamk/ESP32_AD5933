@@ -43,6 +43,11 @@ namespace BLE_Client {
                         //tmp_esp32_ad5933->update_time();
                         BLE_Client::StateMachines::Logger logger {};
                         connections.push_back(new decltype(BLE_Client::StateMachines::Connection::Dummy<int>::sm){ tmp_esp32_ad5933, logger, shm });
+                        const BLE_Client::Discovery::Device tmp_device { it->identifier(), it->address(), true };
+                        auto discovery_devices_update_it { std::find_if(shm->discovery_devices->begin(), shm->discovery_devices->end(), [&it](const BLE_Client::Discovery::Device& e) {
+                            return e.get_address() == it->address();
+                        }) };
+                        *discovery_devices_update_it = tmp_device;
                         return true;
                     } catch(const std::exception& e) {
                         shm->console.log(std::string("ERROR: BLE_Client::StateMachines::Connector::Actions::connect: exception: ") + e.what() + "\n");

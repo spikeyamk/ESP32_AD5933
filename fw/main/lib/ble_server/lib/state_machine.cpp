@@ -61,7 +61,7 @@ namespace BLE {
 
 		void sleep() {
 			Util::Blinky::get_instance().stop();
-			Trielo::trielo<SD_Card::deinit>();
+			//Trielo::trielo<SD_Card::deinit>();
 			Server::stop();
 		}
 

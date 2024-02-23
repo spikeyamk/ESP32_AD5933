@@ -1,9 +1,15 @@
 #include <algorithm>
+#include <string_view>
 
 #include "imgui_internal.h"
 #include "implot.h"
+#include <nfd.hpp>
+#include <utf/utf.hpp>
 
-#include "gui/windows/plots/calibration.hpp"
+#include "gui/boilerplate.hpp"
+#include "json/graph.hpp"
+
+#include "gui/windows/client/plots/calibration.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -11,16 +17,15 @@ namespace GUI {
             Calibration::Calibration(size_t index) :
                 index { index }
             {
-                name.append(std::to_string(index));
+                name.append(utf::as_u8(std::to_string(index)));
             }
 
             void Calibration::draw(bool& enable, const ImGuiID side_id) {
                 if(first) {
-                    ImGui::DockBuilderDockWindow(name.c_str(), side_id);
-                    ImPlot::CreateContext();
+                    ImGui::DockBuilderDockWindow((const char*) name.c_str(), side_id);
                 }
 
-                if(ImGui::Begin(name.c_str(), &enable) == false) {
+                if(ImGui::Begin((const char*) name.c_str(), &enable) == false) {
                     ImGui::End();
                     return;
                 }
@@ -87,6 +92,18 @@ namespace GUI {
                     ImPlot::PlotLine("IMAG_DATA [1/Ohm]", vectors.freq.data(), vectors.raw_imag_data.data(), std::min(vectors.freq.size(), vectors.raw_imag_data.size()));
                     ImPlot::EndPlot();
                 }
+
+                if(ImGui::Button("Save")) {
+                    static constexpr char graph_name[] { "calibration_raw" };
+                    ns::RawDataGraph2D_File<graph_name, float, ns::ValueNames::freq> graph_file {};
+                    ns::load_graph2D_file(
+                        vectors.freq,
+                        vectors.raw_real_data,
+                        vectors.raw_imag_data,
+                        graph_file
+                    );
+                    ns::save_to_fs(graph_file);
+                }
             }
 
             void Calibration::draw_calculated_data() {
@@ -101,6 +118,18 @@ namespace GUI {
                     ImPlot::PlotLine("RAW_PHASE [rad]", vectors.freq.data(), vectors.raw_phase.data(), std::min(vectors.freq.size(), vectors.raw_phase.size()));
                     ImPlot::EndPlot();
                 }
+
+                if(ImGui::Button("Save")) {
+                    static constexpr char graph_name[] { "calibration_calculated" };
+                    ns::CalculatedGraph2D_File<graph_name, float, ns::ValueNames::freq> graph_file {};
+                    ns::load_graph2D_file(
+                        vectors.freq,
+                        vectors.raw_magnitude,
+                        vectors.raw_phase,
+                        graph_file
+                    );
+                    ns::save_to_fs(graph_file);
+                }
             }
 
             void Calibration::draw_calibration_data() {
@@ -114,6 +143,18 @@ namespace GUI {
                     ImPlot::SetupAxes("f [Hz]", "SYSTEM_PHASE");
                     ImPlot::PlotLine("SYSTEM_PHASE [rad]", vectors.freq.data(), vectors.system_phase.data(), std::min(vectors.freq.size(), vectors.system_phase.size()));
                     ImPlot::EndPlot();
+                }
+
+                if(ImGui::Button("Save")) {
+                    static constexpr char graph_name[] { "calibration_calibration" };
+                    ns::CalibrationGraph2D_File<graph_name, float, ns::ValueNames::freq> graph_file {};
+                    ns::load_graph2D_file(
+                        vectors.freq,
+                        vectors.gain_factor,
+                        vectors.system_phase,
+                        graph_file
+                    );
+                    ns::save_to_fs(graph_file);
                 }
             }
         }

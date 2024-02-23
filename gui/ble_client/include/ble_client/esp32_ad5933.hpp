@@ -59,6 +59,7 @@ namespace BLE_Client {
         void write(const std::array<uint8_t, N>& packet, SimpleBLE::Characteristic& characteristic) {
             static_assert(N <= Magic::MTU);
             peripheral.write_request(service.uuid(), characteristic.uuid(), std::string(packet.begin(), packet.end()));
+
         }
     public:
         template<size_t N>

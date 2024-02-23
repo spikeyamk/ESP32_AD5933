@@ -11,7 +11,7 @@
 #include "misc/variant_tester.hpp"
 #include "ad5933/masks/masks.hpp"
 
-#include "gui/windows/debug.hpp"
+#include "gui/windows/client/debug.hpp"
 
 namespace GUI {
     namespace Windows {
