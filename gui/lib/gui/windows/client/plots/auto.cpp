@@ -83,13 +83,13 @@ namespace GUI {
             void Auto::draw_send_corrected_gon_data() {
                 if(ImPlot::BeginPlot("Auto Measurement Corrected Data")) {
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
-                    //ImPlot::SetupAxes("f [Hz]", "CORRECTED_IMPEDANCE");
+                    ImPlot::SetupAxes("Time", "CORRECTED_IMPEDANCE");
                     ImPlot::PlotLine("IMPEDANCE [Ohm]", send_vectors.time.data(), send_vectors.impedance.data(), std::min(send_vectors.time.size(), send_vectors.impedance.size()));
                     ImPlot::EndPlot();
                 }
                 if(ImPlot::BeginPlot("Auto Measurement Calculated Phase")) {
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
-                    //ImPlot::SetupAxes("f [Hz]", "CORRECTED_PHASE");
+                    ImPlot::SetupAxes("Time", "CORRECTED_PHASE");
                     ImPlot::PlotLine("PHASE [rad]", send_vectors.time.data(), send_vectors.phase.data(), std::min(send_vectors.time.size(), send_vectors.phase.size()));
                     ImPlot::EndPlot();
                 }
@@ -110,13 +110,13 @@ namespace GUI {
             void Auto::draw_send_corrected_alg_data() {
                 if(ImPlot::BeginPlot("Auto Measurement Resistance Data")) {
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
-                    //ImPlot::SetupAxes("Time [Hz]", "RESISTANCE");
+                    ImPlot::SetupAxes("Time", "RESISTANCE");
                     ImPlot::PlotLine("RESISTANCE [Ohm]", send_vectors.time.data(), send_vectors.resistance.data(), std::min(send_vectors.time.size(), send_vectors.resistance.size()));
                     ImPlot::EndPlot();
                 }
                 if(ImPlot::BeginPlot("Auto Measurement Reactance Data")) {
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
-                    //ImPlot::SetupAxes("f [Hz]", "REACTANCE");
+                    ImPlot::SetupAxes("Time", "REACTANCE");
                     ImPlot::PlotLine("REACTANCE [Ohm]", send_vectors.time.data(), send_vectors.reactance.data(), std::min(send_vectors.time.size(), send_vectors.reactance.size()));
                     ImPlot::EndPlot();
                 }

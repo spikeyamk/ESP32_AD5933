@@ -33,9 +33,23 @@ namespace GUI {
         const std::optional<Lock> Measure::draw_inner() {
             if(status == Status::NotLoaded || status == Status::Measuring) {
                 ImGui::BeginDisabled();
-
                 draw_input_elements();
-                ImGui::Button("Load");
+                ImGui::EndDisabled();
+
+                if(status == Status::Measuring) {
+                    ImGui::BeginDisabled();
+                    ImGui::Button("Load");
+                    ImGui::EndDisabled();
+                } else {
+                    if(ImGui::Button("Load")) {
+                        if(load()) {
+                            status = Status::Loaded;
+                        }
+                    }
+                }
+
+                ImGui::BeginDisabled();
+
                 ImGui::Button("Single");
                 ImGui::Button("Periodic");
                 if(status == Status::Measuring) {
