@@ -93,7 +93,7 @@ add_subdirectory(${BLE_CLIENT_DIR})
 
 set(GUI_SRCS
 	main.cpp
-	ble_client/lib/shm/common/scoped_cleaner.cpp
+	ble_client/lib/shm/common/clean.cpp
 	ble_client/lib/shm/parent/specialized.cpp
 	ble_client/lib/shm/parent/parent.cpp
 	lib/imgui_custom/spinner.cpp
@@ -103,6 +103,7 @@ set(GUI_SRCS
 
 	lib/gui/run.cpp
 	lib/gui/boilerplate.cpp
+	lib/gui/ubuntu_sans_regular.cpp
 
 	# singleton windows
 	lib/gui/windows/console.cpp
@@ -172,7 +173,7 @@ set(SHM_CLEANER shm_cleaner)
 
 add_executable(${SHM_CLEANER}
 	misc/shm_cleaner.cpp
-	ble_client/lib/shm/common/scoped_cleaner.cpp
+	ble_client/lib/shm/common/clean.cpp
 )
 
 target_link_libraries(${SHM_CLEANER} PRIVATE

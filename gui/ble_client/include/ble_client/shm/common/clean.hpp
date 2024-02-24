@@ -1,8 +1,8 @@
 #pragma once
 
-#include <optional>
 #include <string>
 #include <vector>
+#include <filesystem>
 
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
@@ -33,11 +33,6 @@ namespace ns {
 
 namespace BLE_Client {
     namespace SHM {
-        class ScopedCleaner {
-        private:
-            const std::optional<ns::SHM> read_json() const noexcept;
-        public:
-            ~ScopedCleaner() noexcept;
-        };
+        void clean(const std::filesystem::path& self_path);
     }
 }

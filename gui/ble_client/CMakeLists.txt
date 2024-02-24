@@ -105,7 +105,7 @@ if(BLE_CLIENT_TEST)
 	enable_testing()
 	set(TEST_SRCS 
 		"tests/tests.cpp"
-		lib/shm/common/scoped_cleaner.cpp
+		lib/shm/common/clean.cpp
 		lib/shm/parent/specialized.cpp
 		lib/shm/parent/parent.cpp
 	)

@@ -1,6 +1,7 @@
-#include "ble_client/shm/common/scoped_cleaner.hpp"
+#include "ble_client/shm/common/clean.hpp"
 
-int main() {
-    BLE_Client::SHM::ScopedCleaner cleaner {};
+int main(int argc, char* argv[]) {
+    (void) argc;
+    BLE_Client::SHM::clean(std::filesystem::path(argv[0]));
     return 0;
 }

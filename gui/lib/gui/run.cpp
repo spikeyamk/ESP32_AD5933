@@ -10,6 +10,7 @@
 #include <trielo/trielo.hpp>
 #include <SDL3/SDL_events.h>
 #include "imgui_internal.h"
+#include "implot.h"
 
 #include "gui/boilerplate.hpp"
 #include "gui/windows/ble_adapter.hpp"
@@ -102,6 +103,7 @@ namespace GUI {
                 const auto show_theme_combo = []() {
                     static int theme_combo { Boilerplate::respect_system_theme ? 0 : 1 };
                     if(ImGui::Combo("Theme", &theme_combo, "Respect Global System Settings\0Dark\0Light\0Classic\0")) {
+                        Boilerplate::respect_system_theme = (theme_combo == 0 ? true : false);
                         switch(theme_combo) {
                             case 0:
                                 SDL_Event event;
@@ -154,6 +156,7 @@ namespace GUI {
 
                     static int scale_combo { Boilerplate::respect_system_scale ? 0 : 3 };
                     if(ImGui::Combo("Scale", &scale_combo, scale_inputs.data())) {
+                        Boilerplate::respect_system_scale = (scale_combo == 0 ? true : false);
                         SDL_Event event;
                         SDL_zero(event);
                         if(scale_combo != 0) {
@@ -169,6 +172,14 @@ namespace GUI {
 
                 show_theme_combo();
                 show_scale_combo();
+
+                ImGui::Separator();
+                ImGui::Checkbox("Local Time", &ImPlot::GetStyle().UseLocalTime);
+                ImGui::SameLine();
+                ImGui::Checkbox("ISO 8601", &ImPlot::GetStyle().UseISO8601);
+                ImGui::SameLine();
+                ImGui::Checkbox("24 Hour Clock", &ImPlot::GetStyle().Use24HourClock);
+                ImGui::Separator();
 
                 if(ImGui::Button("OK", ImVec2(120, 0))) {
                     ImGui::CloseCurrentPopup();
@@ -219,21 +230,20 @@ namespace GUI {
 namespace GUI {
     void run(
         bool &done,
-        const std::filesystem::path& font_path,
         boost::process::child& ble_client,
         std::shared_ptr<BLE_Client::SHM::ParentSHM> shm
     ) {
         SDL_Window* window;
         SDL_Renderer* renderer;
         {
-            const auto ret { Boilerplate::init(font_path) };
+            const auto ret { Boilerplate::init() };
             window = std::get<0>(ret);
             renderer = std::get<1>(ret);
         }
 
         const ImVec4 clear_color { 0.45f, 0.55f, 0.60f, 1.00f };
 
-        Boilerplate::process_events(done, window, renderer, font_path);
+        Boilerplate::process_events(done, window, renderer);
         Boilerplate::start_new_frame();
         MenuBarEnables menu_bar_enables;
         ImGuiID top_id = top_with_dock_space(done, menu_bar_enables);
@@ -260,7 +270,7 @@ namespace GUI {
         Boilerplate::render(renderer, clear_color);
 
         while(done == false && ble_client.running()) {
-            Boilerplate::process_events(done, window, renderer, font_path);
+            Boilerplate::process_events(done, window, renderer);
             Boilerplate::start_new_frame();
             top_id = top_with_dock_space(done, menu_bar_enables);
             
@@ -271,17 +281,17 @@ namespace GUI {
             }
 
             const auto remove_it {
-                std::remove_if(client_windows.begin(), client_windows.end(), [&shm](const auto& e) mutable {
-                    bool ret = false;
-                    if(e.enable == false) {
-                        std::thread([](auto shm, auto e) {
-                            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::disconnect{ e.index });
-                            std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
-                            shm->active_devices.erase(shm->active_devices.begin() + e.index);
-                        }, shm, e).detach();
-                        ret = true;
+                std::remove_if(client_windows.begin(), client_windows.end(), [&shm](const Windows::Client& e) {
+                    if(e.enable == true) {
+                        return false;
                     }
-                    return ret;
+
+                    std::thread([](auto shm, const size_t index) {
+                        shm->cmd.send(BLE_Client::StateMachines::Connection::Events::disconnect{ index });
+                        std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
+                        shm->active_devices.erase(shm->active_devices.begin() + index);
+                    }, shm, e.index).detach();
+                    return true;
                 })
             };
 

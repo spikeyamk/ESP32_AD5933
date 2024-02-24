@@ -3,11 +3,13 @@
 #include <memory>
 #include <vector>
 #include <filesystem>
+#include <optional>
 
 #include <nfd.hpp>
 #include "imgui.h"
 
 #include "ble_client/shm/parent/parent.hpp"
+#include "gui/windows/client/lock.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -39,8 +41,9 @@ namespace GUI {
             Status get_status() const;
             FileManager() = default;
             FileManager(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm);
-            void draw(bool& enable, const ImGuiID side_id);
+            void draw(bool& enable, const ImGuiID side_id, std::optional<Lock>& lock);
         private:
+            void draw_inner();
             void list();
             void remove();
             void download();

@@ -1,10 +1,9 @@
-#include <string>
 #include <fstream>
 #include <stdexcept>
 #include <functional>
+#include <optional>
 
 #include <trielo/trielo.hpp>
-
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/sync/named_mutex.hpp>
 #include <boost/interprocess/sync/named_condition.hpp>
@@ -12,7 +11,7 @@
 #include "ble_client/shm/common/names.hpp"
 #include "ble_client/shm/parent/specialized.hpp"
 
-#include "ble_client/shm/common/scoped_cleaner.hpp"
+#include "ble_client/shm/common/clean.hpp"
 
 namespace ns {
     void to_json(json& j, const Channel& p) {
@@ -46,7 +45,22 @@ namespace ns {
 
 namespace BLE_Client {
     namespace SHM {
-        ScopedCleaner::~ScopedCleaner() noexcept {
+        static const std::optional<ns::SHM> read_json(const std::filesystem::path& shm_json_path) {
+            try {
+                std::ifstream read_file { shm_json_path }; 
+                if(read_file.is_open() == false) {
+                    return std::nullopt;
+                }
+                json j;
+                read_file >> j;
+                return j;
+            } catch(const std::exception& e) {
+                std::cout << "ERROR: BLE_Client::SHM::ScopedCleaner::~ScopedCleaner(): exception: " << e.what() << std::endl;
+                return std::nullopt;
+            }
+        }
+
+        void clean(const std::filesystem::path& self_path) {
             /* Top SHM segment */
             #ifdef _MSC_VER
                 /* Stupid Windows */
@@ -88,7 +102,11 @@ namespace BLE_Client {
             #endif
 
             /* Additional NotifyChannelsRX */
-            const std::optional<ns::SHM> shm_names { read_json() };
+            const std::optional<ns::SHM> shm_names {
+                read_json(
+                    std::filesystem::path(self_path).replace_filename(std::string(Names::shm).append(Names::json_postfix))
+                )
+            };
             if(shm_names.has_value()) {
                 for(const ns::Channel& e: shm_names.value().channels.channels_vector) {
                     #ifdef _MSC_VER
@@ -100,21 +118,6 @@ namespace BLE_Client {
                         Trielo::trielo<boost::interprocess::named_condition::remove>(Trielo::OkErrCode(true), e.condition.c_str());
                     #endif
                 }
-            }
-        }
-
-        const std::optional<ns::SHM> ScopedCleaner::read_json() const noexcept {
-            try {
-                std::ifstream read_file { std::string(Names::shm).append(Names::json_postfix) };
-                if(read_file.is_open() == false) {
-                    return std::nullopt;
-                }
-                json j;
-                read_file >> j;
-                return j;
-            } catch(const std::exception& e) {
-                std::cout << "ERROR: BLE_Client::SHM::ScopedCleaner::~ScopedCleaner(): exception: " << e.what() << std::endl;
-                return std::nullopt;
             }
         }
     }

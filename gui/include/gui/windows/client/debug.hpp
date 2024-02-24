@@ -22,6 +22,7 @@
 #include "imgui.h"
 
 #include "ble_client/shm/parent/parent.hpp"
+#include "gui/windows/client/lock.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -170,8 +171,6 @@ namespace GUI {
     }
 }
 
-
-
 namespace GUI {
     namespace Windows {
         class Debug {
@@ -194,7 +193,7 @@ namespace GUI {
             Status get_status() const;
             Debug() = default;
             Debug(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm);
-            void draw(bool &enable, const ImGuiID side_id);
+            void draw(bool &enable, const ImGuiID side_id, const std::optional<Lock> lock);
         private:
             void draw_input_elements();
             bool dump();

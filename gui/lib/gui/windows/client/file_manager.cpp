@@ -27,22 +27,7 @@ namespace GUI {
             name.append(utf::as_u8(std::to_string(index)));
         }
 
-        void FileManager::draw(bool& enable, const ImGuiID side_id) {
-            if(first) {
-                ImGui::DockBuilderDockWindow((const char*) name.c_str(), side_id);
-            }
-
-            if(ImGui::Begin((const char*) name.c_str(), &enable) == false) {
-                ImGui::End();
-                return;
-            }
-
-            if(first) {
-                ImGui::End();
-                first = false;
-                return;
-            }
-
+        void FileManager::draw_inner() {
             if(status == Status::Listing || status == Status::Downloading) {
                 ImGui::BeginDisabled();
                 ImGui::Button("List");
@@ -99,6 +84,33 @@ namespace GUI {
                         remove();
                     }
                 }
+            }
+
+
+        }
+
+        void FileManager::draw(bool& enable, const ImGuiID side_id, std::optional<Lock>& lock) {
+            if(first) {
+                ImGui::DockBuilderDockWindow((const char*) name.c_str(), side_id);
+            }
+
+            if(ImGui::Begin((const char*) name.c_str(), &enable) == false) {
+                ImGui::End();
+                return;
+            }
+
+            if(first) {
+                ImGui::End();
+                first = false;
+                return;
+            }
+
+            if(lock.has_value() && lock.value() != Lock::FileManager) {
+                ImGui::BeginDisabled();
+                draw_inner();
+                ImGui::EndDisabled();
+            } else {
+                draw_inner();
             }
 
             ImGui::End();

@@ -65,7 +65,7 @@ namespace GUI {
                             connecting = true;
                             const BLE_Client::StateMachines::Connector::Events::connect connect_event { shm->discovery_devices->at(selected.value()).get_address() };
                             shm->cmd.send(connect_event);
-                            std::thread([](auto shm, const BLE_Client::StateMachines::Connector::Events::connect connect_event, bool& connecting, std::vector<Windows::Client>& client_windows, BLE_Client::Discovery::Device& device) {
+                            std::thread([](auto shm, const BLE_Client::StateMachines::Connector::Events::connect connect_event, bool& connecting, std::vector<Windows::Client>& client_windows) {
                                 for(int i = 0; i < 100; i++) {
                                     try{
                                         shm->attach_device(connect_event);
@@ -76,7 +76,7 @@ namespace GUI {
                                     }
                                 }
                                 connecting = false;
-                            }, shm, connect_event, std::ref(connecting), std::ref(client_windows), std::ref(shm->discovery_devices->at(selected.value()))).detach();
+                            }, shm, connect_event, std::ref(connecting), std::ref(client_windows)).detach();
                         }
                     } else if(connecting == true) {
                         show_disabled_connect_button();

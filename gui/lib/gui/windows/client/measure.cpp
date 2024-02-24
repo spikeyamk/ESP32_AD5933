@@ -26,17 +26,7 @@ namespace GUI {
             name.append(utf::as_u8(std::to_string(index)));
         }
 
-        void Measure::draw(bool &enable, const ImGuiID side_id) {
-            if(first) {
-                ImGui::DockBuilderDockWindow((const char*) name.c_str(), side_id);
-                first = false;
-            }
-
-            if(ImGui::Begin((const char*) name.c_str(), &enable) == false) {
-                ImGui::End();
-                return;
-            }
-
+        void Measure::draw_inner() {
             if(status == Status::NotLoaded || status == Status::Measuring) {
                 ImGui::BeginDisabled();
                 draw_input_elements();
@@ -73,6 +63,26 @@ namespace GUI {
                 if(ImGui::Button("Periodic")) {
                     periodic();
                 }
+            }
+        }
+
+        void Measure::draw(bool &enable, const ImGuiID side_id, const std::optional<Lock> lock) {
+            if(first) {
+                ImGui::DockBuilderDockWindow((const char*) name.c_str(), side_id);
+                first = false;
+            }
+
+            if(ImGui::Begin((const char*) name.c_str(), &enable) == false) {
+                ImGui::End();
+                return;
+            }
+
+            if(lock.has_value() && lock.value() != Lock::Measure) {
+                ImGui::BeginDisabled();
+                draw_inner();
+                ImGui::EndDisabled();
+            } else {
+                draw_inner();
             }
 
             ImGui::End();

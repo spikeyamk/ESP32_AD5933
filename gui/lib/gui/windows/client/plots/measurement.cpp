@@ -237,7 +237,7 @@ namespace GUI {
                     ImPlot::EndPlot();
                 }
 
-                if(ImGui::Button("Save One")) {
+                if(ImGui::Button("Save")) {
                     static constexpr char graph_file_name[] { "measurement_periodic_corrected_gon" };
                     ns::CorrectedGonGraph3D_File<graph_file_name, ns::Graph3D_Names::zfreq_corrected_gon, ns::Freq, double, ns::ValueNames::unix_timestamp> graph3D_file;
                     const size_t wished_size { periodic_vectors.freq.size() };

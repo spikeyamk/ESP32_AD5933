@@ -111,7 +111,7 @@ namespace GUI {
         
         std::atomic<float> progress_bar_fraction { 0.0f };
 
-        void Calibrate::draw(bool& enable, const ImGuiID side_id) {
+        void Calibrate::draw(bool& enable, const ImGuiID side_id, const std::optional<Lock> lock) {
             if(first) {
                 ImGui::DockBuilderDockWindow((const char*) name.c_str(), side_id);
             }

@@ -18,6 +18,7 @@
 #include "ad5933/measurement/measurement.hpp"
 #include "gui/run.hpp"
 #include "ble_client/shm/parent/parent.hpp"
+
 #include "gui/windows/client/calibrate.hpp"
 #include "gui/windows/client/plots/calibration.hpp"
 #include "gui/windows/client/measure.hpp"
@@ -26,6 +27,7 @@
 #include "gui/windows/client/debug.hpp"
 #include "gui/windows/client/auto.hpp"
 #include "gui/windows/client/plots/auto.hpp"
+#include "gui/windows/client/lock.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -33,6 +35,11 @@ namespace GUI {
         private:
             bool first { true };
             std::string name;
+        public:
+            bool enable { true };
+            size_t index;
+            std::optional<Lock> lock { std::nullopt };
+        private:
             std::string dockspace_name;
             std::shared_ptr<BLE_Client::SHM::ParentSHM> shm { nullptr };
             Windows::Calibrate calibrate_window;
@@ -44,13 +51,8 @@ namespace GUI {
             Windows::Auto auto_window;
             Windows::Plots::Auto auto_plots_window;
         public:
-            bool enable { true };
-            size_t index;
             Client(const std::string name, const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> parent_shm);
-            void draw(
-                const ImGuiID center_id,
-                MenuBarEnables &enables
-            );
+            void draw(const ImGuiID center_id, MenuBarEnables &enables);
         };
     }
 }

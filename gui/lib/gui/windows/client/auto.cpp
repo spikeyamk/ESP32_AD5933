@@ -18,7 +18,7 @@ namespace GUI {
             name.append(utf::as_u8(std::to_string(index)));
         }
 
-        void Auto::draw(bool &enable, const ImGuiID side_id) {
+        void Auto::draw(bool &enable, const ImGuiID side_id, const std::optional<Lock> lock) {
             if(first) {
                 ImGui::DockBuilderDockWindow((const char*) name.c_str(), side_id);
                 first = false;

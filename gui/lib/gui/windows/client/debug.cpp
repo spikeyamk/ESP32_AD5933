@@ -162,7 +162,7 @@ namespace GUI {
             debug_captures.update_config();
         }
 
-        void Debug::draw(bool &enable, const ImGuiID side_id) {
+        void Debug::draw(bool &enable, const ImGuiID side_id, const std::optional<Lock> lock) {
             if(first) {
                 ImGui::DockBuilderDockWindow(name.c_str(), side_id);
                 first = false;

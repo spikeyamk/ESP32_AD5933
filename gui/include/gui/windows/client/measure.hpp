@@ -10,6 +10,7 @@
 #include <span>
 #include <array>
 #include <chrono>
+#include <optional>
 
 #include "ad5933/masks/maps.hpp"
 #include "imgui.h"
@@ -19,6 +20,7 @@
 #include "ad5933/config/config.hpp"
 #include "ad5933/calibration/calibration.hpp"
 #include "ad5933/measurement/measurement.hpp"
+#include "gui/windows/client/lock.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -102,7 +104,7 @@ namespace GUI {
         public:
             Measure() = default;
             Measure(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm);
-            void draw(bool &enable, const ImGuiID side_id);
+            void draw(bool &enable, const ImGuiID side_id, const std::optional<Lock> lock);
         private:
             static void single_cb(std::stop_token st, Measure& self);
             void single();
@@ -111,6 +113,7 @@ namespace GUI {
             void stop();
             bool load();
             void draw_input_elements(); 
+            void draw_inner();
         };
     }
 }

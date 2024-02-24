@@ -2,12 +2,6 @@
 
 #include "imgui_internal.h"
 
-#include "gui/windows/client/debug.hpp"
-#include "gui/windows/client/calibrate.hpp"
-#include "gui/windows/client/measure.hpp"
-#include "gui/windows/client/file_manager.hpp"
-#include "gui/windows/client/plots/measurement.hpp"
-#include "gui/windows/client/plots/calibration.hpp"
 #include "imgui_custom/spinner.hpp"
 #include "gui/boilerplate.hpp"
 
@@ -68,11 +62,11 @@ namespace GUI {
                     measurement_plots_window.draw(enables.measurement_plots, right_id);
                     calibration_plots_window.draw(enables.calibration_plots, right_id);
                     auto_plots_window.draw(enables.auto_plots, right_id);
-                    debug_window.draw(enables.debug, dockspace_id);
-                    calibrate_window.draw(enables.calibrate, dockspace_id);
-                    measure_window.draw(enables.measure, dockspace_id);
-                    file_manager_window.draw(enables.file_manager, dockspace_id);
-                    auto_window.draw(enables.auto_window, dockspace_id);
+                    debug_window.draw(enables.debug, dockspace_id, lock);
+                    calibrate_window.draw(enables.calibrate, dockspace_id, lock);
+                    measure_window.draw(enables.measure, dockspace_id, lock);
+                    file_manager_window.draw(enables.file_manager, dockspace_id, lock);
+                    auto_window.draw(enables.auto_window, dockspace_id, lock);
                     ImGui::DockBuilderFinish(dockspace_id);
                     first = false;
                 } else {
@@ -100,19 +94,19 @@ namespace GUI {
                         auto_plots_window.draw(enables.auto_plots, ImGui::GetID(static_cast<void*>(nullptr)));
                     }
                     if(enables.debug) {
-                        debug_window.draw(enables.debug, ImGui::GetID(static_cast<void*>(nullptr)));
+                        debug_window.draw(enables.debug, ImGui::GetID(static_cast<void*>(nullptr)), lock);
                     }
                     if(enables.calibrate) {
-                        calibrate_window.draw(enables.calibrate, ImGui::GetID(static_cast<void*>(nullptr)));
+                        calibrate_window.draw(enables.calibrate, ImGui::GetID(static_cast<void*>(nullptr)), lock);
                     }
                     if(enables.measure) {
-                        measure_window.draw(enables.measure, ImGui::GetID(static_cast<void*>(nullptr)));
+                        measure_window.draw(enables.measure, ImGui::GetID(static_cast<void*>(nullptr)), lock);
                     }
                     if(enables.file_manager) {
-                        file_manager_window.draw(enables.file_manager, ImGui::GetID(static_cast<void*>(nullptr)));
+                        file_manager_window.draw(enables.file_manager, ImGui::GetID(static_cast<void*>(nullptr)), lock);
                     }
                     if(enables.auto_window) {
-                        auto_window.draw(enables.auto_window, ImGui::GetID(static_cast<void*>(nullptr)));
+                        auto_window.draw(enables.auto_window, ImGui::GetID(static_cast<void*>(nullptr)), lock);
                     }
                 }
             }

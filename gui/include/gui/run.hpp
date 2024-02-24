@@ -30,7 +30,6 @@ namespace GUI {
 
     void run(
         bool &done,
-        const std::filesystem::path& font_path,
         boost::process::child& ble_client,
         std::shared_ptr<BLE_Client::SHM::ParentSHM> shm
     );

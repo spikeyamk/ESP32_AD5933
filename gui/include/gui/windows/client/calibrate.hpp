@@ -7,6 +7,7 @@
 #include <vector>
 #include <stop_token>
 #include <atomic>
+#include <optional>
 
 #include "imgui.h"
 
@@ -16,6 +17,7 @@
 #include "ad5933/calibration/calibration.hpp"
 #include "json/conversion.hpp"
 #include "ble_client/shm/parent/parent.hpp"
+#include "gui/windows/client/lock.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -88,7 +90,7 @@ namespace GUI {
             Status status { Status::NotCalibrated };
         public:
             Calibrate(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm);
-            void draw(bool& enable, const ImGuiID side_id);
+            void draw(bool& enable, const ImGuiID side_id, const std::optional<Lock> lock);
             Status get_status() const;
             bool plotted { false };
         private:

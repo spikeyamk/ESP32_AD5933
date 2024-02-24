@@ -5,11 +5,13 @@
 #include <memory>
 #include <queue>
 #include <stop_token>
+#include <optional>
 
 #include "imgui.h"
 
 #include "ble_client/shm/parent/parent.hpp"
 #include "magic/events/results.hpp"
+#include "gui/windows/client/lock.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -37,7 +39,7 @@ namespace GUI {
             std::queue<Point> send_points;
             Auto() = default;
             Auto(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm);
-            void draw(bool &enable, const ImGuiID side_id);
+            void draw(bool &enable, const ImGuiID side_id, const std::optional<Lock> lock);
         private:
             void start_saving();
             void start_sending();

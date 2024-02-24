@@ -8,6 +8,7 @@
 
 #include "backends/imgui_impl_sdl3.h"
 #include "backends/imgui_impl_sdlrenderer3.h"
+#include "gui/ubuntu_sans_regular.hpp"
 
 #include "gui/boilerplate.hpp"
 
@@ -34,19 +35,21 @@ namespace GUI {
             }
         }
 
-        void set_scale(const float scale, const std::filesystem::path& font_path) {
-            #ifdef _MSC_VER // I hate Windows, also fuck Bill Gates
-                ImGui_ImplSDLRenderer3_DestroyFontsTexture();
-                ImGuiIO& io { ImGui::GetIO() };
-                io.Fonts->Clear();
-                static constexpr ImWchar font_ranges_magic_load_all_utf8_glyphs[] {
-                    0x20, 0xFFFF, 0 
-                };
-                io.Fonts->AddFontFromFileTTF(font_path.string().c_str(), font_size_pixels_base * scale, nullptr, font_ranges_magic_load_all_utf8_glyphs);
-                ImGuiStyle& style = ImGui::GetStyle();
-                style = ImGuiStyle();
-                style.ScaleAllSizes(scale);
-            #endif
+        void set_scale(const float scale) {
+            ImGui_ImplSDLRenderer3_DestroyFontsTexture();
+            ImGuiIO& io { ImGui::GetIO() };
+            io.Fonts->Clear();
+            static constexpr ImWchar font_ranges_magic_load_all_utf8_glyphs[] {
+                0x20, 0xFFFF, 0 
+            };
+
+            uint8_t* font = new uint8_t[ubuntu_sans_regular.size()];
+            std::copy(ubuntu_sans_regular.begin(), ubuntu_sans_regular.end(), font);
+
+            io.Fonts->AddFontFromMemoryTTF(font, ubuntu_sans_regular.size(), font_size_pixels_base * scale, nullptr, font_ranges_magic_load_all_utf8_glyphs);
+            ImGuiStyle& style = ImGui::GetStyle();
+            style = ImGuiStyle();
+            style.ScaleAllSizes(scale);
         }
 
         float get_scale() {
@@ -54,15 +57,15 @@ namespace GUI {
         }
 
         bool respect_system_scale { true };
-        static inline void set_sdl_scale(const float sdl_scale, const std::filesystem::path& font_path) {
+        static inline void set_sdl_scale(const float sdl_scale) {
             if(respect_system_scale == false) {
                 return;
             }
 
-            set_scale(sdl_scale, font_path);
+            set_scale(sdl_scale);
         }
 
-        std::tuple<SDL_Window*, SDL_Renderer*> init(const std::filesystem::path& font_path) {
+        std::tuple<SDL_Window*, SDL_Renderer*> init() {
             Trielo::trieloxit_lambda<SDL_Init>(Trielo::OkErrCode(0), sdl_error_lambda, SDL_INIT_VIDEO);
             Trielo::trielo_lambda<SDL_SetHint>(Trielo::OkErrCode(SDL_bool{SDL_TRUE}), sdl_error_lambda, SDL_HINT_IME_SHOW_UI, "1");
 
@@ -106,8 +109,6 @@ namespace GUI {
                 std::printf("Current SDL_Renderer: %s\n", info.name);
             }
 
-            Trielo::trielo_lambda<SDL_SetHint>(Trielo::OkErrCode(SDL_bool{SDL_TRUE}), sdl_error_lambda, SDL_HINT_VIDEO_X11_SCALING_FACTOR, std::to_string(SDL_GetWindowDisplayScale(window)).c_str());
-
             Trielo::trieloxit<ImGui::DebugCheckVersionAndDataLayout>(
                 Trielo::OkErrCode(true),
                 IMGUI_VERSION,
@@ -128,6 +129,7 @@ namespace GUI {
             ImGui_ImplSDLRenderer3_Init(renderer);
 
             switch_imgui_theme();
+            set_scale(1.0f);
 
             Trielo::trielo_lambda<SDL_ShowWindow>(Trielo::OkErrCode(0), sdl_error_lambda, window);
             return std::tuple { window, renderer };
@@ -140,25 +142,26 @@ namespace GUI {
             ImPlot::GetStyle().PlotDefaultSize.y = default_style.PlotDefaultSize.y * scale;
         }
 
-        void process_events(bool &done, SDL_Window* window, SDL_Renderer* renderer, const std::filesystem::path& font_path) {
+        void process_events(bool &done, SDL_Window* window, SDL_Renderer* renderer) {
             SDL_Event event;
-            if(SDL_PollEvent(&event)) {
+            while(SDL_PollEvent(&event)) {
                 ImGui_ImplSDL3_ProcessEvent(&event);
                 switch(event.type) {
                     case SDL_EVENT_QUIT:
                         done = true;
                         return;
                     case SDL_EVENT_SYSTEM_THEME_CHANGED:
-                        switch_imgui_theme();
+                        Trielo::trielo<switch_imgui_theme>();
                         break; 
                     case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
-                        set_sdl_scale(SDL_GetWindowDisplayScale(window), font_path);
-                        set_implot_scale();
+                        const float sdl_scale { Trielo::trielo_lambda<SDL_GetWindowDisplayScale>(Trielo::OkErrCode(0.0f), sdl_error_lambda, window) };
+                        Trielo::trielo<set_sdl_scale>(sdl_scale);
+                        Trielo::trielo<set_implot_scale>();
                         break; 
                 }
                 if(event.type == event_user_scale_event_type) {
-                    set_scale(*reinterpret_cast<const float*>(&event.user.code), font_path);
-                    set_implot_scale();
+                    Trielo::trielo<set_scale>(*reinterpret_cast<const float*>(&event.user.code));
+                    Trielo::trielo<set_implot_scale>();
                 }
             }
         }

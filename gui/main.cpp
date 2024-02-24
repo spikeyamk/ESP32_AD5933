@@ -1,12 +1,5 @@
-#include <thread>
-#include <chrono>
-#include <iostream>
-#include <string_view>
-
-#include <boost/process.hpp>
-
 #include "gui/run.hpp"
-#include "ble_client/shm/common/scoped_cleaner.hpp"
+#include "ble_client/shm/common/clean.hpp"
 #include "ble_client/shm/parent/parent.hpp"
 #include "ble_client/child_main.hpp"
 #include "gui/windows/client/debug.hpp"
@@ -18,13 +11,12 @@ int main(int argc, char* argv[]) {
     }
 
     std::shared_ptr<BLE_Client::SHM::ParentSHM> shm { nullptr };
+    const std::filesystem::path self_path { argv[0] };
     try {
         shm = std::make_shared<BLE_Client::SHM::ParentSHM>();
     } catch(const boost::interprocess::interprocess_exception& e) {
         std::cout << "ERROR: GUI: Failed to open SHM: exception: " << e.what() << std::endl;
-        {
-            BLE_Client::SHM::ScopedCleaner cleaner {};
-        }
+        BLE_Client::SHM::clean(self_path);
         try {
             shm = std::make_shared<BLE_Client::SHM::ParentSHM>();
         } catch(const boost::interprocess::interprocess_exception& e) {
@@ -33,10 +25,19 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    boost::process::child ble_client { argv[0], ble_client_magic_key.data() };
+    boost::process::child ble_client { self_path.string().c_str(), ble_client_magic_key.data() };
 
     bool done { false };
-    GUI::run(done, std::filesystem::path(argv[0]).replace_filename("UbuntuSans-Regular.ttf"), ble_client, shm);
+    const std::filesystem::path font_path { std::filesystem::path(self_path).replace_filename("UbuntuSans-Regular.ttf") };
+    if(std::ifstream(font_path).is_open() == false) {
+        std::cout << "ERROR: GUI: Could not find the font file: '" << font_path.string() << "'\n";
+        if(ble_client.running()) {
+            ble_client.terminate();
+        }
+        return EXIT_FAILURE;
+    } else {
+        GUI::run(done, ble_client, shm);
+    }
 
     for(size_t i = 0; i < 60'000 && ble_client.running(); i++) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -44,5 +45,5 @@ int main(int argc, char* argv[]) {
     if(ble_client.running()) {
         ble_client.terminate();
     }
-    return 0;
+    return EXIT_SUCCESS;
 }
