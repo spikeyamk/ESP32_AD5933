@@ -27,20 +27,7 @@ int main(int argc, char* argv[]) {
     boost::process::child ble_client { self_path.string().c_str(), ble_client_magic_key.data() };
 
     bool done { false };
-    const std::filesystem::path font_path { std::filesystem::path(self_path).replace_filename("UbuntuSans-Regular.ttf") };
-    if(std::ifstream(font_path).is_open() == false) {
-        std::cout << "ERROR: GUI: Could not find the font file: '" << font_path.string() << "'\n";
-        if(ble_client.running()) {
-            ble_client.terminate();
-        }
-        return EXIT_FAILURE;
-    } else {
-        GUI::run(
-            done,
-            ble_client,
-            shm
-        );
-    }
+    GUI::run(done, ble_client, shm);
 
     for(size_t i = 0; i < 60'000 && ble_client.running(); i++) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));

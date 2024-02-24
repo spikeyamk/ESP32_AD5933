@@ -20,17 +20,17 @@ namespace GUI {
 
         bool respect_system_theme { true };
         Uint32 event_user_scale_event_type { (Uint32)(-1) };
-        inline void switch_imgui_theme() {
+        inline void switch_imgui_theme(ImGuiStyle* dst = nullptr) {
             if(respect_system_theme == false) {
                 return;
             }
 
             switch(SDL_GetSystemTheme()) {
                 case SDL_SYSTEM_THEME_DARK:
-                    ImGui::StyleColorsDark();
+                    ImGui::StyleColorsDark(dst);
                     break;
                 default:
-                    ImGui::StyleColorsLight();
+                    ImGui::StyleColorsLight(dst);
                     break;
             }
         }
@@ -39,7 +39,7 @@ namespace GUI {
             ImGui_ImplSDLRenderer3_DestroyFontsTexture();
             ImGuiIO& io { ImGui::GetIO() };
             io.Fonts->Clear();
-            static constexpr ImWchar font_ranges_magic_load_all_utf8_glyphs[] {
+            static const ImWchar font_ranges_magic_load_all_utf8_glyphs[] {
                 0x20, 0xFFFF, 0 
             };
 
@@ -48,7 +48,9 @@ namespace GUI {
 
             io.Fonts->AddFontFromMemoryTTF(font, ubuntu_sans_regular.size(), font_size_pixels_base * scale, nullptr, font_ranges_magic_load_all_utf8_glyphs);
             ImGuiStyle& style = ImGui::GetStyle();
-            style = ImGuiStyle();
+            ImGuiStyle tmp_style = ImGuiStyle();
+            switch_imgui_theme(&tmp_style);
+            style = tmp_style;
             style.ScaleAllSizes(scale);
         }
 
@@ -127,7 +129,6 @@ namespace GUI {
 
             ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
             ImGui_ImplSDLRenderer3_Init(renderer);
-
             switch_imgui_theme();
             set_scale(SDL_GetWindowDisplayScale(window));
 
@@ -151,7 +152,7 @@ namespace GUI {
                         done = true;
                         return;
                     case SDL_EVENT_SYSTEM_THEME_CHANGED:
-                        Trielo::trielo<switch_imgui_theme>();
+                        switch_imgui_theme();
                         break; 
                     case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
                         const float sdl_scale { Trielo::trielo_lambda<SDL_GetWindowDisplayScale>(Trielo::OkErrCode(0.0f), sdl_error_lambda, window) };
