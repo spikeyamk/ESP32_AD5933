@@ -88,19 +88,24 @@ namespace GUI {
             std::vector<AD5933::Calibration<float>> calibration;
         private:
             Status status { Status::NotCalibrated };
+            ns::CalibrationFile calibration_file;
+
         public:
             Calibrate(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm);
-            void draw(bool& enable, const ImGuiID side_id, const std::optional<Lock> lock);
+            ~Calibrate();
+            void draw(bool& enable, const ImGuiID side_id, Lock& lock);
             Status get_status() const;
             bool plotted { false };
         private:
+            const std::optional<Lock> draw_inner();
+            void draw_input_fields();
             void update_freq_start_valid();
             void update_freq_inc_valid();
             void update_num_of_inc_valid();
             void update_impedance_valid();
             void update_settling_number_valid();
         private:
-            static void calibrate_cb(std::stop_token st, Calibrate& calibrate_window);
+            static void calibrate_cb(std::stop_token st, Calibrate& self);
             void calibrate();
             void save() const;
         };

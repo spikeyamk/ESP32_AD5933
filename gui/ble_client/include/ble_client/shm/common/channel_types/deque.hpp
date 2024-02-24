@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <thread>
 
 #include <boost/interprocess/containers/deque.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
@@ -49,7 +50,12 @@ namespace BLE_Client {
 
             std::optional<T> read_for(const boost::posix_time::milliseconds& timeout) {
                 boost::interprocess::scoped_lock lock(this->mutex);
+
                 if(this->condition.timed_wait(lock, boost::get_system_time() + timeout, [&]() { return !this->data->empty(); }) == false) {
+                    return std::nullopt;
+                }
+
+                if(this->data->empty()) {
                     return std::nullopt;
                 }
                 const T ret = this->data->front();

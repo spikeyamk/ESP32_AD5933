@@ -38,7 +38,7 @@ namespace GUI {
         public:
             bool enable { true };
             size_t index;
-            std::optional<Lock> lock { std::nullopt };
+            Lock lock { Lock::Released };
         private:
             std::string dockspace_name;
             std::shared_ptr<BLE_Client::SHM::ParentSHM> shm { nullptr };

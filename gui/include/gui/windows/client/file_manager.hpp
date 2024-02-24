@@ -4,6 +4,7 @@
 #include <vector>
 #include <filesystem>
 #include <optional>
+#include <stop_token>
 
 #include <nfd.hpp>
 #include "imgui.h"
@@ -36,20 +37,27 @@ namespace GUI {
                 std::vector<Magic::Events::Results::File::Size> sizes;
             };
             ListTable list_table {};
-            int selected = -1;
+            std::optional<size_t> selected { std::nullopt };
+            struct Bytes {
+                uint64_t free { 0 };
+                uint64_t total { 0 };
+            };
+            Bytes bytes {};
         public:
             Status get_status() const;
             FileManager() = default;
             FileManager(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm);
-            void draw(bool& enable, const ImGuiID side_id, std::optional<Lock>& lock);
+            ~FileManager();
+            void draw(bool& enable, const ImGuiID side_id, Lock& lock);
         private:
-            void draw_inner();
+            const std::optional<Lock> draw_inner();
             void list();
             void remove();
             void download();
         private:
-            static void list_cb(FileManager& self);
-            static void download_cb(FileManager& self, const std::filesystem::path outPath);
+            std::stop_source stop_source;
+            static void list_cb(std::stop_token st, FileManager& self);
+            static void download_cb(std::stop_token st, FileManager& self, const std::filesystem::path outPath);
         };
     }
 }

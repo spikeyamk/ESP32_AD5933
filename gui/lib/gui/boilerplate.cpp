@@ -129,7 +129,7 @@ namespace GUI {
             ImGui_ImplSDLRenderer3_Init(renderer);
 
             switch_imgui_theme();
-            set_scale(1.0f);
+            set_scale(SDL_GetWindowDisplayScale(window));
 
             Trielo::trielo_lambda<SDL_ShowWindow>(Trielo::OkErrCode(0), sdl_error_lambda, window);
             return std::tuple { window, renderer };

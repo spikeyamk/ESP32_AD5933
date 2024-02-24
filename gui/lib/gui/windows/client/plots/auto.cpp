@@ -5,6 +5,8 @@
 #include <utf/utf.hpp>
 
 #include "gui/boilerplate.hpp"
+#include "json/graph.hpp"
+
 #include "gui/windows/client/plots/auto.hpp"
 
 namespace GUI {
@@ -91,6 +93,18 @@ namespace GUI {
                     ImPlot::PlotLine("PHASE [rad]", send_vectors.time.data(), send_vectors.phase.data(), std::min(send_vectors.time.size(), send_vectors.phase.size()));
                     ImPlot::EndPlot();
                 }
+
+                if(ImGui::Button("Save")) {
+                    static constexpr char graph_name[] { "auto_send_corrected_gon" };
+                    ns::CorrectedAlgGraph2D_File<graph_name, double, ns::ValueNames::unix_timestamp> graph_file {};
+                    ns::load_graph2D_file(
+                        send_vectors.time,
+                        send_vectors.impedance,
+                        send_vectors.phase,
+                        graph_file
+                    );
+                    ns::save_to_fs(graph_file);
+                }
             }
 
             void Auto::draw_send_corrected_alg_data() {
@@ -105,6 +119,18 @@ namespace GUI {
                     //ImPlot::SetupAxes("f [Hz]", "REACTANCE");
                     ImPlot::PlotLine("REACTANCE [Ohm]", send_vectors.time.data(), send_vectors.reactance.data(), std::min(send_vectors.time.size(), send_vectors.reactance.size()));
                     ImPlot::EndPlot();
+                }
+
+                if(ImGui::Button("Save")) {
+                    static constexpr char graph_name[] { "auto_send_corrected_alg" };
+                    ns::CorrectedAlgGraph2D_File<graph_name, double, ns::ValueNames::unix_timestamp> graph_file {};
+                    ns::load_graph2D_file(
+                        send_vectors.time,
+                        send_vectors.resistance,
+                        send_vectors.reactance,
+                        graph_file
+                    );
+                    ns::save_to_fs(graph_file);
                 }
             }
         }

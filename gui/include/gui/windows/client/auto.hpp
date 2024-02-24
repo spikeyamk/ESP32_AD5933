@@ -39,8 +39,10 @@ namespace GUI {
             std::queue<Point> send_points;
             Auto() = default;
             Auto(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm);
-            void draw(bool &enable, const ImGuiID side_id, const std::optional<Lock> lock);
+            ~Auto();
+            void draw(bool &enable, const ImGuiID side_id, Lock& lock);
         private:
+            const std::optional<Lock> draw_inner();
             void start_saving();
             void start_sending();
             void stop();

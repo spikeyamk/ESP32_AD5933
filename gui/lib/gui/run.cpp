@@ -269,7 +269,10 @@ namespace GUI {
         console.draw();
         Boilerplate::render(renderer, clear_color);
 
-        while(done == false && ble_client.running()) {
+        while(
+            done == false
+            && ble_client.running()
+        ) {
             Boilerplate::process_events(done, window, renderer);
             Boilerplate::start_new_frame();
             top_id = top_with_dock_space(done, menu_bar_enables);

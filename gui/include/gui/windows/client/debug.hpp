@@ -193,8 +193,9 @@ namespace GUI {
             Status get_status() const;
             Debug() = default;
             Debug(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm);
-            void draw(bool &enable, const ImGuiID side_id, const std::optional<Lock> lock);
+            void draw(bool &enable, const ImGuiID side_id, const Lock lock);
         private:
+            void draw_inner();
             void draw_input_elements();
             bool dump();
             bool program_and_dump();

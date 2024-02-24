@@ -2,7 +2,6 @@
 #include "ble_client/shm/common/clean.hpp"
 #include "ble_client/shm/parent/parent.hpp"
 #include "ble_client/child_main.hpp"
-#include "gui/windows/client/debug.hpp"
 
 int main(int argc, char* argv[]) {
     const std::string_view ble_client_magic_key { "okOvDRmWjEUErr3grKvWKpHw2Z0c8L5p6rjl5KT4HAoRGenjFFdPxegc43vCt8BR9ZdWJIPiaMaTYwhr6TMu4od0gHO3r1f7qTQ8pmaQtEm12SqT3IikKLdAsAI46N9E" };
@@ -36,7 +35,11 @@ int main(int argc, char* argv[]) {
         }
         return EXIT_FAILURE;
     } else {
-        GUI::run(done, ble_client, shm);
+        GUI::run(
+            done,
+            ble_client,
+            shm
+        );
     }
 
     for(size_t i = 0; i < 60'000 && ble_client.running(); i++) {

@@ -18,17 +18,11 @@ namespace GUI {
             name.append(utf::as_u8(std::to_string(index)));
         }
 
-        void Auto::draw(bool &enable, const ImGuiID side_id, const std::optional<Lock> lock) {
-            if(first) {
-                ImGui::DockBuilderDockWindow((const char*) name.c_str(), side_id);
-                first = false;
-            }
+        Auto::~Auto() {
+            stop_source.request_stop();
+        }
 
-            if(ImGui::Begin((const char*) name.c_str(), &enable) == false) {
-                ImGui::End();
-                return;
-            }
-
+        const std::optional<Lock> Auto::draw_inner() {
             if(status == Status::Off) {
                 if(ImGui::Button("Start Sending")) {
                     start_sending();
@@ -51,8 +45,36 @@ namespace GUI {
                 if(ImGui::Button("Stop")) {
                     stop();
                 }
+
+                return Lock::Auto;
             }
 
+            return std::nullopt;
+        }
+
+        void Auto::draw(bool &enable, const ImGuiID side_id, Lock& lock) {
+            if(first) {
+                ImGui::DockBuilderDockWindow((const char*) name.c_str(), side_id);
+                first = false;
+            }
+
+            if(ImGui::Begin((const char*) name.c_str(), &enable) == false) {
+                ImGui::End();
+                return;
+            }
+
+            if(lock != Lock::Released && lock != Lock::Auto) {
+                ImGui::BeginDisabled();
+                draw_inner();
+                ImGui::EndDisabled();
+            } else {
+                const auto ret_lock { draw_inner() };
+                if(lock == Lock::Auto && ret_lock.has_value() == false) {
+                    lock = Lock::Released;
+                } else if(ret_lock.has_value()) {
+                    lock = ret_lock.value();
+                }
+            }
             ImGui::End();
         }
 

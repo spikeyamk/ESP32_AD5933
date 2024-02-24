@@ -104,7 +104,8 @@ namespace GUI {
         public:
             Measure() = default;
             Measure(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm);
-            void draw(bool &enable, const ImGuiID side_id, const std::optional<Lock> lock);
+            void draw(bool &enable, const ImGuiID side_id, Lock& lock);
+            ~Measure();
         private:
             static void single_cb(std::stop_token st, Measure& self);
             void single();
@@ -113,7 +114,7 @@ namespace GUI {
             void stop();
             bool load();
             void draw_input_elements(); 
-            void draw_inner();
+            const std::optional<Lock> draw_inner();
         };
     }
 }

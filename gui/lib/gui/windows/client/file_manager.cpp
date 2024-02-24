@@ -16,10 +16,6 @@
 
 namespace GUI {
     namespace Windows {
-        FileManager::Status FileManager::get_status() const {
-            return status;
-        }
-
         FileManager::FileManager(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) :
             index { index },
             shm{ shm }
@@ -27,7 +23,15 @@ namespace GUI {
             name.append(utf::as_u8(std::to_string(index)));
         }
 
-        void FileManager::draw_inner() {
+        FileManager::~FileManager() {
+            stop_source.request_stop();
+        }
+
+        FileManager::Status FileManager::get_status() const {
+            return status;
+        }
+
+        const std::optional<Lock> FileManager::draw_inner() {
             if(status == Status::Listing || status == Status::Downloading) {
                 ImGui::BeginDisabled();
                 ImGui::Button("List");
@@ -41,6 +45,9 @@ namespace GUI {
                 }
             }
 
+            ImGui::Text("Total: %lu [Bytes]", bytes.total);
+            ImGui::Text("Free:  %lu [Bytes]", bytes.free);
+
             if(ImGui::BeginTable("List Table", 2, ImGuiTableFlags_Resizable | ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_Borders)) {
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
@@ -52,9 +59,9 @@ namespace GUI {
                         ImGui::TableNextRow();
                         ImGui::TableNextColumn();
                         ImGui::PushID(static_cast<int>(i));
-                        if(ImGui::Selectable(std::string(list_table.paths[i].path.begin(), list_table.paths[i].path.end()).c_str(), static_cast<int>(i) == selected, ImGuiSelectableFlags_SpanAllColumns)) {
-                            if(selected == static_cast<int>(i)) {
-                                selected = -1;
+                        if(ImGui::Selectable(std::string(list_table.paths[i].path.begin(), list_table.paths[i].path.end()).c_str(), i == selected, ImGuiSelectableFlags_SpanAllColumns)) {
+                            if(selected == i) {
+                                selected = std::nullopt;
                             } else {
                                 selected = i;
                             }
@@ -69,7 +76,7 @@ namespace GUI {
             }
             ImGui::EndTable();
 
-            if(selected != -1) {
+            if(selected.has_value()) {
                 if(status == Status::Listing || status == Status::Downloading) {
                     ImGui::BeginDisabled();
                     ImGui::Button("Download");
@@ -86,10 +93,14 @@ namespace GUI {
                 }
             }
 
-
+            if(status == Status::Listing || status == Status::Downloading) {
+                return Lock::FileManager;
+            } else {
+                return std::nullopt;
+            }
         }
 
-        void FileManager::draw(bool& enable, const ImGuiID side_id, std::optional<Lock>& lock) {
+        void FileManager::draw(bool& enable, const ImGuiID side_id, Lock& lock) {
             if(first) {
                 ImGui::DockBuilderDockWindow((const char*) name.c_str(), side_id);
             }
@@ -105,20 +116,47 @@ namespace GUI {
                 return;
             }
 
-            if(lock.has_value() && lock.value() != Lock::FileManager) {
+            if(lock != Lock::Released && lock != Lock::FileManager) {
                 ImGui::BeginDisabled();
                 draw_inner();
                 ImGui::EndDisabled();
             } else {
-                draw_inner();
+                const auto ret_lock { draw_inner() };
+                if(lock == Lock::FileManager && ret_lock.has_value() == false) {
+                    lock = Lock::Released;
+                } else if(ret_lock.has_value()) {
+                    lock = ret_lock.value();
+                }
             }
 
             ImGui::End();
         }
 
-        void FileManager::list_cb(FileManager& self) {
+        void FileManager::list_cb(std::stop_token st, FileManager& self) {
             self.status = Status::Listing;
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Start{} });
+
+            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Free{} });
+            const auto free_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(5'000)) };
+            if(free_payload.has_value() == false) {
+                self.status = Status::Failed;
+                std::cout << "ERROR: GUI::Windows::FileManager::list_cb: failed to retreive free: timeout\n";
+                return;
+            }
+
+            if(variant_tester<Magic::Events::Results::File::Free>(free_payload.value()) == false) {
+                self.status = Status::Failed;
+                std::cout << "ERROR: GUI::Windows::FileManager::list_cb: failed to retreive free: wrong variant type\n";
+                return;
+            }
+
+            std::visit([&self](auto&& event) {
+                if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Events::Results::File::Free>) {
+                    self.bytes.free = event.bytes_free;
+                    self.bytes.total = event.bytes_total;
+                }
+            }, free_payload.value());
+
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::ListCount{} });
             const auto list_count_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(5'000)) };
 
@@ -207,20 +245,23 @@ namespace GUI {
         void FileManager::list() {
             std::jthread t1(list_cb, std::ref(*this));
             t1.detach();
+            stop_source = t1.get_stop_source();
         }
 
         void FileManager::remove() {
             shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Events::Commands::File::Start{} });
-            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Events::Commands::File::Remove::from_raw_data(list_table.paths[selected].to_raw_data()) });
+            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Events::Commands::File::Remove::from_raw_data(list_table.paths[selected.value()].to_raw_data()) });
             shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Events::Commands::File::End{} });
             list();
         }
 
         void FileManager::download() {
             nfdchar_t* path = nullptr;
-            const nfdresult_t result = NFD::SaveDialog(path, nullptr, 0, nullptr, std::string(list_table.paths[selected].path.begin(), list_table.paths[selected].path.end()).c_str());
+            const nfdresult_t result = NFD::SaveDialog(path, nullptr, 0, nullptr, std::string(list_table.paths[selected.value()].path.begin(), list_table.paths[selected.value()].path.end()).c_str());
             if(result == NFD_OKAY) {
                 std::jthread t1(download_cb, std::ref(*this), std::filesystem::path(path));
+                t1.detach();
+                stop_source = t1.get_stop_source();
                 if(path != nullptr) {
                     NFD::FreePath(path);
                     path = nullptr;
@@ -242,13 +283,13 @@ namespace GUI {
             }
         }
 
-        void FileManager::download_cb(FileManager& self, const std::filesystem::path path) {
+        void FileManager::download_cb(std::stop_token st, FileManager& self, const std::filesystem::path path) {
             try {
                 self.status = Status::Downloading;
                 self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Start{} });
-                self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Download::from_raw_data(self.list_table.paths[self.selected].to_raw_data()) });
+                self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Download::from_raw_data(self.list_table.paths[self.selected.value()].to_raw_data()) });
                 std::vector<Magic::Events::Results::File::Download> download_slices;
-                const size_t wished_size = static_cast<size_t>(std::ceil(static_cast<float>(self.list_table.sizes[self.selected].num_of_bytes) / static_cast<float>(sizeof(Magic::T_MaxDataSlice))));
+                const size_t wished_size = static_cast<size_t>(std::ceil(static_cast<float>(self.list_table.sizes[self.selected.value()].num_of_bytes) / static_cast<float>(sizeof(Magic::T_MaxDataSlice))));
                 download_slices.reserve(wished_size);
                 while(download_slices.size() < wished_size) {
                     const auto download_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(5'000)) };

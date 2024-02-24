@@ -162,17 +162,7 @@ namespace GUI {
             debug_captures.update_config();
         }
 
-        void Debug::draw(bool &enable, const ImGuiID side_id, const std::optional<Lock> lock) {
-            if(first) {
-                ImGui::DockBuilderDockWindow(name.c_str(), side_id);
-                first = false;
-            }
-
-            if(ImGui::Begin(name.c_str(), &enable) == false) {
-                ImGui::End();
-                return;
-            }
-
+        void Debug::draw_inner() {
             if(ImGui::Button("Dump")) {
                 if(dump()) {
                     status = Status::Dumped;
@@ -185,6 +175,26 @@ namespace GUI {
                 ImGui::EndDisabled();
             } else {
                 draw_input_elements();
+            }
+        }
+
+        void Debug::draw(bool &enable, const ImGuiID side_id, const Lock lock) {
+            if(first) {
+                ImGui::DockBuilderDockWindow(name.c_str(), side_id);
+                first = false;
+            }
+
+            if(ImGui::Begin(name.c_str(), &enable) == false) {
+                ImGui::End();
+                return;
+            }
+
+            if(lock != Lock::Released) {
+                ImGui::BeginDisabled();
+                draw_inner();
+                ImGui::EndDisabled();
+            } else {
+                draw_inner();
             }
 
             ImGui::End();

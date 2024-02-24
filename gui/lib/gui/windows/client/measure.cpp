@@ -25,18 +25,17 @@ namespace GUI {
         {
             name.append(utf::as_u8(std::to_string(index)));
         }
+        
+        Measure::~Measure() {
+            stop_source.request_stop();
+        }
 
-        void Measure::draw_inner() {
+        const std::optional<Lock> Measure::draw_inner() {
             if(status == Status::NotLoaded || status == Status::Measuring) {
                 ImGui::BeginDisabled();
+
                 draw_input_elements();
-                ImGui::EndDisabled();
-                if(ImGui::Button("Load")) {
-                    if(load()) {
-                        status = Status::Loaded;
-                    }
-                }
-                ImGui::BeginDisabled();
+                ImGui::Button("Load");
                 ImGui::Button("Single");
                 ImGui::Button("Periodic");
                 if(status == Status::Measuring) {
@@ -44,7 +43,9 @@ namespace GUI {
                     const float scale = GUI::Boilerplate::get_scale();
                     Spinner::Spinner("Measuring", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                 }
+
                 ImGui::EndDisabled();
+
                 if(periodically_sweeping) {
                     if(ImGui::Button("Stop")) {
                         stop();
@@ -64,9 +65,15 @@ namespace GUI {
                     periodic();
                 }
             }
+
+            if(status == Status::Measuring) {
+                return Lock::Measure; 
+            } else {
+                return std::nullopt;
+            }
         }
 
-        void Measure::draw(bool &enable, const ImGuiID side_id, const std::optional<Lock> lock) {
+        void Measure::draw(bool &enable, const ImGuiID side_id, Lock& lock) {
             if(first) {
                 ImGui::DockBuilderDockWindow((const char*) name.c_str(), side_id);
                 first = false;
@@ -77,12 +84,17 @@ namespace GUI {
                 return;
             }
 
-            if(lock.has_value() && lock.value() != Lock::Measure) {
+            if(lock != Lock::Released && lock != Lock::Measure) {
                 ImGui::BeginDisabled();
                 draw_inner();
                 ImGui::EndDisabled();
             } else {
-                draw_inner();
+                const auto ret_lock { draw_inner() };
+                if(lock == Lock::Measure && ret_lock.has_value() == false) {
+                    lock = Lock::Released;
+                } else if(ret_lock.has_value()) {
+                    lock = ret_lock.value();
+                }
             }
 
             ImGui::End();
