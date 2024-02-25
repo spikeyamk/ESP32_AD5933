@@ -22,17 +22,17 @@ namespace GUI {
 
         bool respect_system_theme { true };
         Uint32 event_user_scale_event_type { (Uint32)(-1) };
-        inline void switch_imgui_theme(ImGuiStyle* dst = nullptr) {
+        inline void switch_imgui_theme() {
             if(respect_system_theme == false) {
                 return;
             }
 
             switch(SDL_GetSystemTheme()) {
                 case SDL_SYSTEM_THEME_DARK:
-                    ImGui::StyleColorsDark(dst);
+                    ImGui::StyleColorsDark();
                     break;
                 default:
-                    ImGui::StyleColorsLight(dst);
+                    ImGui::StyleColorsLight();
                     break;
             }
         }
