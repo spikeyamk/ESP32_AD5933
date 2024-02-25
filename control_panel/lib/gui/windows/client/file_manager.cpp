@@ -31,22 +31,44 @@ namespace GUI {
             return status;
         }
 
+        void FileManager::draw_table_rows() {
+            for(size_t i = 0; i < list_table.paths.size() && i < list_table.sizes.size(); i++) {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::PushID(static_cast<int>(i));
+                if(ImGui::Selectable(std::string(list_table.paths[i].path.begin(), list_table.paths[i].path.end()).c_str(), i == selected, ImGuiSelectableFlags_SpanAllColumns)) {
+                    if(selected == i) {
+                        selected = std::nullopt;
+                    } else {
+                        selected = i;
+                    }
+                }
+                ImGui::PopID();
+                ImGui::TableNextColumn();
+                ImGui::PushID(-static_cast<int>(i));
+                ImGui::Text(std::to_string(list_table.sizes[i].num_of_bytes).c_str());
+                ImGui::PopID();
+            }
+        }
+
         const std::optional<Lock> FileManager::draw_inner() {
             if(status == Status::Listing || status == Status::Downloading) {
                 ImGui::BeginDisabled();
                 ImGui::Button("List");
                 ImGui::EndDisabled();
-                ImGui::SameLine();
-                const float scale = GUI::Boilerplate::get_scale();
-                Spinner::Spinner("Processing", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                if(status == Status::Listing) {
+                    ImGui::SameLine();
+                    const float scale = GUI::Boilerplate::get_scale();
+                    Spinner::Spinner("Processing", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                }
             } else {
                 if(ImGui::Button("List")) {
                     list();
                 }
             }
 
-            ImGui::Text("Total: %lu [Bytes]", bytes.total);
-            ImGui::Text("Free:  %lu [Bytes]", bytes.free);
+            ImGui::Text("Total: %llu [Bytes]", bytes.total);
+            ImGui::Text("Free:  %llu [Bytes]", bytes.free);
 
             if(ImGui::BeginTable("List Table", 2, ImGuiTableFlags_Resizable | ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_Borders)) {
                 ImGui::TableNextRow();
@@ -55,23 +77,11 @@ namespace GUI {
                 ImGui::TableNextColumn();
                 ImGui::Text("Size [Bytes]");
                 if(status == Status::Listed) {
-                    for(size_t i = 0; i < list_table.paths.size() && i < list_table.sizes.size(); i++) {
-                        ImGui::TableNextRow();
-                        ImGui::TableNextColumn();
-                        ImGui::PushID(static_cast<int>(i));
-                        if(ImGui::Selectable(std::string(list_table.paths[i].path.begin(), list_table.paths[i].path.end()).c_str(), i == selected, ImGuiSelectableFlags_SpanAllColumns)) {
-                            if(selected == i) {
-                                selected = std::nullopt;
-                            } else {
-                                selected = i;
-                            }
-                        }
-                        ImGui::PopID();
-                        ImGui::TableNextColumn();
-                        ImGui::PushID(-static_cast<int>(i));
-                        ImGui::Text(std::to_string(list_table.sizes[i].num_of_bytes).c_str());
-                        ImGui::PopID();
-                    }
+                    draw_table_rows();
+                } else {
+                    ImGui::BeginDisabled();
+                    draw_table_rows();
+                    ImGui::EndDisabled();
                 }
             }
             ImGui::EndTable();
@@ -80,6 +90,12 @@ namespace GUI {
                 if(status == Status::Listing || status == Status::Downloading) {
                     ImGui::BeginDisabled();
                     ImGui::Button("Download");
+                    if(status == Status::Downloading) {
+                        ImGui::EndDisabled();
+                        ImGui::SameLine();
+                        ImGui::ProgressBar(progress_bar_fraction);
+                        ImGui::BeginDisabled();
+                    }
                     ImGui::SameLine();
                     ImGui::Button("Remove");
                     ImGui::EndDisabled();
@@ -243,6 +259,7 @@ namespace GUI {
         }
 
         void FileManager::list() {
+            selected = std::nullopt;
             std::jthread t1(list_cb, std::ref(*this));
             t1.detach();
             stop_source = t1.get_stop_source();
@@ -259,6 +276,7 @@ namespace GUI {
             nfdchar_t* path = nullptr;
             const nfdresult_t result = NFD::SaveDialog(path, nullptr, 0, nullptr, std::string(list_table.paths[selected.value()].path.begin(), list_table.paths[selected.value()].path.end()).c_str());
             if(result == NFD_OKAY) {
+                progress_bar_fraction = 0.0f;
                 std::jthread t1(download_cb, std::ref(*this), std::filesystem::path(path));
                 t1.detach();
                 stop_source = t1.get_stop_source();
@@ -289,9 +307,17 @@ namespace GUI {
                 self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Start{} });
                 self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Download::from_raw_data(self.list_table.paths[self.selected.value()].to_raw_data()) });
                 std::vector<Magic::Events::Results::File::Download> download_slices;
-                const size_t wished_size = static_cast<size_t>(std::ceil(static_cast<float>(self.list_table.sizes[self.selected.value()].num_of_bytes) / static_cast<float>(sizeof(Magic::T_MaxDataSlice))));
-                download_slices.reserve(wished_size);
-                while(download_slices.size() < wished_size) {
+                const size_t wished_slices_size = static_cast<size_t>(std::ceil(static_cast<float>(self.list_table.sizes[self.selected.value()].num_of_bytes) / static_cast<float>(sizeof(Magic::T_MaxDataSlice))));
+                const float progress_bar_step = 1.0f / static_cast<float>(wished_slices_size);
+                const uint64_t wished_file_size = self.list_table.sizes[self.selected.value()].num_of_bytes;
+                download_slices.reserve(wished_slices_size);
+                while(download_slices.size() < wished_slices_size) {
+                    if(st.stop_requested()) {
+                        std::cout << "ERROR: GUI::Windows::FileManager::download_cb: failed to retreive download_payload: stop_requested\n";
+                        self.status = Status::Failed;
+                        return;
+                    }
+
                     const auto download_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(60'000)) };
                     if(download_payload.has_value() == false) {
                         std::cout << "ERROR: GUI::Windows::FileManager::download_cb: failed to retreive download_payload: timeout\n";
@@ -310,12 +336,19 @@ namespace GUI {
                             download_slices.push_back(event);
                         }
                     }, download_payload.value());
+                    self.progress_bar_fraction += progress_bar_step;
                 }
 
                 std::ofstream file(path, std::ios::out | std::ios::binary);
+
+                uint64_t i = 0;
                 for(const auto& slice: download_slices) {
-                    for(const auto& e: slice.slice) {
+                    for(const uint8_t e: slice.slice) {
+                        if(i == wished_file_size) {
+                            break;
+                        }
                         file << e;
+                        i++;
                     }
                 }
 

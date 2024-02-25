@@ -101,6 +101,7 @@ set(GUI_SRCS
 	lib/imgui_custom/markdown.cpp
 
 	lib/gui/run.cpp
+	lib/gui/top.cpp
 	lib/gui/boilerplate.cpp
 	lib/gui/ubuntu_sans_regular.cpp
 
@@ -122,6 +123,7 @@ set(GUI_SRCS
 	lib/gui/windows/client/plots/auto.cpp
 
 	lib/json/conversion.cpp
+	lib/json/settings.cpp
 	${IMGUI_SRCS}
 	${IMPLOT_SRCS}
 )

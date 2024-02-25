@@ -22,7 +22,7 @@ namespace GUI {
             auto_plots_window { index }
         {}
 
-        void Client::draw(const ImGuiID center_id, MenuBarEnables &enables) {
+        void Client::draw(const ImGuiID center_id, Top::MenuBarEnables &enables) {
             if(enable == false) {
                 return;
             }

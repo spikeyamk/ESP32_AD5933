@@ -218,7 +218,7 @@ namespace BLE {
 
 			std::optional<uint64_t> get_num_of_bytes(const Magic::Events::Commands::File::Size& event) {
 				struct stat st;
-				std::array<char, SD_Card::mount_point_prefix.size() + sizeof(Magic::T_MaxDataSlice)> path;
+				std::array<char, SD_Card::mount_point_prefix.size() + Magic::MTU> path { 0 };
 				std::copy(SD_Card::mount_point_prefix.begin(), SD_Card::mount_point_prefix.end(), path.begin());
 				std::copy(event.path.begin(), event.path.end(), path.begin() + SD_Card::mount_point_prefix.size());
 				if(stat(path.data(), &st) != 0) {
@@ -244,7 +244,7 @@ namespace BLE {
 			}
 
 			void remove(const Magic::Events::Commands::File::Remove& event) {
-				std::array<char, SD_Card::mount_point_prefix.size() + sizeof(Magic::T_MaxDataSlice)> path;
+				std::array<char, SD_Card::mount_point_prefix.size() + Magic::MTU> path { 0 };
 				std::copy(SD_Card::mount_point_prefix.begin(), SD_Card::mount_point_prefix.end(), path.begin());
 				std::copy(event.path.begin(), event.path.end(), path.begin() + SD_Card::mount_point_prefix.size());
 				unlink(path.data());
@@ -254,7 +254,7 @@ namespace BLE {
 				std::thread([](const Magic::Events::Commands::File::Download event, std::shared_ptr<Server::Sender> sender, StopSources& stop_sources) {
 					try {
 						stop_sources.download = true;
-						std::array<char, SD_Card::mount_point_prefix.size() + sizeof(Magic::T_MaxDataSlice)> path;
+						std::array<char, SD_Card::mount_point_prefix.size() + Magic::MTU> path { 0 };
 						std::copy(SD_Card::mount_point_prefix.begin(), SD_Card::mount_point_prefix.end(), path.begin());
 						std::copy(event.path.begin(), event.path.end(), path.begin() + SD_Card::mount_point_prefix.size());
 
@@ -328,7 +328,7 @@ namespace BLE {
 							std::array<char, SD_Card::mount_point_prefix.size() + record_file_name.size()> ret;
 							std::copy(SD_Card::mount_point_prefix.begin(), SD_Card::mount_point_prefix.end(), ret.begin());
 							std::copy(record_file_name.begin(), record_file_name.end(), ret.begin() + SD_Card::mount_point_prefix.size());
-							return record_file_name;
+							return ret;
 						}()
 					};
 
@@ -342,7 +342,7 @@ namespace BLE {
 					}
 
 					{
-						FILE* file = Trielo::trielo<std::fopen>(Trielo::FailErrCode<FILE*>(nullptr), record_filepath.data(), "wb");
+						FILE* file = Trielo::trielo<std::fopen>(Trielo::FailErrCode<FILE*>(nullptr), record_filepath.data(), "w");
 						if(file == nullptr) {
 							std::cout << "ERROR: BLE::Actions::Auto::start_saving: Could not open file at first try\n";
 							return;
@@ -373,7 +373,7 @@ namespace BLE {
 								};
 								const Magic::T_OutComingPacket<Magic::Events::Results::Auto::Point, sizeof(Magic::Events::Results::Auto::Point::T_RawData)> point_packet { point };
 
-								FILE* file = std::fopen(record_filepath.data(), "wb");
+								FILE* file = std::fopen(record_filepath.data(), "w");
 								if(file == nullptr) {
 									std::cout << "ERROR: BLE::Actions::Auto::start_saving: Could not open file for writing in the loop\n";
 									return;

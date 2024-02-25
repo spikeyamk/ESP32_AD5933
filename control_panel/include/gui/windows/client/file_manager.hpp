@@ -43,6 +43,7 @@ namespace GUI {
                 uint64_t total { 0 };
             };
             Bytes bytes {};
+            float progress_bar_fraction { 0.0f };
         public:
             Status get_status() const;
             FileManager() = default;
@@ -50,6 +51,7 @@ namespace GUI {
             ~FileManager();
             void draw(bool& enable, const ImGuiID side_id, Lock& lock);
         private:
+            void draw_table_rows();
             const std::optional<Lock> draw_inner();
             void list();
             void remove();

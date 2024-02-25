@@ -1,3 +1,5 @@
+#include <span>
+
 #include <trielo/trielo.hpp>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_video.h>
@@ -43,15 +45,23 @@ namespace GUI {
                 0x20, 0xFFFF, 0 
             };
 
+            // This is not a memory leak io.Fonts->AddFontFromMemoryTTF calls delete on this variable
             uint8_t* font = new uint8_t[ubuntu_sans_regular.size()];
             std::copy(ubuntu_sans_regular.begin(), ubuntu_sans_regular.end(), font);
-
             io.Fonts->AddFontFromMemoryTTF(font, ubuntu_sans_regular.size(), font_size_pixels_base * scale, nullptr, font_ranges_magic_load_all_utf8_glyphs);
-            ImGuiStyle& style = ImGui::GetStyle();
-            ImGuiStyle tmp_style = ImGuiStyle();
-            switch_imgui_theme(&tmp_style);
-            style = tmp_style;
-            style.ScaleAllSizes(scale);
+
+            decltype(ImGuiStyle::Colors) original_colors {};
+            for(size_t i = 0; i < sizeof(original_colors) / sizeof(original_colors[0]); i++) {
+                original_colors[i] = ImGui::GetStyle().Colors[i];
+            }
+
+            ImGui::GetStyle() = ImGuiStyle();
+
+            for(size_t i = 0; i < sizeof(original_colors) / sizeof(original_colors[0]); i++) {
+                ImGui::GetStyle().Colors[i] = original_colors[i];
+            }
+
+            ImGui::GetStyle().ScaleAllSizes(scale);
         }
 
         float get_scale() {

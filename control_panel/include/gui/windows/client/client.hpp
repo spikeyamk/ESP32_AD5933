@@ -28,6 +28,7 @@
 #include "gui/windows/client/auto.hpp"
 #include "gui/windows/client/plots/auto.hpp"
 #include "gui/windows/client/lock.hpp"
+#include "gui/top.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -52,7 +53,7 @@ namespace GUI {
             Windows::Plots::Auto auto_plots_window;
         public:
             Client(const std::string name, const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> parent_shm);
-            void draw(const ImGuiID center_id, MenuBarEnables &enables);
+            void draw(const ImGuiID center_id, Top::MenuBarEnables &enables);
         };
     }
 }
