@@ -31,12 +31,12 @@ namespace GUI {
         }
 
         const std::optional<Lock> Measure::draw_inner() {
-            if(status == Status::NotLoaded || status == Status::Measuring) {
+            if(status == Status::NotLoaded || status == Status::MeasuringSingle || status == Status::MeasuringPeriodic) {
                 ImGui::BeginDisabled();
                 draw_input_elements();
                 ImGui::EndDisabled();
 
-                if(status == Status::Measuring) {
+                if(status == Status::MeasuringSingle || status == Status::MeasuringPeriodic) {
                     ImGui::BeginDisabled();
                     ImGui::Button("Load");
                     ImGui::EndDisabled();
@@ -51,11 +51,22 @@ namespace GUI {
                 ImGui::BeginDisabled();
 
                 ImGui::Button("Single");
-                ImGui::Button("Periodic");
-                if(status == Status::Measuring) {
+                if(status == Status::MeasuringSingle) {
+                    ImGui::EndDisabled();
+
                     ImGui::SameLine();
-                    const float scale = GUI::Boilerplate::get_scale();
-                    Spinner::Spinner("Measuring", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                    ImGui::ProgressBar(progress_bar_fraction);
+
+                    ImGui::BeginDisabled();
+                }
+                ImGui::Button("Periodic");
+                if(status == Status::MeasuringPeriodic) {
+                    ImGui::EndDisabled();
+
+                    ImGui::SameLine();
+                    ImGui::ProgressBar(progress_bar_fraction);
+
+                    ImGui::BeginDisabled();
                 }
 
                 ImGui::EndDisabled();
@@ -80,7 +91,7 @@ namespace GUI {
                 }
             }
 
-            if(status == Status::Measuring) {
+            if(status == Status::MeasuringSingle || status == Status::MeasuringPeriodic) {
                 return Lock::Measure; 
             } else {
                 return std::nullopt;
@@ -279,7 +290,7 @@ namespace GUI {
         }
 
         void Measure::single() {
-            status = Status::Measuring;
+            status = Status::MeasuringSingle;
             std::jthread t1(single_cb, std::ref(*this));
             stop_source = t1.get_stop_source();
             t1.detach();
@@ -410,7 +421,7 @@ namespace GUI {
         }
 
         void Measure::periodic() {
-            status = Status::Measuring;
+            status = Status::MeasuringPeriodic;
             periodically_sweeping = true;
             std::jthread t1(periodic_cb, std::ref(*this));
             stop_source = t1.get_stop_source();

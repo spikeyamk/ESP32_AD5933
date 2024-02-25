@@ -55,9 +55,9 @@ namespace GUI {
             }
 
             void Calibration::update_vectors(
-                const AD5933::Config& config,
-                const std::vector<AD5933::Data>& raw_calibration,
-                const std::vector<AD5933::Calibration<float>>& calibration
+                const AD5933::Config config,
+                const std::vector<AD5933::Data> raw_calibration,
+                const std::vector<AD5933::Calibration<float>> calibration
             ) {
                 vectors.freq = config.get_freq_vector<float>();
 

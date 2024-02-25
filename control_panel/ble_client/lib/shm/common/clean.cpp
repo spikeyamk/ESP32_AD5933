@@ -45,9 +45,9 @@ namespace ns {
 
 namespace BLE_Client {
     namespace SHM {
-        static const std::optional<ns::SHM> read_json(const std::filesystem::path& shm_json_path) {
+        static const std::optional<ns::SHM> read_json(const boost::filesystem::path& shm_json_path) {
             try {
-                std::ifstream read_file { shm_json_path }; 
+                std::ifstream read_file { Names::json_path }; 
                 if(read_file.is_open() == false) {
                     return std::nullopt;
                 }
@@ -60,7 +60,7 @@ namespace BLE_Client {
             }
         }
 
-        void clean(const std::filesystem::path& self_path) {
+        void clean(const boost::filesystem::path& self_path) {
             /* Top SHM segment */
             #ifdef _MSC_VER
                 /* Stupid Windows */
@@ -104,7 +104,7 @@ namespace BLE_Client {
             /* Additional NotifyChannelsRX */
             const std::optional<ns::SHM> shm_names {
                 read_json(
-                    std::filesystem::path(self_path).replace_filename(std::string(Names::shm).append(Names::json_postfix))
+                    boost::filesystem::path(self_path).replace_filename(std::string(Names::shm).append(Names::json_postfix))
                 )
             };
             if(shm_names.has_value()) {

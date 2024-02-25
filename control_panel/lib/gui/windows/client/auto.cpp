@@ -6,6 +6,8 @@
 
 #include "misc/variant_tester.hpp"
 #include "magic/misc/gettimeofday.hpp"
+#include "imgui_custom/spinner.hpp"
+#include "gui/boilerplate.hpp"
 
 #include "gui/windows/client/auto.hpp"
 
@@ -27,25 +29,30 @@ namespace GUI {
                 if(ImGui::Button("Start Sending")) {
                     start_sending();
                 }
-                ImGui::SameLine();
                 if(ImGui::Button("Start Saving")) {
                     start_saving();
                 }
                 ImGui::BeginDisabled();
-                ImGui::SameLine();
                 ImGui::Button("Stop");
                 ImGui::EndDisabled();
             } else if(status == Status::Sending || status == Status::Saving) {
                 ImGui::BeginDisabled();
                 ImGui::Button("Start Sending");
-                ImGui::SameLine();
+                if(status == Status::Sending) {
+                    const float scale = GUI::Boilerplate::get_scale();
+                    ImGui::SameLine();
+                    Spinner::Spinner("SendingSinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                }
                 ImGui::Button("Start Saving");
+                if(status == Status::Saving) {
+                    const float scale = GUI::Boilerplate::get_scale();
+                    ImGui::SameLine();
+                    Spinner::Spinner("SavingSinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                }
                 ImGui::EndDisabled();
-                ImGui::SameLine();
                 if(ImGui::Button("Stop")) {
                     stop();
                 }
-
                 return Lock::Auto;
             }
 
@@ -80,6 +87,12 @@ namespace GUI {
 
         void Auto::start_saving() {
             status = Status::Saving;
+            shm->cmd.send(
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
+                    index,
+                    Magic::Events::Commands::Auto::Save{}
+                }
+            );
         }
 
         void Auto::start_sending() {
@@ -90,6 +103,15 @@ namespace GUI {
 
         void Auto::stop() {
             stop_source.request_stop();
+            if(status == Status::Saving) {
+                status = Status::Off;
+                shm->cmd.send(
+                    BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
+                        index,
+                        Magic::Events::Commands::Auto::End{}
+                    }
+                );
+            }
         }
 
         void Auto::sending_cb(std::stop_token st, Auto& self) {

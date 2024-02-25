@@ -45,6 +45,7 @@ set(BLE_CLIENT_SRCS
 	lib/esp32_ad5933.cpp
 	lib/cmd_listener.cpp
 	lib/child_main.cpp
+	"lib/shm/common/names.cpp"
 	lib/shm/child/specialized.cpp
 	lib/shm/child/child.cpp
 	lib/state_machines/adapter/adapter.cpp
@@ -105,6 +106,7 @@ if(BLE_CLIENT_TEST)
 	enable_testing()
 	set(TEST_SRCS 
 		"tests/tests.cpp"
+		"lib/shm/common/names.cpp"
 		lib/shm/common/clean.cpp
 		lib/shm/parent/specialized.cpp
 		lib/shm/parent/parent.cpp

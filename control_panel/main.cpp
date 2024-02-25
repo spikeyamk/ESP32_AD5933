@@ -1,15 +1,29 @@
 #include <boost/filesystem/path.hpp>
 
-#include <utf/utf.hpp>
-
 #include "gui/run.hpp"
 #include "ble_client/shm/common/clean.hpp"
 #include "ble_client/shm/parent/parent.hpp"
 #include "ble_client/child_main.hpp"
 
 int main(int argc, char* argv[]) {
-    // This ugly hack is needed in order for the path to work on Windows with UTF-16 special characters in the path and whitespace otherwise launching the child process will fail
-    static const boost::filesystem::path self_path { boost::filesystem::initial_path().append(boost::filesystem::path(argv[0]).filename()) };
+    static const boost::filesystem::path self_path {
+        #ifdef _MSC_VER
+        // This ugly hack is needed in order for the path to work on Windows with UTF-16 special characters in the path and whitespace otherwise launching the child process will fail
+        []() {
+            std::basic_string<boost::filesystem::path::value_type> ret;
+            ret.resize(MAX_PATH);
+            const DWORD nSize = GetModuleFileNameW(NULL, ret.data(), MAX_PATH);
+            if(nSize == 0) {
+                std::cout << "ERROR: GUI: GetModuleFileNameW(NULL, ret.data(), MAX_PATH); failed: Could not retrieve self_path\n";
+                std::exit(EXIT_FAILURE);
+            }
+            return ret;
+        }().data()
+        #else
+        argv[0]
+        #endif
+    };
+
     const std::string_view ble_client_magic_key { "okOvDRmWjEUErr3grKvWKpHw2Z0c8L5p6rjl5KT4HAoRGenjFFdPxegc43vCt8BR9ZdWJIPiaMaTYwhr6TMu4od0gHO3r1f7qTQ8pmaQtEm12SqT3IikKLdAsAI46N9E" };
     if(argc > 1 && argv[1] == ble_client_magic_key) {
         return BLE_Client::child_main();
@@ -20,7 +34,7 @@ int main(int argc, char* argv[]) {
         shm = std::make_shared<BLE_Client::SHM::ParentSHM>();
     } catch(const boost::interprocess::interprocess_exception& e) {
         std::cout << "ERROR: GUI: Failed to open SHM: exception: " << e.what() << std::endl;
-        BLE_Client::SHM::clean(std::filesystem::path(self_path.string()));
+        BLE_Client::SHM::clean(self_path.string());
         try {
             shm = std::make_shared<BLE_Client::SHM::ParentSHM>();
         } catch(const boost::interprocess::interprocess_exception& e) {
@@ -29,7 +43,13 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    boost::process::child ble_client { self_path, ble_client_magic_key.data() };
+    boost::process::child ble_client;
+    try {
+        ble_client = std::move(boost::process::child { self_path, ble_client_magic_key.data() });
+    } catch(const boost::interprocess::interprocess_exception& e) {
+        std::cout << "ERROR: GUI: Failed to open ble_client child process: exception: " << e.what() << std::endl;
+        return EXIT_FAILURE;
+    }
 
     bool done { false };
     GUI::run(done, ble_client, shm);

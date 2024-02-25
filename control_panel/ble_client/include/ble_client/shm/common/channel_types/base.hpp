@@ -115,7 +115,7 @@ namespace BLE_Client {
             void add_names_to_json() const {
                 const ns::Channel channel { mutex_name, condition_name };
                 try {
-                    std::ifstream input_file { std::string(Names::shm).append(Names::json_postfix) };
+                    std::ifstream input_file { Names::json_path };
                     if(input_file.is_open()) {
                         json loaded_shm_json_names;
                         input_file >> loaded_shm_json_names;
@@ -129,14 +129,14 @@ namespace BLE_Client {
                             }
                         ) == loaded_shm_names.channels.channels_vector.end()) {
                             loaded_shm_names.channels.channels_vector.push_back(channel);
-                            std::ofstream output_file { std::string(Names::shm).append(Names::json_postfix) };
+                            std::ofstream output_file { Names::json_path };
                             const json new_shm_json_names { loaded_shm_names };
                             output_file << std::setw(4) << new_shm_json_names;
                         }
                     } else {
                         const ns::SHM shm_names { ns::Channels { std::vector<ns::Channel> { channel } } };
                         const json shm_names_json { shm_names };
-                        std::ofstream output_file { std::string(Names::shm).append(Names::json_postfix) };
+                        std::ofstream output_file { Names::json_path };
                         output_file << std::setw(4) << shm_names_json;
                     }
                 } catch(const std::exception& e) {
@@ -144,7 +144,7 @@ namespace BLE_Client {
                     try {
                         const ns::SHM shm_names { std::vector<ns::Channel> { channel } };
                         const json shm_names_json { shm_names };
-                        std::ofstream output_file { std::string(Names::shm).append(Names::json_postfix) };
+                        std::ofstream output_file { Names::json_path };
                         output_file << std::setw(4) << shm_names_json;
                     } catch(...) {
                         std::cout << "ERROR: BLE_Client::SHM::T_ScopedChannel::add_names_to_json: complete disaster exception: " << std::endl;

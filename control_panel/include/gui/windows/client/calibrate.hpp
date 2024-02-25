@@ -6,8 +6,8 @@
 #include <cstddef>
 #include <vector>
 #include <stop_token>
-#include <atomic>
 #include <optional>
+#include <mutex>
 
 #include "imgui.h"
 
@@ -84,12 +84,12 @@ namespace GUI {
             std::stop_source stop_source;
             std::shared_ptr<BLE_Client::SHM::ParentSHM> shm;
         public:
-            std::vector<AD5933::Data> raw_calibration;
-            std::vector<AD5933::Calibration<float>> calibration;
+            std::vector<AD5933::Data> raw_calibration {};
+            std::vector<AD5933::Calibration<float>> calibration {};
         private:
             Status status { Status::NotCalibrated };
             ns::CalibrationFile calibration_file;
-
+            float progress_bar_fraction { 0.0f };
         public:
             Calibrate(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm);
             ~Calibrate();

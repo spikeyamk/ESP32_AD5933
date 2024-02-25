@@ -4,6 +4,7 @@
 #include <vector>
 #include <filesystem>
 
+#include <boost/filesystem.hpp>
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
@@ -33,6 +34,6 @@ namespace ns {
 
 namespace BLE_Client {
     namespace SHM {
-        void clean(const std::filesystem::path& self_path);
+        void clean(const boost::filesystem::path& initial_path);
     }
 }

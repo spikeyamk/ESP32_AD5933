@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-set(CURRENT_PROJECT_NAME "esp32_ad5933_control_panel")
+set(CURRENT_PROJECT_NAME "control_panel")
 project(${CURRENT_PROJECT_NAME} C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 23)
@@ -47,10 +47,11 @@ find_package(Boost REQUIRED COMPONENTS date_time filesystem)
 set(BOOST_SML_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/sml_wrapper/sml)
 add_subdirectory(${BOOST_SML_DIR} ${CMAKE_BINARY_DIR}/sml)
 
+# This is disabled because we embed the font in the binary
 #configure_file(
 #	${CMAKE_CURRENT_LIST_DIR}/misc/UbuntuSans-Regular.ttf
-#    ${CMAKE_BINARY_DIR}/UbuntuSans-Regular.ttf
-#    COPYONLY
+#	${CMAKE_BINARY_DIR}/UbuntuSans-Regular.ttf
+#	COPYONLY
 #)
 
 set(IMGUI_SRCS
@@ -86,14 +87,12 @@ add_subdirectory(${SEMVER_DIR})
 add_library(mbits::semver ALIAS semver)
 add_subdirectory(${UTFCONV_DIR})
 
-set(BLE_CLIENT_TEST ON)
-list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
-enable_testing()
 add_subdirectory(${BLE_CLIENT_DIR})
 
 set(GUI_SRCS
 	main.cpp
 	ble_client/lib/shm/common/clean.cpp
+	"ble_client/lib/shm/common/names.cpp"
 	ble_client/lib/shm/parent/specialized.cpp
 	ble_client/lib/shm/parent/parent.cpp
 	lib/imgui_custom/spinner.cpp
@@ -169,25 +168,28 @@ if(WIN32)
 	target_compile_definitions(${CURRENT_PROJECT_NAME} PRIVATE _WIN32_WINNT=0x0A00)
 endif()
 
-set(SHM_CLEANER shm_cleaner)
+if(SHM_CLEANER)
+	set(SHM_CLEANER shm_cleaner)
 
-add_executable(${SHM_CLEANER}
-	misc/shm_cleaner.cpp
-	ble_client/lib/shm/common/clean.cpp
-)
+	add_executable(${SHM_CLEANER}
+		misc/shm_cleaner.cpp
+		"ble_client/lib/shm/common/names.cpp"
+		ble_client/lib/shm/common/clean.cpp
+	)
 
-target_link_libraries(${SHM_CLEANER} PRIVATE
-	trielo
-	nlohmann_json
-	magic
-    ${Boost_LIBRARIES}
-)
+	target_link_libraries(${SHM_CLEANER} PRIVATE
+		trielo
+		nlohmann_json
+		magic
+		${Boost_LIBRARIES}
+	)
 
-target_include_directories(${SHM_CLEANER} PRIVATE
-	${CMAKE_CURRENT_LIST_DIR}/ble_client/include
-    ${Boost_INCLUDE_DIRS}
-)
+	target_include_directories(${SHM_CLEANER} PRIVATE
+		${CMAKE_CURRENT_LIST_DIR}/ble_client/include
+		${Boost_INCLUDE_DIRS}
+	)
 
-if(WIN32)
-	target_compile_definitions(${SHM_CLEANER} PRIVATE _WIN32_WINNT=0x0A00)
+	if(WIN32)
+		target_compile_definitions(${SHM_CLEANER} PRIVATE _WIN32_WINNT=0x0A00)
+	endif()
 endif()

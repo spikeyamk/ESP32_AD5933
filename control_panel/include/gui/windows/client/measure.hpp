@@ -68,7 +68,8 @@ namespace GUI {
             enum class Status {
                 NotLoaded,
                 Loaded,
-                Measuring,
+                MeasuringSingle,
+                MeasuringPeriodic,
                 Failed,
             };
             Status status { Status::NotLoaded };

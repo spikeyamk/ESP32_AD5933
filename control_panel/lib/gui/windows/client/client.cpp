@@ -2,7 +2,6 @@
 
 #include "imgui_internal.h"
 
-#include "imgui_custom/spinner.hpp"
 #include "gui/boilerplate.hpp"
 
 #include "gui/windows/client/client.hpp"

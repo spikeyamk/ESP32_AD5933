@@ -36,9 +36,9 @@ namespace GUI {
                 Calibration(size_t index);
                 void draw(bool& enable, const ImGuiID side_id);
                 void update_vectors(
-                    const AD5933::Config& config,
-                    const std::vector<AD5933::Data>& raw_calibration,
-                    const std::vector<AD5933::Calibration<float>>& calibration
+                    const AD5933::Config config,
+                    const std::vector<AD5933::Data> raw_calibration,
+                    const std::vector<AD5933::Calibration<float>> calibration
                 );
             private:
                 void draw_raw_data();

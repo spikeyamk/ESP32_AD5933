@@ -204,8 +204,6 @@ namespace GUI {
             ImGui::Input_uint32_t("System Clock Frequency [Hz]", &inputs.numeric_values.sysclk_freq, 0, 0, ImGuiInputTextFlags_ReadOnly);
         }
 
-        double* progress_bar_fraction { new double(0.0) };
-
         const std::optional<Lock> Calibrate::draw_inner() {
             ImGui::Text("Sweep Parameters");
             ImGui::Separator();
@@ -230,10 +228,7 @@ namespace GUI {
 
             if(status == Status::Calibrating) {
                 ImGui::SameLine();
-                const float scale = GUI::Boilerplate::get_scale();
-                Spinner::Spinner("Scanning", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
-                ImGui::SameLine();
-                ImGui::ProgressBar(*progress_bar_fraction, ImVec2(-FLT_MIN, 0), nullptr);
+                ImGui::ProgressBar(progress_bar_fraction, ImVec2(-FLT_MIN, 0), nullptr);
             }
 
             if(status != Status::Calibrated) {
@@ -294,7 +289,7 @@ namespace GUI {
             );
 
             const uint16_t wished_size = self.config.get_num_of_inc().unwrap() + 1;
-            const double progress_bar_step = 1.0 / static_cast<double>(wished_size);
+            const float progress_bar_step = 1.0 / static_cast<double>(wished_size);
             const float timeout_ms =
                 (1.0f / static_cast<float>(self.config.get_start_freq().unwrap())) 
                 * static_cast<float>(self.config.get_settling_time_cycles_number().unwrap())
@@ -357,8 +352,7 @@ namespace GUI {
                     return;
                 }
                 
-                *progress_bar_fraction += progress_bar_step;
-                std::cout << "self.progress_bar_fraction: %f" << *progress_bar_fraction << std::endl;
+                self.progress_bar_fraction += progress_bar_step;
             } while(tmp_calibration.size() != wished_size);
 
             self.raw_calibration = tmp_raw_calibration;
@@ -379,7 +373,7 @@ namespace GUI {
         
         void Calibrate::calibrate() {
             status = Status::Calibrating;
-            *progress_bar_fraction = 0.0;
+            progress_bar_fraction = 0.0f;
             std::jthread t1(calibrate_cb, std::ref(*this));
             stop_source = t1.get_stop_source();
             t1.detach();
