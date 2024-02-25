@@ -292,7 +292,7 @@ namespace GUI {
                 const size_t wished_size = static_cast<size_t>(std::ceil(static_cast<float>(self.list_table.sizes[self.selected.value()].num_of_bytes) / static_cast<float>(sizeof(Magic::T_MaxDataSlice))));
                 download_slices.reserve(wished_size);
                 while(download_slices.size() < wished_size) {
-                    const auto download_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(5'000)) };
+                    const auto download_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(60'000)) };
                     if(download_payload.has_value() == false) {
                         std::cout << "ERROR: GUI::Windows::FileManager::download_cb: failed to retreive download_payload: timeout\n";
                         self.status = Status::Failed;

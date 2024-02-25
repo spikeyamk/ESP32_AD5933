@@ -75,6 +75,9 @@
         "typeinfo": "cpp",
         "variant": "cpp",
         "regex": "cpp",
-        "filesystem": "cpp"
+        "filesystem": "cpp",
+        "ble_hs.h": "c",
+        "ble_hs_mbuf.h": "c",
+        "ble_hs_priv.h": "c"
     }
 }

@@ -50,8 +50,11 @@ namespace BLE {
 			Util::Blinky::get_instance().set_blink_time(std::chrono::milliseconds(500));
 		};
 
-		void disconnect() {
-
+		void disconnect(StopSources& stop_sources) {
+			stop_sources.download = false;
+			stop_sources.run = false;
+			stop_sources.save = false;
+			stop_sources.send = false;
 		};
 
 		void unexpected() {
@@ -117,28 +120,31 @@ namespace BLE {
 			}
 
 			//static void run(Sender &sender, AD5933::Extension &ad5933, boost::sml::back::process<Events::FreqSweep::Private::sweep_complete> process_event) {
-			void run(std::atomic<bool> &processing, std::shared_ptr<Server::Sender> &sender, AD5933::Extension &ad5933) {
-				std::unique_lock lock(sender->mutex);
-				processing = true;
-				ad5933.reset();
-				ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::StandbyMode);
-				ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::InitStartFreq);
-				ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::StartFreqSweep);
-				do {
-					while(ad5933.has_status_condition(AD5933::Masks::Or::Status::ValidData) == false) {
-						std::this_thread::sleep_for(std::chrono::milliseconds(1));
-					}
-					const auto data { ad5933.read_impe_data() };
-					if(data.has_value()) {
-						const Magic::Events::Results::Sweep::ValidData valid_data_event { data.value() };
-						const Magic::OutComingPacket<Magic::Events::Results::Sweep::ValidData> valid_data_packet { valid_data_event };
-						sender->notify_hid_information(valid_data_packet);
-					}
-					ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::IncFreq);
-				} while(ad5933.has_status_condition(AD5933::Masks::Or::Status::FreqSweepComplete) == false);
-				
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-				processing = false;
+			void run(std::atomic<bool> &processing, std::shared_ptr<Server::Sender> &sender, AD5933::Extension &ad5933, StopSources& stop_sources) {
+				std::thread([](std::shared_ptr<Server::Sender> sender, std::atomic<bool> &processing, AD5933::Extension &ad5933, StopSources& stop_sources) {
+					stop_sources.run = true;
+					std::unique_lock lock(sender->mutex);
+					processing = true;
+					ad5933.reset();
+					ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::StandbyMode);
+					ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::InitStartFreq);
+					ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::StartFreqSweep);
+					do {
+						while(ad5933.has_status_condition(AD5933::Masks::Or::Status::ValidData) == false) {
+							std::this_thread::sleep_for(std::chrono::milliseconds(1));
+						}
+						const auto data { ad5933.read_impe_data() };
+						if(data.has_value()) {
+							const Magic::Events::Results::Sweep::ValidData valid_data_event { data.value() };
+							const Magic::OutComingPacket<Magic::Events::Results::Sweep::ValidData> valid_data_packet { valid_data_event };
+							sender->notify_hid_information(valid_data_packet);
+						}
+						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::IncFreq);
+					} while(ad5933.has_status_condition(AD5933::Masks::Or::Status::FreqSweepComplete) == false && stop_sources.run);
+					
+					std::this_thread::sleep_for(std::chrono::milliseconds(1));
+					processing = false;
+				}, sender, std::ref(processing), std::ref(ad5933), std::ref(stop_sources)).detach();
 			}
 
 			void end() {
@@ -244,31 +250,36 @@ namespace BLE {
 				unlink(path.data());
 			}
 
-			void download(const Magic::Events::Commands::File::Download& event, std::shared_ptr<Server::Sender> &sender) {
-				try {
-					std::array<char, SD_Card::mount_point_prefix.size() + sizeof(Magic::T_MaxDataSlice)> path;
-					std::copy(SD_Card::mount_point_prefix.begin(), SD_Card::mount_point_prefix.end(), path.begin());
-					std::copy(event.path.begin(), event.path.end(), path.begin() + SD_Card::mount_point_prefix.size());
+			void download(const Magic::Events::Commands::File::Download& event, std::shared_ptr<Server::Sender> &sender, StopSources& stop_sources) {
+				std::thread([](const Magic::Events::Commands::File::Download event, std::shared_ptr<Server::Sender> sender, StopSources& stop_sources) {
+					try {
+						stop_sources.download = true;
+						std::array<char, SD_Card::mount_point_prefix.size() + sizeof(Magic::T_MaxDataSlice)> path;
+						std::copy(SD_Card::mount_point_prefix.begin(), SD_Card::mount_point_prefix.end(), path.begin());
+						std::copy(event.path.begin(), event.path.end(), path.begin() + SD_Card::mount_point_prefix.size());
 
-					FILE* file = std::fopen(path.data(), "rb");
-					if(file == NULL) {
-						return;
+						FILE* file = std::fopen(path.data(), "rb");
+						if(file == NULL) {
+							std::cout << "BLE::Actions::File::download: failed to pen file: " << std::string_view{ reinterpret_cast<const char*>(path.data()), path.size() } << std::endl;
+							return;
+						}
+
+						Magic::T_MaxDataSlice tmp_slice { 0 };
+						while(std::fread(tmp_slice.data(), 1, tmp_slice.size(), file) && stop_sources.download) {
+							const Magic::Events::Results::File::Download download_event { .slice = tmp_slice };
+							const Magic::OutComingPacket<Magic::Events::Results::File::Download> download_packet { download_event };
+							while(sender->notify_hid_information(download_packet) == false) {
+								std::this_thread::sleep_for(std::chrono::milliseconds(1));
+							}
+							tmp_slice = Magic::T_MaxDataSlice { 0 };
+							std::this_thread::sleep_for(std::chrono::milliseconds(1));
+						}
+
+						std::fclose(file);
+					} catch(...) {
+
 					}
-
-					Magic::T_MaxDataSlice tmp_slice { 0 };
-					while(std::fread(tmp_slice.data(), 1, tmp_slice.size(), file)) {
-						const Magic::Events::Results::File::Download download_event { .slice = tmp_slice };
-						const Magic::OutComingPacket<Magic::Events::Results::File::Download> download_packet { download_event };
-						std::cout << "BLE::Actions::File::download: tmp_slice: \n\t" << std::string_view{ reinterpret_cast<const char*>(tmp_slice.data()), tmp_slice.size() } << std::endl;
-						sender->notify_hid_information(download_packet);
-						tmp_slice = Magic::T_MaxDataSlice { 0 };
-						std::this_thread::sleep_for(std::chrono::milliseconds(100));
-					}
-
-					std::fclose(file);
-				} catch(...) {
-
-				}
+				}, event, sender, std::ref(stop_sources)).detach();
 			}
 
 			void upload(const Magic::Events::Commands::File::Upload& event) {

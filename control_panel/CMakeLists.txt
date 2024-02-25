@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-set(CURRENT_PROJECT_NAME "gui")
+set(CURRENT_PROJECT_NAME "esp32_ad5933_control_panel")
 project(${CURRENT_PROJECT_NAME} C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 23)

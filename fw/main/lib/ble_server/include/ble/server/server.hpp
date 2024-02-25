@@ -31,6 +31,8 @@ namespace BLE {
     }
 
 	struct StopSources {
+		bool run { false };
+		bool download { false };
 		bool save { false };
 		bool send { false };
 	};
@@ -116,7 +118,7 @@ namespace BLE {
 		void advertise();
 		void advertising();
 		void set_connected_blink_time();
-		void disconnect();
+		void disconnect(StopSources& stop_sources);
 		void unexpected();
 		void sleep();
 		void wakeup();
@@ -132,7 +134,7 @@ namespace BLE {
 			//static void configure(bool &processing, AD5933::Extension &ad5933, const Events::FreqSweep::configure &configure_event, boost::sml::back::process<Events::FreqSweep::Private::configure_complete> process_event) {
 			void configure(std::atomic<bool> &processing, AD5933::Extension &ad5933, const Magic::Events::Commands::Sweep::Configure &configure_event);
 			//static void run(Sender &sender, AD5933::Extension &ad5933, boost::sml::back::process<Events::FreqSweep::Private::sweep_complete> process_event) {
-			void run(std::atomic<bool> &processing, std::shared_ptr<Server::Sender>& sender, AD5933::Extension &ad5933);
+			void run(std::atomic<bool> &processing, std::shared_ptr<Server::Sender> &sender, AD5933::Extension &ad5933, StopSources& stop_sources);
 			void end();
 		}
 
@@ -142,7 +144,7 @@ namespace BLE {
 			void list(std::shared_ptr<Server::Sender>& sender);
 			void size(const Magic::Events::Commands::File::Size& event, std::shared_ptr<Server::Sender>& sender);
 			void remove(const Magic::Events::Commands::File::Remove& event);
-			void download(const Magic::Events::Commands::File::Download& event, std::shared_ptr<Server::Sender>& sender);
+			void download(const Magic::Events::Commands::File::Download& event, std::shared_ptr<Server::Sender> &sender, StopSources& stop_sources);
 			void upload(const Magic::Events::Commands::File::Upload& event);
 		}
 
