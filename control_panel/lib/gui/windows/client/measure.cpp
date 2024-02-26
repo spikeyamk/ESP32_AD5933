@@ -104,7 +104,7 @@ namespace GUI {
                 first = false;
             }
 
-            if(ImGui::Begin((const char*) name.c_str(), &enable) == false) {
+            if(ImGui::Begin((const char*) name.c_str(), &enable, ImGuiWindowFlags_NoMove) == false) {
                 ImGui::End();
                 return;
             }

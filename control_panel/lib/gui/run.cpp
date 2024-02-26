@@ -50,8 +50,6 @@ namespace GUI {
             renderer = std::get<1>(ret);
         }
 
-        const ImVec4 clear_color { 0.45f, 0.55f, 0.60f, 1.00f };
-
         Boilerplate::process_events(done, window, renderer);
         Boilerplate::start_new_frame();
         Top top;
@@ -76,7 +74,7 @@ namespace GUI {
             shm
         );
         console.draw();
-        Boilerplate::render(renderer, clear_color);
+        Boilerplate::render(renderer);
 
         while(
             done == false
@@ -115,7 +113,7 @@ namespace GUI {
                 ImGui::ShowDemoWindow();
             }
 
-            Boilerplate::render(renderer, clear_color);
+            Boilerplate::render(renderer);
         }
         Boilerplate::shutdown(renderer, window);
 

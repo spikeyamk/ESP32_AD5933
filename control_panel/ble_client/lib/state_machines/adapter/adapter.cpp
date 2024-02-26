@@ -49,12 +49,11 @@ namespace BLE_Client {
                 bool discovery_available(SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm) {
                     try {
                         adapter.set_callback_on_scan_start([shm]() {
-                            shm->console.log("BLE_Client::Scan started\n");
+                            shm->console.log("BLE_Client::callback_on_scan_start\n");
                             shm->discovery_devices->clear();
                         });
                         adapter.set_callback_on_scan_stop([shm]() { shm->console.log("BLE_Client::Scan stopped\n"); });
                         adapter.set_callback_on_scan_found([shm](SimpleBLE::Peripheral found_peripheral) {
-                            shm->console.log("BLE_Client::callback_on_scan_found.\n");
                             if(std::find_if(shm->discovery_devices->begin(), shm->discovery_devices->end(), [&found_peripheral, shm](const BLE_Client::Discovery::Device& e) {
                                 shm->console.log("BLE_Client::callback_on_scan_found: inside std::find_if\n");
                                 return e.get_address() == found_peripheral.address();
@@ -76,8 +75,8 @@ namespace BLE_Client {
                         });
                         
                         adapter.set_callback_on_scan_updated([shm](SimpleBLE::Peripheral found_peripheral) {
-                            shm->console.log("BLE_Client::callback_on_scan_updated.\n");
-                            auto it = std::find_if(shm->discovery_devices->begin(), shm->discovery_devices->end(), [&found_peripheral](const BLE_Client::Discovery::Device& e) {
+                            auto it = std::find_if(shm->discovery_devices->begin(), shm->discovery_devices->end(), [&found_peripheral, shm](const BLE_Client::Discovery::Device& e) {
+                                shm->console.log("BLE_Client::callback_on_scan_updated: inside std::find_if\n");
                                 return e.get_address() == found_peripheral.address();
                             });
 

@@ -1,5 +1,3 @@
-#include <boost/filesystem/path.hpp>
-
 #include "gui/run.hpp"
 #include "ble_client/shm/common/clean.hpp"
 #include "ble_client/shm/parent/parent.hpp"
@@ -8,12 +6,11 @@
 int main(int argc, char* argv[]) {
     static const boost::filesystem::path self_path {
         #ifdef _MSC_VER
-        // This ugly hack is needed in order for the path to work on Windows with UTF-16 special characters in the path and whitespace otherwise launching the child process will fail
+        // This is needed in order for the path to work on Windows with UTF-16 special characters (Windows uses const wchar_t* for paths) in the path and whitespace otherwise launching the child process will fail
         []() {
             std::basic_string<boost::filesystem::path::value_type> ret;
             ret.resize(MAX_PATH);
-            const DWORD nSize = GetModuleFileNameW(NULL, ret.data(), MAX_PATH);
-            if(nSize == 0) {
+            if(GetModuleFileNameW(NULL, ret.data(), MAX_PATH) == 0) {
                 std::cout << "ERROR: GUI: GetModuleFileNameW(NULL, ret.data(), MAX_PATH); failed: Could not retrieve self_path\n";
                 std::exit(EXIT_FAILURE);
             }
@@ -24,10 +21,12 @@ int main(int argc, char* argv[]) {
         #endif
     };
 
-    const std::string_view ble_client_magic_key { "okOvDRmWjEUErr3grKvWKpHw2Z0c8L5p6rjl5KT4HAoRGenjFFdPxegc43vCt8BR9ZdWJIPiaMaTYwhr6TMu4od0gHO3r1f7qTQ8pmaQtEm12SqT3IikKLdAsAI46N9E" };
+    static constexpr std::string_view ble_client_magic_key { "okOvDRmWjEUErr3grKvWKpHw2Z0c8L5p6rjl5KT4HAoRGenjFFdPxegc43vCt8BR9ZdWJIPiaMaTYwhr6TMu4od0gHO3r1f7qTQ8pmaQtEm12SqT3IikKLdAsAI46N9E" };
     if(argc > 1 && argv[1] == ble_client_magic_key) {
         return BLE_Client::child_main();
     }
+
+    std::atexit([]() { std::cout << "Control Panel: GUI: Parent process finished\n"; });
 
     std::shared_ptr<BLE_Client::SHM::ParentSHM> shm { nullptr };
     try {
@@ -54,10 +53,12 @@ int main(int argc, char* argv[]) {
     bool done { false };
     GUI::run(done, ble_client, shm);
 
-    for(size_t i = 0; i < 60'000 && ble_client.running(); i++) {
+    for(size_t i = 0, timeout = 60'000; i < timeout && ble_client.running(); i++) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::cout << "ERROR: GUI: Child process had trouble exiting: timeout: " << timeout << " ms i: " << i << " ms" << std::endl;
     }
     if(ble_client.running()) {
+        std::cout << "ERROR: GUI: Waiting for child process to exit failed: timeout: killing it right now." << std::endl;
         ble_client.terminate();
     }
     return EXIT_SUCCESS;

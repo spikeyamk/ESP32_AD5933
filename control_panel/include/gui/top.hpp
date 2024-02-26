@@ -42,6 +42,9 @@ namespace GUI {
                 "300%\0"
             };
         };
+        bool settings_clicked { false };
+        bool about_clicked { false };
+        bool legal_clicked { false };
     public:
         struct MenuBarEnables {
             bool ble_adapter { true };
@@ -62,8 +65,10 @@ namespace GUI {
     private:
         void draw_about_page();
         void draw_settings();
-        void save_settings();
+        void draw_legal() const;
+        void draw_license(const char* name, const char* license) const;
     private:
+        void save_settings();
         void update_theme();
         void update_scale();
     };

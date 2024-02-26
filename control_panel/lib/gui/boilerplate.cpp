@@ -16,18 +16,19 @@
 
 namespace GUI {
     namespace Boilerplate {
-        static const auto sdl_error_lambda = []() {
-            std::cout << SDL_GetError() << std::endl;
+        const std::function<void()> sdl_error_lambda {
+            []() {
+                std::cout << SDL_GetError() << std::endl;
+            }
         };
 
         bool respect_system_theme { true };
-        Uint32 event_user_scale_event_type { (Uint32)(-1) };
         inline void switch_imgui_theme() {
             if(respect_system_theme == false) {
                 return;
             }
 
-            switch(SDL_GetSystemTheme()) {
+            switch(Trielo::trielo<SDL_GetSystemTheme>()) {
                 case SDL_SYSTEM_THEME_DARK:
                     ImGui::StyleColorsDark();
                     break;
@@ -45,10 +46,9 @@ namespace GUI {
                 0x20, 0xFFFF, 0 
             };
 
-            // This is not a memory leak io.Fonts->AddFontFromMemoryTTF calls delete on this variable
-            uint8_t* font = new uint8_t[ubuntu_sans_regular.size()];
+            uint8_t* font = new uint8_t[ubuntu_sans_regular.size()]; // This is not a memory leak io.Fonts->AddFontFromMemoryTTF calls delete on this variable
             std::copy(ubuntu_sans_regular.begin(), ubuntu_sans_regular.end(), font);
-            io.Fonts->AddFontFromMemoryTTF(font, ubuntu_sans_regular.size(), font_size_pixels_base * scale, nullptr, font_ranges_magic_load_all_utf8_glyphs);
+            io.Fonts->AddFontFromMemoryTTF(font, static_cast<int>(ubuntu_sans_regular.size()), font_size_pixels_base * scale, nullptr, font_ranges_magic_load_all_utf8_glyphs);
 
             decltype(ImGuiStyle::Colors) original_colors {};
             for(size_t i = 0; i < sizeof(original_colors) / sizeof(original_colors[0]); i++) {
@@ -69,7 +69,7 @@ namespace GUI {
         }
 
         bool respect_system_scale { true };
-        static inline void set_sdl_scale(const float sdl_scale) {
+        void set_sdl_scale(const float sdl_scale) {
             if(respect_system_scale == false) {
                 return;
             }
@@ -78,11 +78,13 @@ namespace GUI {
         }
 
         std::tuple<SDL_Window*, SDL_Renderer*> init() {
-            Trielo::trieloxit_lambda<SDL_Init>(Trielo::OkErrCode(0), sdl_error_lambda, SDL_INIT_VIDEO);
+            if(Trielo::trielo_lambda<SDL_Init>(Trielo::OkErrCode(0), sdl_error_lambda, SDL_INIT_VIDEO) != 0) {
+                return { nullptr, nullptr };
+            }
             Trielo::trielo_lambda<SDL_SetHint>(Trielo::OkErrCode(SDL_bool{SDL_TRUE}), sdl_error_lambda, SDL_HINT_IME_SHOW_UI, "1");
 
             Trielo::trielo<NFD::Init>(Trielo::OkErrCode(NFD_OKAY));
-            event_user_scale_event_type = SDL_RegisterEvents(1);
+            Trielo::trielo<SDL_RegisterEvents>(Trielo::OkErrCode(static_cast<Uint32>(SDL_EVENT_USER)), 1);
 
             static constexpr Uint32 window_flags = (
                 SDL_WINDOW_RESIZABLE
@@ -90,38 +92,55 @@ namespace GUI {
                 | SDL_WINDOW_MAXIMIZED
                 | SDL_WINDOW_HIDDEN
             );
-            SDL_Window* window = Trielo::trieloxit_lambda<SDL_CreateWindow>(
-                Trielo::FailErrCode(static_cast<SDL_Window*>(nullptr)),
-                sdl_error_lambda,
-                "AD5933",
-                1280,
-                720,
-                window_flags
-            );
+            SDL_Window* window { nullptr };
+            if(
+                (
+                    window = Trielo::trielo_lambda<SDL_CreateWindow>(
+                        Trielo::FailErrCode(static_cast<SDL_Window*>(nullptr)),
+                        sdl_error_lambda,
+                        "AD5933",
+                        1280,
+                        720,
+                        window_flags
+                    )
+                )
+            == nullptr) {
+                return { nullptr, nullptr };
+            }
 
-            static constexpr Uint32 renderer_flags = (
+            static const Uint32 renderer_flags = (
 		        SDL_RENDERER_ACCELERATED
                 | SDL_RENDERER_PRESENTVSYNC
             );
-            SDL_Renderer* renderer = Trielo::trieloxit_lambda<SDL_CreateRenderer>(
-                Trielo::FailErrCode(static_cast<SDL_Renderer*>(nullptr)),
-                sdl_error_lambda,
-                window,
-                nullptr,
-                renderer_flags 
-            );
+
+            SDL_Renderer* renderer { nullptr };
+            if(
+                (
+                    renderer = Trielo::trielo_lambda<SDL_CreateRenderer>(
+                        Trielo::FailErrCode(static_cast<SDL_Renderer*>(nullptr)),
+                        sdl_error_lambda,
+                        window,
+                        nullptr,
+                        renderer_flags 
+                    )
+                ) 
+            == nullptr) {
+                return { nullptr, nullptr };
+            }
+
             {
                 SDL_RendererInfo info;
-                Trielo::trielo_lambda<SDL_GetRendererInfo>(
+                if(Trielo::trielo_lambda<SDL_GetRendererInfo>(
                     Trielo::OkErrCode(0),
                     sdl_error_lambda,
                     renderer,
                     &info
-                );
-                std::printf("Current SDL_Renderer: %s\n", info.name);
+                ) == 0) {
+                    std::printf("GUI::Boilerplate::init: Current SDL_Renderer: %s\n", info.name);
+                }
             }
 
-            Trielo::trieloxit<ImGui::DebugCheckVersionAndDataLayout>(
+            if(Trielo::trielo<ImGui::DebugCheckVersionAndDataLayout>(
                 Trielo::OkErrCode(true),
                 IMGUI_VERSION,
                 sizeof(ImGuiIO),
@@ -130,20 +149,34 @@ namespace GUI {
                 sizeof(ImVec4),
                 sizeof(ImDrawVert),
                 sizeof(ImDrawIdx)
-            );
-            Trielo::trieloxit<ImGui::CreateContext>(Trielo::FailErrCode(static_cast<ImGuiContext*>(nullptr)), static_cast<ImFontAtlas*>(nullptr));
-            Trielo::trieloxit<ImPlot::CreateContext>(Trielo::FailErrCode(static_cast<ImPlotContext*>(nullptr)));
+            ) == false) {
+                return { nullptr, nullptr };
+            }
+            if(Trielo::trielo<ImGui::CreateContext>(Trielo::FailErrCode(static_cast<ImGuiContext*>(nullptr)), static_cast<ImFontAtlas*>(nullptr)) == nullptr) {
+                return { nullptr, nullptr };
+            }
+            if(Trielo::trielo<ImPlot::CreateContext>(Trielo::FailErrCode(static_cast<ImPlotContext*>(nullptr))) == nullptr) {
+                return { nullptr, nullptr };
+            }
 
             ImGuiIO& io = ImGui::GetIO();
             io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_DockingEnable;
             io.IniFilename = nullptr;
 
-            ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
-            ImGui_ImplSDLRenderer3_Init(renderer);
-            switch_imgui_theme();
-            set_scale(SDL_GetWindowDisplayScale(window));
+            if(Trielo::trielo<ImGui_ImplSDL3_InitForSDLRenderer>(Trielo::OkErrCode(true), window, renderer) == false) {
+                return { nullptr, nullptr };
+            }
+            if(Trielo::trielo<ImGui_ImplSDLRenderer3_Init>(Trielo::OkErrCode(true), renderer) == false) {
+                return { nullptr, nullptr };
+            }
 
-            Trielo::trielo_lambda<SDL_ShowWindow>(Trielo::OkErrCode(0), sdl_error_lambda, window);
+            Trielo::trielo<switch_imgui_theme>();
+            Trielo::trielo<set_scale>(Trielo::trielo_lambda<SDL_GetWindowDisplayScale>(Trielo::FailErrCode(0.0f), sdl_error_lambda, window));
+
+            if(Trielo::trielo_lambda<SDL_ShowWindow>(Trielo::OkErrCode(0), sdl_error_lambda, window) != 0) {
+                return { nullptr, nullptr };
+            }
+
             return std::tuple { window, renderer };
         } 
 
@@ -162,18 +195,19 @@ namespace GUI {
                     case SDL_EVENT_QUIT:
                         done = true;
                         return;
-                    case SDL_EVENT_SYSTEM_THEME_CHANGED:
-                        switch_imgui_theme();
+                   case SDL_EVENT_SYSTEM_THEME_CHANGED:
+                        Trielo::trielo<switch_imgui_theme>();
                         break; 
                     case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
-                        const float sdl_scale { Trielo::trielo_lambda<SDL_GetWindowDisplayScale>(Trielo::OkErrCode(0.0f), sdl_error_lambda, window) };
-                        Trielo::trielo<set_sdl_scale>(sdl_scale);
+                        // This fires when changes system wide scale settings change
+                        Trielo::trielo<set_sdl_scale>(Trielo::trielo_lambda<SDL_GetWindowDisplayScale>(Trielo::OkErrCode(0.0f), sdl_error_lambda, window));
                         Trielo::trielo<set_implot_scale>();
-                        break; 
-                }
-                if(event.type == event_user_scale_event_type) {
-                    Trielo::trielo<set_scale>(*reinterpret_cast<const float*>(&event.user.code));
-                    Trielo::trielo<set_implot_scale>();
+                        break;
+                    case SDL_EVENT_USER:
+                        // This fires if user explicitally changes scale ignoring system wide settings
+                        Trielo::trielo<set_scale>(*reinterpret_cast<const float*>(&event.user.code));
+                        Trielo::trielo<set_implot_scale>();
+                        break;
                 }
             }
         }
@@ -184,13 +218,14 @@ namespace GUI {
             ImGui::NewFrame();
         }
 
-        void render(SDL_Renderer* renderer, const ImVec4& clear_color) {
+        void render(SDL_Renderer* renderer) {
             ImGuiIO& io = ImGui::GetIO();
             ImGui::Render();
             if(SDL_SetRenderScale(renderer, io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y) != 0) {
                 fmt::print(fmt::fg(fmt::color::yellow), "WARNING: SDL_RenderSetScale failed");
                 sdl_error_lambda();
             }
+            static constexpr ImVec4 clear_color { 0.45f, 0.55f, 0.60f, 1.00f };
             if(SDL_SetRenderDrawColor(renderer, (Uint8)(clear_color.x * 255), (Uint8)(clear_color.y * 255), (Uint8)(clear_color.z * 255), (Uint8)(clear_color.w * 255)) != 0) {
                 fmt::print(fmt::fg(fmt::color::yellow), "WARNING: SDL_SetRenderDrawColor failed");
                 sdl_error_lambda();

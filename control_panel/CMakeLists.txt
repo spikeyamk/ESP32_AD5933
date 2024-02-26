@@ -124,6 +124,19 @@ set(GUI_SRCS
 
 	lib/json/conversion.cpp
 	lib/json/settings.cpp
+
+	lib/legal/boost.cpp
+	lib/legal/dear_imgui.cpp
+	lib/legal/implot.cpp
+	lib/legal/json.cpp
+	lib/legal/nativefiledialog_extended.cpp
+	lib/legal/sdl3.cpp
+	lib/legal/semver.cpp
+	lib/legal/simpleble.cpp
+	lib/legal/sml.cpp
+	lib/legal/ubuntu_sans_fonts.cpp
+	lib/legal/utfconv.cpp
+	lib/legal/fmt.cpp
 	${IMGUI_SRCS}
 	${IMPLOT_SRCS}
 )

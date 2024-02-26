@@ -15,8 +15,8 @@
 
 namespace BLE_Client {
     int child_main() {
-        std::cout << "BLE_Client: child process started" << std::endl;
-        std::atexit([]() { std::cout << "BLE_Client: child process finished" << std::endl; });
+        std::cout << "BLE_Client: child process started\n";
+        std::atexit([]() { std::cout << "BLE_Client: child process finished\n"; });
         std::shared_ptr<BLE_Client::SHM::ChildSHM> child_shm = nullptr;
         try {
             child_shm = std::make_shared<BLE_Client::SHM::ChildSHM>();

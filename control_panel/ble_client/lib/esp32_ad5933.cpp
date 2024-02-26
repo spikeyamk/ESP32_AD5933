@@ -37,13 +37,13 @@ namespace BLE_Client {
         Magic::Events::Commands::Time::UpdateTimezone timezone_command;
         gettimeofday(&timeval_command.tv, &timezone_command.tz);
         const auto timeval_command_serialized { timeval_command.to_raw_data() };
-        peripheral.write_command(
+        peripheral.write_request(
             service.uuid(),
             service.time_update_control_point.uuid(),
             std::string(timeval_command_serialized.begin(), timeval_command_serialized.end())
         );
         const auto timezone_command_serialized { timezone_command.to_raw_data() };
-        peripheral.write_command(
+        peripheral.write_request(
             service.uuid(),
             service.time_update_control_point.uuid(),
             std::string(timezone_command_serialized.begin(), timezone_command_serialized.end())

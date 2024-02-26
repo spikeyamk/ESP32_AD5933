@@ -1,3 +1,4 @@
+#include <trielo/trielo.hpp>
 #include "imgui_internal.h"
 #include "implot.h"
 
@@ -6,6 +7,18 @@
 #include "gui/windows/console.hpp"
 #include "gui/windows/client/client.hpp"
 #include "gui/windows/ble_adapter.hpp"
+#include "legal/boost.hpp"
+#include "legal/dear_imgui.hpp"
+#include "legal/implot.hpp"
+#include "legal/fmt.hpp"
+#include "legal/json.hpp"
+#include "legal/nativefiledialog_extended.hpp"
+#include "legal/sdl3.hpp"
+#include "legal/semver.hpp"
+#include "legal/simpleble.hpp"
+#include "legal/sml.hpp"
+#include "legal/ubuntu_sans_fonts.hpp"
+#include "legal/utfconv.hpp"
 
 #include "gui/top.hpp"
 
@@ -54,43 +67,43 @@ namespace GUI {
         // DockSpace
         ImGuiIO& io = ImGui::GetIO();
         ImGuiID dockspace_id = ImGui::GetID("TopDockSpace");
-        static bool settings_clicked { false };
-        static bool about_clicked { false };
         if(io.ConfigFlags & ImGuiConfigFlags_DockingEnable) {
             ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
             if(ImGui::BeginMenuBar()) {
                 if(ImGui::BeginMenu("File")) {
                     ImGui::MenuItem("Open");
                     ImGui::MenuItem("Save");
+                    if(ImGui::MenuItem("Settings")) {
+                        settings_clicked = true;
+                    }
                     if(ImGui::MenuItem("Exit")) {
                         done = true;
                     }
                     ImGui::EndMenu();
                 }
 
-                if(ImGui::BeginMenu("Edit")) {
-                    if(ImGui::MenuItem("Settings")) {
-                        settings_clicked = true;
-                    }
-                    ImGui::EndMenu();
-                }
-
                 if(ImGui::BeginMenu("View")) {
                     ImGui::MenuItem((const char*) Windows::BLE_Adapter::name.data(), nullptr, &menu_bar_enables.ble_adapter);
-                    ImGui::MenuItem((const char*) Windows::Console::name.data(), nullptr, &menu_bar_enables.console);
+
                     ImGui::MenuItem((const char*) Windows::Calibrate::name_base.data(), nullptr, &menu_bar_enables.calibrate);
                     ImGui::MenuItem((const char*) Windows::Measure::name_base.data(), nullptr, &menu_bar_enables.measure);
-                    ImGui::MenuItem((const char*) Windows::Debug::name_base.data(), nullptr, &menu_bar_enables.debug);
                     ImGui::MenuItem((const char*) Windows::Auto::name_base.data(), nullptr, &menu_bar_enables.auto_window);
                     ImGui::MenuItem((const char*) Windows::FileManager::name_base.data(), nullptr, &menu_bar_enables.file_manager);
+
                     ImGui::MenuItem((const char*) Windows::Plots::Measurement::name_base.data(), nullptr, &menu_bar_enables.measurement_plots);
                     ImGui::MenuItem((const char*) Windows::Plots::Calibration::name_base.data(), nullptr, &menu_bar_enables.calibration_plots);
                     ImGui::MenuItem((const char*) Windows::Plots::Auto::name_base.data(), nullptr, &menu_bar_enables.auto_plots);
+
+                    ImGui::MenuItem((const char*) Windows::Console::name.data(), nullptr, &menu_bar_enables.console);
+                    ImGui::MenuItem((const char*) Windows::Debug::name_base.data(), nullptr, &menu_bar_enables.debug);
                     ImGui::MenuItem("Demo", nullptr, &menu_bar_enables.demo);
                     ImGui::EndMenu();
                 }
 
                 if(ImGui::BeginMenu("Help")) {
+                    if(ImGui::MenuItem("Legal")) {
+                        legal_clicked = true;
+                    }
                     if(ImGui::MenuItem("About")) {
                         about_clicked = true;
                     }
@@ -126,6 +139,19 @@ namespace GUI {
                 ImGui::EndPopup();
             }
 
+            if(legal_clicked) {
+                ImGui::OpenPopup("Legal");
+                // Always center this window when appearing
+                const ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+                ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+                legal_clicked = false;
+            }
+
+            if(ImGui::BeginPopupModal("Legal")) {
+                draw_legal();
+                ImGui::EndPopup();
+            }
+
             ImGui::End();
         }
 
@@ -134,14 +160,38 @@ namespace GUI {
 
     void Top::draw_about_page() {
         ImGui::Text((const char*)
-            u8"Tu bude naša krásna nádherná about page ani neviem čo tu vôbec budem dávať.\n"
-            u8"Tu budu asi externé závislosti? A ich licencie? To asi ani robiť nebudem."
+            u8"Tento text zatiaľ slúži iba na overenie toho či fungujú alebo nefungujú mäkkčene a dĺžne" 
         );
 
         static const std::string_view page_link { "Repo: [https://www.github.com/spikeyamk/ESP32_AD5933](https://www.github.com/spikeyamk/ESP32_AD5933)" };
         ImGui::RenderMarkdown(page_link.data(), page_link.size());
 
-        if(ImGui::Button("OK", ImVec2(120, 0))) {
+        if(ImGui::Button("OK")) {
+            ImGui::CloseCurrentPopup();
+        }
+    }
+
+    void Top::draw_license(const char* name, const char* license) const {
+        if(ImGui::TreeNode(name)) {
+            ImGui::Text(license);
+            ImGui::TreePop();
+        }
+    }
+
+    void Top::draw_legal() const {
+        draw_license("SimpleBLE", Legal::simpleble);
+        draw_license("Dear ImGui", Legal::dear_imgui);
+        draw_license("implot", Legal::implot);
+        draw_license("json", Legal::json);
+        draw_license("nativefiledialog-extended", Legal::nativefiledialog_extended);
+        draw_license("boost", Legal::boost);
+        draw_license("sml", Legal::sml);
+        draw_license("SDL3", Legal::sdl3);
+        draw_license("semver", Legal::semver);
+        draw_license("utfconv", Legal::utfconv);
+        draw_license("fmt", Legal::fmt);
+        draw_license("Ubuntu-Sans-Fonts", Legal::ubuntu_sans_fonts);
+        if(ImGui::Button("OK")) {
             ImGui::CloseCurrentPopup();
         }
     }
@@ -211,16 +261,16 @@ namespace GUI {
                 SDL_Event event;
                 SDL_zero(event);
                 event.type = SDL_EVENT_SYSTEM_THEME_CHANGED;
-                SDL_PushEvent(&event);
+                Trielo::trielo_lambda<SDL_PushEvent>(Trielo::OkErrCode(0), Boilerplate::sdl_error_lambda, &event);
                 break;
             case 1:
-                ImGui::StyleColorsDark();
+                Trielo::trielo<ImGui::StyleColorsDark>(nullptr);
                 break;
             case 2:
-                ImGui::StyleColorsLight();
+                Trielo::trielo<ImGui::StyleColorsLight>(nullptr);
                 break;
             case 3:
-                ImGui::StyleColorsClassic();
+                Trielo::trielo<ImGui::StyleColorsClassic>(nullptr);
                 break;
         }
     }
@@ -230,12 +280,12 @@ namespace GUI {
         SDL_Event event;
         SDL_zero(event);
         if(scale_combo != 0) {
-            event.type = Boilerplate::event_user_scale_event_type;
+            event.type = SDL_EVENT_USER;
             event.user.code = *reinterpret_cast<const Uint32*>(Scales::values + static_cast<size_t>(scale_combo - 1));
-            SDL_PushEvent(&event);
+            Trielo::trielo_lambda<SDL_PushEvent>(Trielo::OkErrCode(0), Boilerplate::sdl_error_lambda, &event);
         } else {
             event.type = SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED;
-            SDL_PushEvent(&event);
+            Trielo::trielo_lambda<SDL_PushEvent>(Trielo::OkErrCode(0), Boilerplate::sdl_error_lambda, &event);
         }
     }
 }
