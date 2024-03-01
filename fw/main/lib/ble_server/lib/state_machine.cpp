@@ -252,33 +252,39 @@ namespace BLE {
 
 			void download(const Magic::Events::Commands::File::Download& event, std::shared_ptr<Server::Sender> &sender, StopSources& stop_sources) {
 				std::thread([](const Magic::Events::Commands::File::Download event, std::shared_ptr<Server::Sender> sender, StopSources& stop_sources) {
-					try {
-						stop_sources.download = true;
-						std::array<char, SD_Card::mount_point_prefix.size() + Magic::MTU> path { 0 };
-						std::copy(SD_Card::mount_point_prefix.begin(), SD_Card::mount_point_prefix.end(), path.begin());
-						std::copy(event.path.begin(), event.path.end(), path.begin() + SD_Card::mount_point_prefix.size());
+					stop_sources.download = true;
+					std::array<char, SD_Card::mount_point_prefix.size() + Magic::MTU> path { 0 };
+					std::copy(SD_Card::mount_point_prefix.begin(), SD_Card::mount_point_prefix.end(), path.begin());
+					std::copy(event.path.begin(), event.path.end(), path.begin() + SD_Card::mount_point_prefix.size());
 
-						FILE* file = std::fopen(path.data(), "rb");
-						if(file == NULL) {
-							std::cout << "BLE::Actions::File::download: failed to pen file: " << std::string_view{ reinterpret_cast<const char*>(path.data()), path.size() } << std::endl;
-							return;
-						}
+					FILE* file = std::fopen(path.data(), "rb");
+					if(file == NULL) {
+						std::cout << "BLE::Actions::File::download: failed to pen file: " << std::string_view{ reinterpret_cast<const char*>(path.data()), path.size() } << std::endl;
+						return;
+					}
 
-						Magic::T_MaxDataSlice tmp_slice { 0 };
-						while(std::fread(tmp_slice.data(), 1, tmp_slice.size(), file) && stop_sources.download) {
+					Magic::T_MaxDataSlice tmp_slice { 0 };
+
+					const auto start { std::chrono::high_resolution_clock::now() };
+					while(stop_sources.download) {
+						for(size_t i = 0, stopper = 100; stop_sources.download && i < stopper; i++) {
+							if(std::fread(tmp_slice.data(), 1, tmp_slice.size(), file) == 0) {
+								stop_sources.download = false;
+								break;
+							}
 							const Magic::Events::Results::File::Download download_event { .slice = tmp_slice };
 							const Magic::OutComingPacket<Magic::Events::Results::File::Download> download_packet { download_event };
-							while(sender->notify_hid_information(download_packet) == false) {
-								std::this_thread::sleep_for(std::chrono::milliseconds(1));
-							}
+							sender->notify_hid_information(download_packet);
 							tmp_slice = Magic::T_MaxDataSlice { 0 };
-							std::this_thread::sleep_for(std::chrono::milliseconds(1));
 						}
-
-						std::fclose(file);
-					} catch(...) {
-
+						std::this_thread::sleep_for(std::chrono::milliseconds(1));
 					}
+
+					std::fclose(file);
+					const auto finish { std::chrono::high_resolution_clock::now() };
+					std::cout << "BLE::Actions::download: finish - start: " << std::chrono::duration_cast<std::chrono::seconds>(finish - start) << std::endl;
+					std::cout << "BLE::Actions::download: estimated speed: " << get_num_of_bytes(Magic::Events::Commands::File::Size{ event.path }).value_or(0) / std::chrono::duration_cast<std::chrono::seconds>(finish - start).count() << " bytes/s\n";
+
 				}, event, sender, std::ref(stop_sources)).detach();
 			}
 

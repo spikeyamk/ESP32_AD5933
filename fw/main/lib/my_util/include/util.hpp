@@ -89,6 +89,6 @@ namespace Util {
 		return result;
 	}
 
-	void restart_button();
+	void init_restart_button();
     void print_current_time();
 }

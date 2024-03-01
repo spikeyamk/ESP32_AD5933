@@ -71,7 +71,6 @@ namespace BLE {
         }
 
         static int gap_event_cb(struct ble_gap_event *event, void *arg) {
-            std::printf("BLE::Server::gap_event_cb\n");
             struct ble_gap_conn_desc desc;
             int rc;
             switch(event->type) {

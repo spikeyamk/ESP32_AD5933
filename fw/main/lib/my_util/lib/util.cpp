@@ -297,8 +297,8 @@ namespace Util {
 		esp_restart();
 	}
 
-	void restart_button() {
-		constexpr gpio_num_t button { GPIO_NUM_4 };
+	void init_restart_button() {
+		const gpio_num_t button { GPIO_NUM_4 };
 		Trielo::trielo<gpio_set_direction>(Trielo::OkErrCode(ESP_OK), button, GPIO_MODE_INPUT);
 		Trielo::trielo<gpio_set_pull_mode>(Trielo::OkErrCode(ESP_OK), button, GPIO_PULLDOWN_ONLY);
 		Trielo::trielo<gpio_set_intr_type>(Trielo::OkErrCode(ESP_OK), button, GPIO_INTR_POSEDGE);
@@ -308,7 +308,7 @@ namespace Util {
 	}
 
     void print_current_time() {
-        const time_t current_time = std::chrono::high_resolution_clock::to_time_t(std::chrono::high_resolution_clock::now());
+        const time_t current_time { std::chrono::high_resolution_clock::to_time_t(std::chrono::high_resolution_clock::now()) };
         std::cout << "BLE_Server::time_update_control_point_characteristic_access_cb: Current time is: " << std::ctime(&current_time) << std::endl;
     };
 }

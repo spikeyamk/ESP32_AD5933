@@ -11,7 +11,7 @@ namespace I2C {
 
 	class Bus {
 	private:
-		static constexpr char class_name[] = "Bus::";
+		static constexpr char class_name[] { "Bus::" };
 		i2c_master_bus_config_t bus_config {
 			.i2c_port = I2C_NUM_0,
 			.sda_io_num = gpio_num_t(6),

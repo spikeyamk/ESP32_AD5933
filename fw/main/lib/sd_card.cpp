@@ -26,10 +26,10 @@
 
 namespace SD_Card {
     namespace Pins {
-        static constexpr gpio_num_t cs   { GPIO_NUM_3 };
-        static constexpr gpio_num_t mosi { GPIO_NUM_2 };
-        static constexpr gpio_num_t miso { GPIO_NUM_11 };
-        static constexpr gpio_num_t clk  { GPIO_NUM_10 };
+        static constexpr gpio_num_t mosi { GPIO_NUM_15 };
+        static constexpr gpio_num_t miso { GPIO_NUM_23 };
+        static constexpr gpio_num_t clk  { GPIO_NUM_22 };
+        static constexpr gpio_num_t cs   { GPIO_NUM_21 };
     }
 
     static constexpr esp_vfs_fat_sdmmc_mount_config_t mount_config = {
@@ -86,7 +86,7 @@ namespace SD_Card {
         if(Trielo::trielo<spi_bus_initialize>(Trielo::OkErrCode(ESP_OK), slot_config.host_id, &bus_cfg, SDSPI_DEFAULT_DMA)) {
             return -1;
         }
-        
+
         const esp_err_t mount_rc = Trielo::trielo<esp_vfs_fat_sdspi_mount>(Trielo::OkErrCode(ESP_OK), mount_point.data(), &host, &slot_config, &mount_config, &card);
         if(
             mount_rc == ESP_ERR_NO_MEM
@@ -94,7 +94,9 @@ namespace SD_Card {
         ) {
             return -2;
         }
+        /* 
         sdmmc_card_print_info(stdout, card);
+        */
         return 0;
     }
 
@@ -158,6 +160,7 @@ namespace SD_Card {
 
     int create_megabyte_test_file() {
         const std::filesystem::path test_megabyte { std::filesystem::path(mount_point).append("test4") };
+
         {
             std::ofstream clearing_test_file(test_megabyte, std::ofstream::out | std::ofstream::trunc);
         }
