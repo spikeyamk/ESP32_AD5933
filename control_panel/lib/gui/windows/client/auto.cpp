@@ -26,25 +26,25 @@ namespace GUI {
 
         const std::optional<Lock> Auto::draw_inner() {
             if(status == Status::Off) {
-                if(ImGui::Button("Start Sending")) {
-                    start_sending();
+                if(ImGui::Button("Over BLE")) {
+                    over_ble();
                 }
-                if(ImGui::Button("Start Saving")) {
-                    start_saving();
+                if(ImGui::Button("To SD Card")) {
+                    to_sd_card();
                 }
                 ImGui::BeginDisabled();
                 ImGui::Button("Stop");
                 ImGui::EndDisabled();
-            } else if(status == Status::Sending || status == Status::Saving) {
+            } else if(status == Status::BLE || status == Status::SD_Card) {
                 ImGui::BeginDisabled();
-                ImGui::Button("Start Sending");
-                if(status == Status::Sending) {
+                ImGui::Button("Record over BLE");
+                if(status == Status::BLE) {
                     const float scale = GUI::Boilerplate::get_scale();
                     ImGui::SameLine();
                     Spinner::Spinner("SendingSinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                 }
-                ImGui::Button("Start Saving");
-                if(status == Status::Saving) {
+                ImGui::Button("Record to SD Card");
+                if(status == Status::SD_Card) {
                     const float scale = GUI::Boilerplate::get_scale();
                     ImGui::SameLine();
                     Spinner::Spinner("SavingSinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
@@ -85,8 +85,8 @@ namespace GUI {
             ImGui::End();
         }
 
-        void Auto::start_saving() {
-            status = Status::Saving;
+        void Auto::to_sd_card() {
+            status = Status::SD_Card;
             shm->cmd.send(
                 BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     index,
@@ -95,15 +95,15 @@ namespace GUI {
             );
         }
 
-        void Auto::start_sending() {
-            std::jthread t1(sending_cb, std::ref(*this));
+        void Auto::over_ble() {
+            std::jthread t1(over_ble_cb, std::ref(*this));
             stop_source = t1.get_stop_source();
             t1.detach();
         }
 
         void Auto::stop() {
             stop_source.request_stop();
-            if(status == Status::Saving) {
+            if(status == Status::BLE) {
                 status = Status::Off;
                 shm->cmd.send(
                     BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
@@ -114,8 +114,8 @@ namespace GUI {
             }
         }
 
-        void Auto::sending_cb(std::stop_token st, Auto& self) {
-            self.status = Status::Sending;
+        void Auto::over_ble_cb(std::stop_token st, Auto& self) {
+            self.status = Status::BLE;
             self.shm->cmd.send(
                 BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     self.index,
@@ -125,13 +125,13 @@ namespace GUI {
             while(st.stop_requested() == false) {
                 const auto rx_payload { self.shm->active_devices[self.index].measurement->read_for(boost::posix_time::milliseconds(10'000)) };
                 if(rx_payload.has_value() == false) {
-                    std::cout << "ERROR: GUI::Windows::Auto::sending_cb: rx_payload: timeout\n";
+                    std::cout << "ERROR: GUI::Windows::Auto::over_ble_cb: rx_payload: timeout\n";
                     self.status = Status::Error;
                     return;
                 }
 
                 if(variant_tester<Magic::Events::Results::Auto::Point>(rx_payload.value()) == false) {
-                    std::cout << "ERROR: GUI::Windows::Auto::sending_cb: rx_payload: bad variant type\n";
+                    std::cout << "ERROR: GUI::Windows::Auto::over_ble_cb: rx_payload: bad variant type\n";
                     self.status = Status::Error;
                     return;
                 }

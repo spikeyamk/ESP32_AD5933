@@ -23,35 +23,37 @@ namespace BLE_Client {
                         }
 
                         it->connect();
-
-                        for(size_t i = 0; it->is_connected() == false && i <= 100; i++) {
-                            if(i == 100) {
+                        for(size_t i = 0, timeout_ms = 5'000; it->is_connected() == false && i <= timeout_ms; i++) {
+                            if(i == timeout_ms) {
+                                it->disconnect();
                                 throw std::runtime_error("timed out");
                             }
-                            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                            std::this_thread::sleep_for(std::chrono::milliseconds(1));
                         }
                         
-                        auto ret { find_services_characteristics(*it) };
-                        if(ret.has_value() == false) {
+                        std::optional<BLE_Client::ESP32_AD5933::Service> service { find_services_characteristics(*it) };
+                        if(service.has_value() == false) {
                             it->disconnect();
                             throw std::runtime_error("not an ESP32_AD5933");
                         }
 
                         shm->init_device(Events::connect{ it->address() });
-                        auto tmp_esp32_ad5933 { std::make_shared<BLE_Client::ESP32_AD5933>(*it, ret.value(), shm->active_devices.back().measurement, shm->active_devices.back().information, shm) };
+                        auto tmp_esp32_ad5933 { std::make_shared<BLE_Client::ESP32_AD5933>(*it, service.value(), shm->active_devices.back().measurement, shm->active_devices.back().information, shm) };
                         tmp_esp32_ad5933->setup_subscriptions();
                         tmp_esp32_ad5933->update_time();
                         BLE_Client::StateMachines::Logger logger {};
                         connections.push_back(new decltype(BLE_Client::StateMachines::Connection::Dummy<int>::sm){ tmp_esp32_ad5933, logger, shm });
-                        const BLE_Client::Discovery::Device tmp_device { it->identifier(), it->address(), true };
                         auto discovery_devices_update_it { std::find_if(shm->discovery_devices->begin(), shm->discovery_devices->end(), [&it](const BLE_Client::Discovery::Device& e) {
                             return e.get_address() == it->address();
                         }) };
-                        *discovery_devices_update_it = tmp_device;
+
+                        if(discovery_devices_update_it != shm->discovery_devices->end()) {
+                            const BLE_Client::Discovery::Device tmp_device { it->identifier(), it->address(), true };
+                            *discovery_devices_update_it = tmp_device;
+                        }
                         return true;
                     } catch(const std::exception& e) {
                         shm->console.log(std::string("ERROR: BLE_Client::StateMachines::Connector::Actions::connect: exception: ") + e.what() + "\n");
-                        shm->console.log("ERROR: BLE_Client::Discovery::Actions::connect: didn't find the device with the address in the scan_results\n");
                         return false;
                     }
                 }

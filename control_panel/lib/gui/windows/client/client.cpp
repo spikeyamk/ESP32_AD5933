@@ -9,9 +9,11 @@
 namespace GUI {
     namespace Windows {
         Client::Client(const std::string name, const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> parent_shm) :
+            address{ name },
             name{ std::string(name).append("##").append(std::to_string(index)) },
             dockspace_name { std::string("DockSpace").append(name).append("##").append(std::to_string(index)) },
             index{ index },
+            shm{ parent_shm },
             calibrate_window { index, parent_shm },
             calibration_plots_window { index },
             measure_window { index, parent_shm },
@@ -21,6 +23,10 @@ namespace GUI {
             auto_window { index, parent_shm },
             auto_plots_window { index }
         {}
+
+        const std::string& Client::get_address() const {
+            return address;
+        }
 
         void Client::draw(const ImGuiID center_id, Top::MenuBarEnables &enables) {
             if(enable == false) {
@@ -57,7 +63,7 @@ namespace GUI {
                     ImGui::DockBuilderRemoveNode(dockspace_id); // clear any previous layout
                     ImGui::DockBuilderAddNode(dockspace_id, dockspace_flags);
                     ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetWindowSize());
-                    ImGuiID right_id = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.2f, nullptr, &dockspace_id);
+                    const ImGuiID right_id = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.5f, nullptr, &dockspace_id);
                     measurement_plots_window.draw(enables.measurement_plots, right_id);
                     calibration_plots_window.draw(enables.calibration_plots, right_id);
                     auto_plots_window.draw(enables.auto_plots, right_id);
@@ -99,6 +105,10 @@ namespace GUI {
                         calibrate_window.draw(enables.calibrate, ImGui::GetID(static_cast<void*>(nullptr)), lock);
                     }
                     if(enables.measure) {
+                        if(calibrate_window.calibration_queue_to_load_into_measurement.empty() == false) {
+                            measure_window.load_from_memory(calibrate_window.calibration_queue_to_load_into_measurement.front());
+                            calibrate_window.calibration_queue_to_load_into_measurement.pop();
+                        }
                         measure_window.draw(enables.measure, ImGui::GetID(static_cast<void*>(nullptr)), lock);
                     }
                     if(enables.file_manager) {
@@ -110,6 +120,27 @@ namespace GUI {
                 }
             }
             ImGui::End();
+
+            auto it { std::find_if(shm->discovery_devices->begin(), shm->discovery_devices->end(), [&](const auto& e) {
+                return e.get_address() == address;
+            }) };
+
+            if(it != shm->discovery_devices->end()) {
+                if(it->get_connected() == false && lock != Lock::UnexpectedDisconnection) {
+                    ImGui::OpenPopup("Error##2");
+                    // Always center this window when appearing
+                    ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+                    lock = Lock::UnexpectedDisconnection;
+                }
+            }
+
+            if(ImGui::BeginPopupModal("Error##2", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text("%s Unexpectedly disconnected", address.c_str());
+                if(ImGui::Button("OK")) {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
         }
     }
 }

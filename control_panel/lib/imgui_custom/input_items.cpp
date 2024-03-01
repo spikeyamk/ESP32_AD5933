@@ -8,13 +8,50 @@ namespace ImGui {
         if(valid == false) {
             ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
             ImGui::PushStyleColor(ImGuiCol_Border, ImGui::GetColorU32(ImVec4(1.0f, 0.0f, 0.0f, 1.0f)));
-            const bool result = ImGui::InputText(label, buf, buf_size, flags, callback, user_data);
+            const bool result { ImGui::InputText(label, buf, buf_size, flags, callback, user_data) };
             ImGui::PopStyleColor();
             ImGui::PopStyleVar();
             return result;
         }
         return ImGui::InputText(label, buf, buf_size, flags, callback, user_data);
     }
+
+    bool SliderIntValid(const char* label, int* v, const int v_min, const int v_max, bool valid, const char *format, ImGuiSliderFlags flags) {
+        if(valid == false) {
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+            ImGui::PushStyleColor(ImGuiCol_Border, ImGui::GetColorU32(ImVec4(1.0f, 0.0f, 0.0f, 1.0f)));
+            const bool result { ImGui::SliderInt(label, v, v_min, v_max, format, flags) };
+            ImGui::PopStyleColor();
+            ImGui::PopStyleVar();
+            return result;
+        }
+        return ImGui::SliderInt(label, v, v_min, v_max, format, flags);
+    }
+
+    bool Slider_uint32_t_Valid(const char* label, uint32_t* v, const uint32_t v_min, const uint32_t v_max, bool valid, const char *format, ImGuiSliderFlags flags) {
+        if(valid == false) {
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+            ImGui::PushStyleColor(ImGuiCol_Border, ImGui::GetColorU32(ImVec4(1.0f, 0.0f, 0.0f, 1.0f)));
+            const bool result { SliderScalar(label, ImGuiDataType_U32, v, &v_min, &v_max, format, flags) };
+            ImGui::PopStyleColor();
+            ImGui::PopStyleVar();
+            return result;
+        }
+        return SliderScalar(label, ImGuiDataType_U32, v, &v_min, &v_max, format, flags);
+    }
+
+    bool Slider_uint16_t_Valid(const char* label, uint16_t* v, const uint16_t v_min, const uint16_t v_max, bool valid, const char *format, ImGuiSliderFlags flags) {
+        if(valid == false) {
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+            ImGui::PushStyleColor(ImGuiCol_Border, ImGui::GetColorU32(ImVec4(1.0f, 0.0f, 0.0f, 1.0f)));
+            const bool result { SliderScalar(label, ImGuiDataType_U16, v, &v_min, &v_max, format, flags) };
+            ImGui::PopStyleColor();
+            ImGui::PopStyleVar();
+            return result;
+        }
+        return SliderScalar(label, ImGuiDataType_U16, v, &v_min, &v_max, format, flags);
+    }
+
 
     bool InputScalarWithCallback(const char* label, ImGuiDataType data_type, void* p_data, const void* p_step, const void* p_step_fast, const char* format, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback) {
         ImGuiWindow* window = GetCurrentWindow();

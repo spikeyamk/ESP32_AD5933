@@ -9,6 +9,7 @@
 #include <memory>
 #include <string_view>
 #include <optional>
+#include <thread>
 
 #include <SDL3/SDL.h>
 #include "imgui.h"
@@ -34,6 +35,7 @@ namespace GUI {
     namespace Windows {
         class Client {
         private:
+            std::string address;
             bool first { true };
             std::string name;
         public:
@@ -54,6 +56,7 @@ namespace GUI {
         public:
             Client(const std::string name, const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> parent_shm);
             void draw(const ImGuiID center_id, Top::MenuBarEnables &enables);
+            const std::string& get_address() const;
         };
     }
 }

@@ -31,7 +31,7 @@ namespace GUI {
         ImGui::DockBuilderAddNode(dockspace_id, dockspace_flags);
         ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->Size);
         ImGuiID dock_id_center;
-        const ImGuiID dock_id_left = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.2f, nullptr, &dock_id_center);
+        const ImGuiID dock_id_left = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.225f, nullptr, &dock_id_center);
         return { dock_id_left, dock_id_center };
     }
 }
@@ -42,17 +42,23 @@ namespace GUI {
         boost::process::child& ble_client,
         std::shared_ptr<BLE_Client::SHM::ParentSHM> shm
     ) {
-        SDL_Window* window;
-        SDL_Renderer* renderer;
+        SDL_Window* window { nullptr };
+        SDL_Renderer* renderer { nullptr };
+        ns::SettingsFile settings_file;
         {
             const auto ret { Boilerplate::init() };
             window = std::get<0>(ret);
             renderer = std::get<1>(ret);
+            settings_file = std::get<2>(ret);
+        }
+
+        if(window == nullptr || renderer == nullptr) {
+            return;
         }
 
         Boilerplate::process_events(done, window, renderer);
         Boilerplate::start_new_frame();
-        Top top;
+        Top top { settings_file };
         ImGuiID top_id = top.draw(done);
         DockspaceIDs top_ids { split_left_center(top_id) };
         std::vector<Windows::Client> client_windows;
@@ -76,10 +82,9 @@ namespace GUI {
         console.draw();
         Boilerplate::render(renderer);
 
-        while(
-            done == false
-            && ble_client.running()
-        ) {
+        client_windows.push_back(Windows::Client{"dummy", 0, shm});
+
+        while(done == false && ble_client.running()) {
             Boilerplate::process_events(done, window, renderer);
             Boilerplate::start_new_frame();
             top_id = top.draw(done);

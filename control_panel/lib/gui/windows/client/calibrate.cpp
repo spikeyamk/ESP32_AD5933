@@ -1,6 +1,7 @@
 #include <stdexcept>
 #include <thread>
 #include <atomic>
+#include <limits>
 
 #include <nfd.hpp>
 #include <utf/utf.hpp>
@@ -29,179 +30,104 @@ namespace GUI {
             stop_source.request_stop();
         }
 
-        void Calibrate::update_freq_start_valid() {
-            try {
-                const uint32_t tmp_freq_start = std::stoul(std::string(inputs.gui.freq_start));
-                if(
-                    tmp_freq_start < min_freq 
-                    || tmp_freq_start >= max_freq
-                ) {
-                    valid_fields.freq_start = false;
-                    return;
-                }
-                valid_fields.freq_start = true;
-                inputs.numeric_values.freq_start = tmp_freq_start;
-                config.set_start_freq(AD5933::uint_startfreq_t{ inputs.numeric_values.freq_start });
-            } catch(const std::exception& e) {
-                std::cout << "GUI::Windows::Calibrate::update_freq_start_valid: exception: " << e.what() << std::endl;
-                valid_fields.freq_start = false;
-            }
-        }
-
-        void Calibrate::update_freq_inc_valid() {
-            try {
-                const uint32_t tmp_freq_inc = std::stoul(std::string(inputs.gui.freq_inc));
-                const uint32_t tmp_num_of_inc = std::stoul(std::string(inputs.gui.num_of_inc));
-                if(
-                    tmp_freq_inc >= max_freq
-                    || tmp_freq_inc < res_freq
-                    || ((inputs.numeric_values.freq_start + tmp_freq_inc) > max_freq)
-                    || ((inputs.numeric_values.freq_start + (tmp_freq_inc * tmp_num_of_inc)) > max_freq)
-                ) {
-                    valid_fields.freq_inc = false;
-                    return;
-                }
-                valid_fields.freq_inc = true;
-                inputs.numeric_values.freq_inc = tmp_freq_inc;
-                config.set_inc_freq(AD5933::uint_incfreq_t{ tmp_freq_inc });
-            } catch(const std::exception& e) {
-                std::cout << "GUI::Windows::Calibrate::update_freq_inc_valid: exception: " << e.what() << std::endl;
-                valid_fields.freq_inc = false;
-            }
-        }
-
-        void Calibrate::update_num_of_inc_valid() {
-            try {
-                const uint32_t tmp_freq_inc = static_cast<uint32_t>(std::stoul(std::string(inputs.gui.freq_inc)));
-                const uint16_t tmp_num_of_inc = static_cast<uint16_t>(std::stoul(std::string(inputs.gui.num_of_inc)));
-                if(
-                    tmp_num_of_inc > max_9bit
-                    || tmp_num_of_inc < 1
-                    || ((inputs.numeric_values.freq_start + (tmp_freq_inc * tmp_num_of_inc)) > max_freq)
-                ) {
-                    valid_fields.num_of_inc = false;
-                    return;
-                }
-                valid_fields.num_of_inc = true;
-                inputs.numeric_values.num_of_inc = tmp_num_of_inc;
-                config.set_num_of_inc(AD5933::uint9_t{ tmp_num_of_inc });
-            } catch(const std::exception& e) {
-                std::cout << "GUI::Windows::Calibrate::update_num_of_inc_valid: exception: " << e.what() << std::endl;
-                valid_fields.num_of_inc = false;
-            }
-        }
-
-        void Calibrate::update_impedance_valid() {
-            if(inputs.numeric_values.impedance <= 0.0f) {
-                valid_fields.impedance = false;
-                return;
-            }
-            valid_fields.impedance = true;
-        }
-
-        void Calibrate::update_settling_number_valid() {
-            try {
-                const uint16_t tmp_settling_number = static_cast<uint16_t>(std::stoul(std::string(inputs.gui.settling_number)));
-                if(tmp_settling_number > max_9bit) {
-                    valid_fields.settling_number = false;
-                    return;
-                }
-                inputs.numeric_values.settling_number = tmp_settling_number;
-                valid_fields.settling_number = true;
-                config.set_settling_time_cycles_number(AD5933::uint9_t{ tmp_settling_number });
-            } catch(const std::exception& e) {
-                std::cout << "GUI::Windows::Calibrate::update_settling_number_valid: exception: " << e.what() << std::endl;
-                valid_fields.settling_number = false;
-            }
-        }
-        
         void Calibrate::draw_input_fields() {
-            if(ImGui::InputTextValid(
+            if(ImGui::Slider_uint32_t_Valid(
                 "Start Frequency [Hz]",
-                inputs.gui.freq_start,
-                sizeof(inputs.gui.freq_start),
-                valid_fields.freq_start,
-                ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_CallbackCharFilter,
-                ImGui::plus_minus_dot_char_filter_cb
+                &fields.freq_start,
+                Min::freq_start,
+                Max::freq_start,
+                true,
+                "%u",
+                ImGuiSliderFlags_AlwaysClamp
             )) {
-                update_freq_start_valid();
+                config.set_start_freq(AD5933::uint_startfreq_t{ fields.freq_start });
+                max.freq_inc = Max::freq - fields.freq_start;
+                if(fields.freq_inc > max.freq_inc) {
+                    fields.freq_inc = max.freq_inc;
+                }
+                max.num_of_inc = ((Max::freq - fields.freq_start) / fields.freq_inc);
+                if(fields.num_of_inc > max.num_of_inc) {
+                    fields.num_of_inc = max.num_of_inc;
+                }
             }
 
-            if(ImGui::InputTextValid(
+            if(ImGui::Slider_uint32_t_Valid(
                 "Increment Frequency [Hz]",
-                inputs.gui.freq_inc,
-                sizeof(inputs.gui.freq_inc),
-                valid_fields.freq_inc,
-                ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_CallbackCharFilter,
-                ImGui::plus_minus_dot_char_filter_cb
+                &fields.freq_inc,
+                Min::freq_inc,
+                max.freq_inc,
+                true,
+                "%u",
+                ImGuiSliderFlags_AlwaysClamp
             )) {
-                update_freq_inc_valid();
+                config.set_inc_freq(AD5933::uint_incfreq_t{ fields.freq_inc });
+                max.num_of_inc = ((Max::freq - fields.freq_start) / fields.freq_inc);
+                if(fields.num_of_inc > max.num_of_inc) {
+                    fields.num_of_inc = max.num_of_inc;
+                }
             }
 
-            if(ImGui::InputTextValid(
+            if(ImGui::Slider_uint16_t_Valid(
                 "Number of Increments",
-                inputs.gui.num_of_inc,
-                sizeof(inputs.gui.num_of_inc),
-                valid_fields.num_of_inc,
-                ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_CallbackCharFilter,
-                ImGui::plus_minus_dot_char_filter_cb
+                &fields.num_of_inc,
+                Min::num_of_inc,
+                max.num_of_inc,
+                true,
+                "%u",
+                ImGuiSliderFlags_AlwaysClamp
             )) {
-                update_num_of_inc_valid();
+                config.set_num_of_inc(AD5933::uint9_t{ fields.num_of_inc });
             }
+
             ImGui::Separator(); 
 
-            if(ImGui::InputFloatValid(
+            ImGui::SliderFloat(
                 "Calibration Impedance [Ohm]",
-                &inputs.numeric_values.impedance,
-                valid_fields.impedance,
-                0,
-                0,
+                &fields.impedance,
+                std::numeric_limits<float>::min(),
+                1'000'000.0f,
                 "%.3f",
-                ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_CallbackCharFilter,
-                ImGui::minus_char_filter_cb
-            )) {
-                update_impedance_valid();
-            }
+                ImGuiSliderFlags_AlwaysClamp
+            );
+
             ImGui::Separator(); 
 
             if(ImGui::Combo(
                 "Output Excitation Voltage Range",
-                &inputs.gui.voltage_range_combo,
+                &fields.voltage_range_combo,
                 "2 Vppk\0""1 Vppk\0""400 mVppk\0""200 mVppk\0"
             )) {
-                config.set_voltage_range(std::next(AD5933::Masks::Or::Ctrl::HB::voltage_map.begin(), inputs.gui.voltage_range_combo)->first);
+                config.set_voltage_range(std::next(AD5933::Masks::Or::Ctrl::HB::voltage_map.begin(), fields.voltage_range_combo)->first);
             }
 
-            if(ImGui::Combo("PGA Gain", &inputs.gui.pga_gain_combo, "x1\0""x5\0")) {
-                config.set_PGA_gain(std::next(AD5933::Masks::Or::Ctrl::HB::pga_gain_map.begin(), inputs.gui.pga_gain_combo)->first);
+            if(ImGui::Combo("PGA Gain", &fields.pga_gain_combo, "x1\0""x5\0")) {
+                config.set_PGA_gain(std::next(AD5933::Masks::Or::Ctrl::HB::pga_gain_map.begin(), fields.pga_gain_combo)->first);
             }
+
             ImGui::Separator(); 
+
+            if(ImGui::SliderInt("Settling Time Cycles", &fields.settling_number, Min::settling_cycles, max.settling_cycles, "%d", ImGuiSliderFlags_AlwaysClamp)) {
+                config.set_settling_time_cycles_number(AD5933::uint9_t{ static_cast<uint16_t>(fields.settling_number) });
+            }
 
             if(ImGui::Combo(
                 "Settling Time Cycles Multiplier",
-                &inputs.gui.settling_multiplier_combo,
+                &fields.settling_multiplier_combo,
                 "x1\0""x2\0""x4\0"
             )) {
-                config.set_settling_time_cycles_multiplier(std::next(AD5933::Masks::Or::SettlingTimeCyclesHB::multiplier_map.begin(), inputs.gui.settling_multiplier_combo)->first);
+                config.set_settling_time_cycles_multiplier(std::next(AD5933::Masks::Or::SettlingTimeCyclesHB::multiplier_map.begin(), fields.settling_multiplier_combo)->first);
             }
+
             ImGui::Separator(); 
 
-            if(ImGui::InputTextValid(
-                "Settling Time Cycles Number",
-                inputs.gui.settling_number,
-                sizeof(inputs.gui.settling_number),
-                valid_fields.settling_number,
-                ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_CallbackCharFilter,
-                ImGui::plus_minus_dot_char_filter_cb
-            )) {
-                update_settling_number_valid();
+            if(ImGui::Combo("System Clock Source", &fields.sysclk_src_combo, "Internal\0""External\0")) {
+                config.set_sysclk_src(std::next(AD5933::Masks::Or::Ctrl::LB::sysclk_src_map.begin(), fields.sysclk_src_combo)->first);
+                fields.sysclk_freq = static_cast<uint32_t>(config.get_active_sysclk_freq());
             }
 
-            if(ImGui::Combo("System Clock Source", &inputs.gui.sysclk_src_combo, "Internal\0""External\0")) {
-                config.set_sysclk_src(std::next(AD5933::Masks::Or::Ctrl::LB::sysclk_src_map.begin(), inputs.gui.sysclk_src_combo)->first);
-                inputs.numeric_values.sysclk_freq = static_cast<uint32_t>(config.get_active_sysclk_freq());
-            }
-            ImGui::Input_uint32_t("System Clock Frequency [Hz]", &inputs.numeric_values.sysclk_freq, 0, 0, ImGuiInputTextFlags_ReadOnly);
+            ImGui::BeginDisabled();
+            ImGui::Input_uint32_t("System Clock Frequency [Hz]", &fields.sysclk_freq, 0, 0, ImGuiInputTextFlags_ReadOnly);
+            ImGui::EndDisabled();
         }
 
         const std::optional<Lock> Calibrate::draw_inner() {
@@ -218,7 +144,7 @@ namespace GUI {
 
             ImGui::Separator();
 
-            if(valid_fields.all_true() == false || status == Status::Calibrating) {
+            if(status == Status::Calibrating) {
                 ImGui::BeginDisabled();
                 ImGui::Button("Calibrate");
                 ImGui::EndDisabled();
@@ -289,15 +215,23 @@ namespace GUI {
             );
 
             const uint16_t wished_size = self.config.get_num_of_inc().unwrap() + 1;
-            const float progress_bar_step = 1.0 / static_cast<double>(wished_size);
-            const float timeout_ms =
+            const float progress_bar_step = 1.0f / static_cast<float>(wished_size);
+            const float timeout_ms {
                 (1.0f / static_cast<float>(self.config.get_start_freq().unwrap())) 
-                * static_cast<float>(self.config.get_settling_time_cycles_number().unwrap())
+                * [&]() {
+                    const float ret { static_cast<float>(self.config.get_settling_time_cycles_number().unwrap()) };
+                    if(ret == 0) {
+                        return 1.0f;
+                    } else {
+                        return ret;
+                    }
+                }()
                 * AD5933::Masks::Or::SettlingTimeCyclesHB::get_multiplier_float(self.config.get_settling_time_cycles_multiplier())
                 * 1'000'000.0f
-                * 10.0f;
+                * 100.0f
+            };
             const auto boost_timeout_ms { boost::posix_time::milliseconds(static_cast<size_t>(timeout_ms)) };
-            const float impedance = self.inputs.numeric_values.impedance;
+            const float impedance = self.fields.impedance;
 
             std::vector<AD5933::Data> tmp_raw_calibration;
             tmp_raw_calibration.reserve(wished_size);
@@ -366,6 +300,7 @@ namespace GUI {
             );
 
             self.calibration_file = ns::CalibrationFile { impedance, self.config, tmp_calibration };
+            self.calibration_queue_to_load_into_measurement.push(self.calibration_file);
 
             self.status = Status::Calibrated;
             self.plotted = false;

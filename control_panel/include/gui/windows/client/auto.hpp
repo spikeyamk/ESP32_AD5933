@@ -26,8 +26,8 @@ namespace GUI {
         public:
             enum class Status {
                 Off,
-                Sending,
-                Saving,
+                BLE,
+                SD_Card,
                 Error,
             };
             Status status { Status::Off };
@@ -43,12 +43,12 @@ namespace GUI {
             void draw(bool &enable, const ImGuiID side_id, Lock& lock);
         private:
             const std::optional<Lock> draw_inner();
-            void start_saving();
-            void start_sending();
+            void to_sd_card();
+            void over_ble();
             void stop();
         private:
             std::stop_source stop_source;
-            static void sending_cb(std::stop_token st, Auto& self);
+            static void over_ble_cb(std::stop_token st, Auto& self);
         };
     }
 }

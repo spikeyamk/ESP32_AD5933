@@ -50,12 +50,20 @@ namespace BLE_Client {
                     try {
                         adapter.set_callback_on_scan_start([shm]() {
                             shm->console.log("BLE_Client::callback_on_scan_start\n");
-                            shm->discovery_devices->clear();
+                            auto remove_it { std::remove_if(shm->discovery_devices->begin(), shm->discovery_devices->end(), [](const auto& e) {
+                                if(e.get_connected() == false) {
+                                    return true;
+                                } else {
+                                    return false;
+                                }
+                            }) };
+                            if(remove_it != shm->discovery_devices->end()) {
+                                shm->discovery_devices->erase(remove_it);
+                            }
                         });
                         adapter.set_callback_on_scan_stop([shm]() { shm->console.log("BLE_Client::Scan stopped\n"); });
                         adapter.set_callback_on_scan_found([shm](SimpleBLE::Peripheral found_peripheral) {
                             if(std::find_if(shm->discovery_devices->begin(), shm->discovery_devices->end(), [&found_peripheral, shm](const BLE_Client::Discovery::Device& e) {
-                                shm->console.log("BLE_Client::callback_on_scan_found: inside std::find_if\n");
                                 return e.get_address() == found_peripheral.address();
                             }) == shm->discovery_devices->end()) {
                                 if(is_esp32_ad5933_before_attempting_connect(found_peripheral)) {
@@ -76,7 +84,6 @@ namespace BLE_Client {
                         
                         adapter.set_callback_on_scan_updated([shm](SimpleBLE::Peripheral found_peripheral) {
                             auto it = std::find_if(shm->discovery_devices->begin(), shm->discovery_devices->end(), [&found_peripheral, shm](const BLE_Client::Discovery::Device& e) {
-                                shm->console.log("BLE_Client::callback_on_scan_updated: inside std::find_if\n");
                                 return e.get_address() == found_peripheral.address();
                             });
 

@@ -209,8 +209,12 @@ namespace AD5933 {
 		}
 
 		constexpr void set_sysclk_src(const Masks::Or::Ctrl::LB::SysClkSrc sysclk_src) {
+			const uint_startfreq_t start_freq { get_start_freq() };
+			const uint_incfreq_t inc_freq { get_inc_freq() };
 			const std::bitset<8> set_mask { static_cast<uint8_t>(sysclk_src) };
 			ctrl.LB = ((ctrl.LB & ~Masks::And::Ctrl::LB::SysClkSrc) | set_mask);
+			set_start_freq(start_freq);
+			set_inc_freq(inc_freq);
 		}
 
 		constexpr void set_start_freq(const uint_startfreq_t &in_start_freq) {

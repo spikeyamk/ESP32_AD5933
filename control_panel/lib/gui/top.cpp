@@ -23,27 +23,10 @@
 #include "gui/top.hpp"
 
 namespace GUI {
-    Top::Top() {
-        try {
-            std::ifstream file(ns::settings_file_path);
-            if(file.is_open() == false) {
-                return;
-            }
-
-            json j;
-            file >> j;
-            const ns::SettingsFile settings_file = j;
-            theme_combo = settings_file.settings.theme_combo;
-            scale_combo = settings_file.settings.scale_combo;
-            update_theme();
-            update_scale();
-            ImPlot::GetStyle().UseLocalTime = settings_file.settings.local_time;
-            ImPlot::GetStyle().UseISO8601 = settings_file.settings.iso_8601;
-            ImPlot::GetStyle().Use24HourClock = settings_file.settings.twenty_four_hour_clock;
-        } catch(const std::exception& e) {
-            std::cout << "ERROR: GUI::Top::Top(): error loading " << ns::settings_file_path << " file and parsing to json: exception: " << e.what() << std::endl;
-        }
-    }
+    Top::Top(const ns::SettingsFile& settings_file) :
+        theme_combo { settings_file.settings.theme_combo },
+        scale_combo { settings_file.settings.scale_combo }
+    {}
 
     ImGuiID Top::draw(bool& done) {
         // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
@@ -206,7 +189,7 @@ namespace GUI {
             update_theme();
         }
 
-        if(ImGui::Combo("Scale", &scale_combo, Scales::identifiers.data())) {
+        if(ImGui::Combo("Scale", &scale_combo, ns::Settings::Scales::identifiers.data())) {
             update_scale();
         }
 
@@ -281,7 +264,7 @@ namespace GUI {
         SDL_zero(event);
         if(scale_combo != 0) {
             event.type = SDL_EVENT_USER;
-            event.user.code = *reinterpret_cast<const Uint32*>(Scales::values + static_cast<size_t>(scale_combo - 1));
+            event.user.code = *reinterpret_cast<const Uint32*>(ns::Settings::Scales::values + static_cast<size_t>(scale_combo - 1));
             Trielo::trielo_lambda<SDL_PushEvent>(Trielo::OkErrCode(0), Boilerplate::sdl_error_lambda, &event);
         } else {
             event.type = SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED;

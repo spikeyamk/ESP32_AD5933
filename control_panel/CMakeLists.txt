@@ -208,3 +208,5 @@ if(SHM_CLEANER)
 		target_compile_definitions(${SHM_CLEANER} PRIVATE _WIN32_WINNT=0x0A00)
 	endif()
 endif()
+
+add_executable(dummy misc/dummy.cpp)

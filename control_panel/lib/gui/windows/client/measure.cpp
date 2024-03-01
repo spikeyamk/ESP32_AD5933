@@ -30,6 +30,18 @@ namespace GUI {
             stop_source.request_stop();
         }
 
+        void Measure::load_from_memory(const ns::CalibrationFile& calibration_file) {
+            const auto calibration_pair { calibration_file.unwrap() };
+            configs.calibration = calibration_pair.first;
+            configs.measurement = calibration_pair.first;
+            calibration_vectors.calibration = calibration_pair.second;
+            calibration_vectors.freq_uint32_t = configs.calibration.get_freq_vector<uint32_t>();
+            calibration_vectors.freq_float = configs.calibration.get_freq_vector<float>();
+            inputs.numeric.freq_start = configs.calibration.get_start_freq().unwrap();
+            inputs.numeric.freq_end = configs.calibration.get_freq_end();
+            status = Status::Loaded;
+        }
+
         const std::optional<Lock> Measure::draw_inner() {
             if(status == Status::NotLoaded || status == Status::MeasuringSingle || status == Status::MeasuringPeriodic) {
                 ImGui::BeginDisabled();
@@ -42,7 +54,7 @@ namespace GUI {
                     ImGui::EndDisabled();
                 } else {
                     if(ImGui::Button("Load")) {
-                        if(load()) {
+                        if(load_from_disk()) {
                             status = Status::Loaded;
                         }
                     }
@@ -79,7 +91,7 @@ namespace GUI {
             } else {
                 draw_input_elements();
                 if(ImGui::Button("Load")) {
-                    if(load()) {
+                    if(load_from_disk()) {
                         status = Status::Loaded;
                     }
                 }
@@ -125,7 +137,7 @@ namespace GUI {
             ImGui::End();
         }
 
-        bool Measure::load() {
+        bool Measure::load_from_disk() {
             nfdchar_t *outPath = nullptr;
             const std::array<nfdfilteritem_t, 1> filterItem { { "Calibration", "json" } };
             switch(NFD::OpenDialog(outPath, filterItem.data(), static_cast<nfdfiltersize_t>(filterItem.size()))) {
@@ -152,14 +164,7 @@ namespace GUI {
                             outPath = nullptr;
                         }
                         const ns::CalibrationFile calibration_file = j;
-                        const auto calibration_pair = calibration_file.unwrap();
-                        configs.calibration = calibration_pair.first;
-                        configs.measurement = calibration_pair.first;
-                        calibration_vectors.calibration = calibration_pair.second;
-                        calibration_vectors.freq_uint32_t = configs.calibration.get_freq_vector<uint32_t>();
-                        calibration_vectors.freq_float = configs.calibration.get_freq_vector<float>();
-                        inputs.numeric.freq_start = configs.calibration.get_start_freq().unwrap();
-                        inputs.numeric.freq_end = configs.calibration.get_freq_end();
+                        load_from_memory(calibration_file);
                         return true;
                     } catch(const std::exception& e) {
                         std::cout << "ERROR: GUI::Windows::Measure::load(): exception: " << e.what() << std::endl;
@@ -210,12 +215,21 @@ namespace GUI {
             const uint16_t wished_size = self.configs.measurement.get_num_of_inc().unwrap() + 1;
             assert(wished_size <= self.calibration_vectors.calibration.size());
             const float progress_bar_step = 1.0f / static_cast<float>(wished_size);
-            const float timeout_ms =
+            const float timeout_ms {
                 (1.0f / static_cast<float>(self.configs.measurement.get_start_freq().unwrap())) 
-                * static_cast<float>(self.configs.measurement.get_settling_time_cycles_number().unwrap())
+                * [&]() {
+                    const float ret { static_cast<float>(self.configs.measurement.get_settling_time_cycles_number().unwrap()) };
+                    if(ret == 0) {
+                        return 1.0f;
+                    } else {
+                        return ret;
+                    }
+                }()
                 * AD5933::Masks::Or::SettlingTimeCyclesHB::get_multiplier_float(self.configs.measurement.get_settling_time_cycles_multiplier())
                 * 1'000'000.0f
-                * 10.0f;
+                * 100.0f
+            };
+
             const auto boost_timeout_ms { boost::posix_time::milliseconds(static_cast<size_t>(timeout_ms)) };
 
             bool first_iteration { true };
@@ -330,12 +344,21 @@ namespace GUI {
             const uint16_t wished_size = self.configs.measurement.get_num_of_inc().unwrap() + 1;
             assert(wished_size <= self.calibration_vectors.calibration.size());
             const float progress_bar_step = 1.0f / static_cast<float>(wished_size);
-            const float timeout_ms =
+            const float timeout_ms {
                 (1.0f / static_cast<float>(self.configs.measurement.get_start_freq().unwrap())) 
-                * static_cast<float>(self.configs.measurement.get_settling_time_cycles_number().unwrap())
+                * [&]() {
+                    const float ret { static_cast<float>(self.configs.measurement.get_settling_time_cycles_number().unwrap()) };
+                    if(ret == 0) {
+                        return 1.0f;
+                    } else {
+                        return ret;
+                    }
+                }()
                 * AD5933::Masks::Or::SettlingTimeCyclesHB::get_multiplier_float(self.configs.measurement.get_settling_time_cycles_multiplier())
                 * 1'000'000.0f
-                * 10.0f;
+                * 100.0f
+            };
+
             const auto boost_timeout_ms { boost::posix_time::milliseconds(static_cast<size_t>(timeout_ms)) };
 
             bool first_iteration { true };
@@ -429,9 +452,11 @@ namespace GUI {
         }
         
         void Measure::draw_input_elements() {
-            if(ImGui::Input_uint32_t_WithCallbackTextReadOnly(
+            ImGui::Slider_uint32_t_Valid(
                 "Start Frequency [Hz]",
                 &inputs.numeric.freq_start,
+            )
+            if(ImGui::Input_uint32_t_WithCallbackTextReadOnly(
                 configs.calibration.get_inc_freq().unwrap(),
                 configs.calibration.get_inc_freq().unwrap(),
                 ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_CallbackCharFilter,
@@ -464,6 +489,10 @@ namespace GUI {
                 }
             }
 
+            if(ImGui::SliderInt("Settling Time Cycles", &inputs.numeric.settling_number, 1, 511, "%d", ImGuiSliderFlags_AlwaysClamp)) {
+                configs.measurement.set_settling_time_cycles_number(AD5933::uint9_t { static_cast<uint16_t>(inputs.numeric.settling_number) });
+            }
+
             if(ImGui::Combo(
                 "Settling Time Cycles Multiplier",
                 &inputs.gui.settling_multiplier_combo,
@@ -474,10 +503,6 @@ namespace GUI {
                         inputs.gui.settling_multiplier_combo
                     )
                 );
-            }
-
-            if(ImGui::SliderInt("Settling Time Cycles Number", &inputs.numeric.settling_number, 1, 511)) {
-                configs.measurement.set_settling_time_cycles_number(AD5933::uint9_t { static_cast<uint16_t>(inputs.numeric.settling_number) });
             }
         }
     }

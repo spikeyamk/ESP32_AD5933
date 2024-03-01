@@ -107,13 +107,14 @@ namespace GUI {
             Measure(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm);
             void draw(bool &enable, const ImGuiID side_id, Lock& lock);
             ~Measure();
+            void load_from_memory(const ns::CalibrationFile& calibration_file);
         private:
             static void single_cb(std::stop_token st, Measure& self);
             void single();
             static void periodic_cb(std::stop_token st, Measure& self);
             void periodic();
             void stop();
-            bool load();
+            bool load_from_disk();
             void draw_input_elements(); 
             const std::optional<Lock> draw_inner();
         };

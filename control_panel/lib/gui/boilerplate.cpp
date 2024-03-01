@@ -1,4 +1,5 @@
 #include <span>
+#include <fstream>
 
 #include <trielo/trielo.hpp>
 #include <SDL3/SDL.h>
@@ -40,15 +41,14 @@ namespace GUI {
 
         void set_scale(const float scale) {
             ImGui_ImplSDLRenderer3_DestroyFontsTexture();
-            ImGuiIO& io { ImGui::GetIO() };
-            io.Fonts->Clear();
+            ImGui::GetIO().Fonts->Clear();
             static const ImWchar font_ranges_magic_load_all_utf8_glyphs[] {
                 0x20, 0xFFFF, 0 
             };
 
             uint8_t* font = new uint8_t[ubuntu_sans_regular.size()]; // This is not a memory leak io.Fonts->AddFontFromMemoryTTF calls delete on this variable
             std::copy(ubuntu_sans_regular.begin(), ubuntu_sans_regular.end(), font);
-            io.Fonts->AddFontFromMemoryTTF(font, static_cast<int>(ubuntu_sans_regular.size()), font_size_pixels_base * scale, nullptr, font_ranges_magic_load_all_utf8_glyphs);
+            ImGui::GetIO().Fonts->AddFontFromMemoryTTF(font, static_cast<int>(ubuntu_sans_regular.size()), font_size_pixels_base * scale, nullptr, font_ranges_magic_load_all_utf8_glyphs);
 
             decltype(ImGuiStyle::Colors) original_colors {};
             for(size_t i = 0; i < sizeof(original_colors) / sizeof(original_colors[0]); i++) {
@@ -77,9 +77,10 @@ namespace GUI {
             set_scale(sdl_scale);
         }
 
-        std::tuple<SDL_Window*, SDL_Renderer*> init() {
+        std::tuple<SDL_Window*, SDL_Renderer*, ns::SettingsFile> init() {
+            ns::SettingsFile settings_file;
             if(Trielo::trielo_lambda<SDL_Init>(Trielo::OkErrCode(0), sdl_error_lambda, SDL_INIT_VIDEO) != 0) {
-                return { nullptr, nullptr };
+                return { nullptr, nullptr, settings_file };
             }
             Trielo::trielo_lambda<SDL_SetHint>(Trielo::OkErrCode(SDL_bool{SDL_TRUE}), sdl_error_lambda, SDL_HINT_IME_SHOW_UI, "1");
 
@@ -105,7 +106,7 @@ namespace GUI {
                     )
                 )
             == nullptr) {
-                return { nullptr, nullptr };
+                return { nullptr, nullptr, settings_file };
             }
 
             static const Uint32 renderer_flags = (
@@ -125,7 +126,7 @@ namespace GUI {
                     )
                 ) 
             == nullptr) {
-                return { nullptr, nullptr };
+                return { nullptr, nullptr, settings_file };
             }
 
             {
@@ -150,13 +151,13 @@ namespace GUI {
                 sizeof(ImDrawVert),
                 sizeof(ImDrawIdx)
             ) == false) {
-                return { nullptr, nullptr };
+                return { nullptr, nullptr, settings_file };
             }
             if(Trielo::trielo<ImGui::CreateContext>(Trielo::FailErrCode(static_cast<ImGuiContext*>(nullptr)), static_cast<ImFontAtlas*>(nullptr)) == nullptr) {
-                return { nullptr, nullptr };
+                return { nullptr, nullptr, settings_file };
             }
             if(Trielo::trielo<ImPlot::CreateContext>(Trielo::FailErrCode(static_cast<ImPlotContext*>(nullptr))) == nullptr) {
-                return { nullptr, nullptr };
+                return { nullptr, nullptr, settings_file };
             }
 
             ImGuiIO& io = ImGui::GetIO();
@@ -164,25 +165,68 @@ namespace GUI {
             io.IniFilename = nullptr;
 
             if(Trielo::trielo<ImGui_ImplSDL3_InitForSDLRenderer>(Trielo::OkErrCode(true), window, renderer) == false) {
-                return { nullptr, nullptr };
+                return { nullptr, nullptr, settings_file };
             }
+
             if(Trielo::trielo<ImGui_ImplSDLRenderer3_Init>(Trielo::OkErrCode(true), renderer) == false) {
-                return { nullptr, nullptr };
+                return { nullptr, nullptr, settings_file };
+            }
+            
+            try {
+                std::ifstream file(ns::settings_file_path);
+                if(file.is_open() == false) {
+                    throw std::exception("ns::settings_file_path doesn't exist");
+                }
+
+                json j;
+                file >> j;
+                settings_file = j;
+                respect_system_theme = (settings_file.settings.theme_combo == 0);
+                respect_system_scale = (settings_file.settings.scale_combo == 0);
+
+                switch(settings_file.settings.theme_combo) {
+                    case 0:
+                        switch_imgui_theme();
+                        break;
+                    case 1:
+                        ImGui::StyleColorsDark();
+                        break;
+                    case 2:
+                        ImGui::StyleColorsLight();
+                        break;
+                    case 3:
+                        ImGui::StyleColorsClassic();
+                        break;
+                }
+
+                if(settings_file.settings.scale_combo == 0) {
+                    Trielo::trielo<set_scale>(Trielo::trielo_lambda<SDL_GetWindowDisplayScale>(Trielo::OkErrCode(0.0f), Boilerplate::sdl_error_lambda, (window)));
+                } else {
+                    Trielo::trielo<set_scale>(ns::Settings::Scales::values[static_cast<size_t>(settings_file.settings.scale_combo - 1)]);
+                }
+
+                Trielo::trielo<set_implot_scale>();
+
+                ImPlot::GetStyle().UseLocalTime = settings_file.settings.local_time;
+                ImPlot::GetStyle().UseISO8601 = settings_file.settings.iso_8601;
+                ImPlot::GetStyle().Use24HourClock = settings_file.settings.twenty_four_hour_clock;
+            } catch(const std::exception& e) {
+                std::cout << "ERROR: GUI::Top::Top(): error loading " << ns::settings_file_path << " file and parsing to json: exception: " << e.what() << std::endl;
+                switch_imgui_theme();
+                Trielo::trielo<set_scale>(Trielo::trielo_lambda<SDL_GetWindowDisplayScale>(Trielo::OkErrCode(0.0f), Boilerplate::sdl_error_lambda, (window)));
+                Trielo::trielo<set_implot_scale>();
             }
 
-            Trielo::trielo<switch_imgui_theme>();
-            Trielo::trielo<set_scale>(Trielo::trielo_lambda<SDL_GetWindowDisplayScale>(Trielo::FailErrCode(0.0f), sdl_error_lambda, window));
-
-            if(Trielo::trielo_lambda<SDL_ShowWindow>(Trielo::OkErrCode(0), sdl_error_lambda, window) != 0) {
-                return { nullptr, nullptr };
+            if(Trielo::trielo_lambda<SDL_ShowWindow>(Trielo::OkErrCode(0), Boilerplate::sdl_error_lambda, window) != 0) {
+                return { nullptr, nullptr, settings_file };
             }
 
-            return std::tuple { window, renderer };
+            return std::tuple { window, renderer, settings_file };
         } 
 
         void set_implot_scale() {
-            const float scale = Boilerplate::get_scale();
             const auto default_style { ImPlotStyle() };
+            const float scale { Boilerplate::get_scale() };
             ImPlot::GetStyle().PlotDefaultSize.x = default_style.PlotDefaultSize.x * scale;
             ImPlot::GetStyle().PlotDefaultSize.y = default_style.PlotDefaultSize.y * scale;
         }
