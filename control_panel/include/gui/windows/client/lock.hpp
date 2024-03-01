@@ -8,6 +8,7 @@ namespace GUI {
             Measure,
             Auto,
             FileManager,
+            UnexpectedDisconnection,
         };
     }
 }

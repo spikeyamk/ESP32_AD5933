@@ -29,12 +29,14 @@ namespace BLE_Client {
                         using T_EventDecay = std::decay_t<decltype(event)>;
                         connections[event.index]->process_event(event);
                         if constexpr (std::is_same_v<T_EventDecay, BLE_Client::StateMachines::Connection::Events::disconnect>) {
-                            delete connections[event.index];
-                            connections.erase(connections.begin() + event.index);
+                            if(event.index < connections.size()) {
+                                delete connections[event.index];
+                                connections.erase(connections.begin() + event.index);
+                            }
                         }
                     }, event_variant);
                 }
             }, shm->cmd.read());
-        }
+       }
     }
 }

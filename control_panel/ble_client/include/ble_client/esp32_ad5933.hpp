@@ -11,6 +11,8 @@
 #include <algorithm>
 #include <optional>
 #include <tuple>
+#include <thread>
+#include <stop_token>
 
 #include "ble_client/shm/child/child.hpp"
 #include "magic/events/common.hpp"
@@ -42,6 +44,7 @@ namespace BLE_Client {
         };
         Channels channels {};
         std::shared_ptr<BLE_Client::SHM::ChildSHM> child_shm { nullptr };
+        std::jthread connection_checker;
     public:
         ESP32_AD5933() = default;
         ESP32_AD5933(
@@ -51,6 +54,7 @@ namespace BLE_Client {
             std::shared_ptr<BLE_Client::SHM::NotifyChannelTX> hid_information_channel,
             std::shared_ptr<BLE_Client::SHM::ChildSHM> child_shm
         );
+        ~ESP32_AD5933();
         void update_time();
         void setup_subscriptions();
         void remove_subscriptions();
@@ -61,6 +65,8 @@ namespace BLE_Client {
             peripheral.write_request(service.uuid(), characteristic.uuid(), std::string(packet.begin(), packet.end()));
 
         }
+
+        static void connection_checker_cb(std::stop_token st, ESP32_AD5933& self);
     public:
         template<size_t N>
         void write_time_update_control_point(const std::array<uint8_t, N>& packet) {

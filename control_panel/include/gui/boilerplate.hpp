@@ -2,14 +2,16 @@
 
 #include <tuple>
 #include <functional>
-#include "imgui.h"
 
+#include "imgui.h"
 #include "SDL3/SDL.h"
+
+#include "json/settings.hpp"
 
 namespace GUI {
     namespace Boilerplate {
         extern const std::function<void()> sdl_error_lambda;
-        std::tuple<SDL_Window*, SDL_Renderer*> init();
+        std::tuple<SDL_Window*, SDL_Renderer*, ns::SettingsFile> init();
         void process_events(bool &done, SDL_Window* window, SDL_Renderer* renderer);
         void start_new_frame();
         void render(SDL_Renderer* renderer);

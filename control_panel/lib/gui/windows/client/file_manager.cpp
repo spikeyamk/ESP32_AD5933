@@ -96,7 +96,6 @@ namespace GUI {
                         ImGui::ProgressBar(progress_bar_fraction);
                         ImGui::BeginDisabled();
                     }
-                    ImGui::SameLine();
                     ImGui::Button("Remove");
                     ImGui::EndDisabled();
                 } else {

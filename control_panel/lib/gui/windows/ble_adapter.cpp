@@ -84,26 +84,37 @@ namespace GUI {
                         && selected.has_value()
                         && connecting == false
                         && shm->discovery_devices->at(selected.value()).get_connected() == false
+                        && [&]() {
+                            if(std::find_if(client_windows.begin(), client_windows.end(), [&](const auto& e) {
+                                return e.get_address() == shm->discovery_devices->at(selected.value()).get_address();
+                            }) != client_windows.end()) {
+                                return false;
+                            }
+
+                            return true;
+                        }()
                     ) {
                         if(ImGui::Button("Connect")) {
                             connecting = true;
                             const BLE_Client::StateMachines::Connector::Events::connect connect_event { shm->discovery_devices->at(selected.value()).get_address() };
                             shm->cmd.send(connect_event);
-                            std::jthread t1([](std::stop_token st, auto shm, const BLE_Client::StateMachines::Connector::Events::connect connect_event, bool& connecting, std::vector<Windows::Client>& client_windows) {
-                                for(int i = 0; i < 100; i++) {
+                            std::jthread t1([](std::stop_token st, auto shm, const BLE_Client::StateMachines::Connector::Events::connect connect_event, bool& connecting, std::vector<Windows::Client>& client_windows, bool& show_connection_attempt_timeout_error_pop_up) {
+                                for(size_t i = 0, timeout_ms = 5'000; i < timeout_ms; i++) {
                                     if(st.stop_requested()) {
                                         return;
                                     }
                                     try{
                                         shm->attach_device(connect_event);
-                                        client_windows.push_back(Windows::Client{std::string(connect_event.get_address()), client_windows.size(), shm });
-                                        break;
+                                        client_windows.push_back(std::move(Windows::Client{std::string(connect_event.get_address()), client_windows.size(), shm }));
+                                        connecting = false;
+                                        return;
                                     } catch(...) {
-                                        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                                        std::this_thread::sleep_for(std::chrono::milliseconds(1));
                                     }
                                 }
+                                show_connection_attempt_timeout_error_pop_up = true;
                                 connecting = false;
-                            }, shm, connect_event, std::ref(connecting), std::ref(client_windows));
+                            }, shm, connect_event, std::ref(connecting), std::ref(client_windows), std::ref(show_connection_attempt_timeout_error_pop_up));
                             t1.detach();
                             stop_sources.push_back(t1.get_stop_source());
                         }
@@ -122,14 +133,29 @@ namespace GUI {
             ImGui::End();
 
             if(show_ble_off_error_pop_up) {
-                ImGui::OpenPopup("Error");
+                ImGui::OpenPopup("Error##0");
                 // Always center this window when appearing
                 ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
                 show_ble_off_error_pop_up = false;
             }
 
-            if(ImGui::BeginPopupModal("Error", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+            if(ImGui::BeginPopupModal("Error##0", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
                 ImGui::Text("Bluetooth is turned off.");
+                if(ImGui::Button("OK")) {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
+
+            if(show_connection_attempt_timeout_error_pop_up) {
+                ImGui::OpenPopup("Error##1");
+                // Always center this window when appearing
+                ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+                show_connection_attempt_timeout_error_pop_up = false;
+            }
+
+            if(ImGui::BeginPopupModal("Error##1", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text("Connection attempt timed out");
                 if(ImGui::Button("OK")) {
                     ImGui::CloseCurrentPopup();
                 }

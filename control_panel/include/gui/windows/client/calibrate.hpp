@@ -8,6 +8,7 @@
 #include <stop_token>
 #include <optional>
 #include <mutex>
+#include <queue>
 
 #include "imgui.h"
 
@@ -25,52 +26,37 @@ namespace GUI {
         public:
             static constexpr std::u8string_view name_base { u8"Calibrate##" };
         private:
-            static constexpr uint32_t min_freq = 1'000;
-            static constexpr uint32_t max_freq = 100'000;
-            static constexpr uint32_t res_freq = 1;
-            static constexpr uint32_t max_9bit = 511;
-            struct ValidTextInputs {
-                bool freq_start = true;
-                bool freq_inc = true;
-                bool num_of_inc = true;
-                bool impedance = true;
-                bool settling_number = true;
-                inline bool all_true() const {
-                    return freq_start && freq_inc && num_of_inc && impedance && settling_number;
-                }
+            struct Min {
+                static constexpr uint32_t freq_start { 1'000 };
+                static constexpr uint32_t freq_inc { 1 };
+                static constexpr uint32_t num_of_inc { 1 };
+                static constexpr uint32_t settling_cycles { 1 };
             };
-            ValidTextInputs valid_fields {};
-            size_t index;
-            std::u8string name { name_base };
-            bool first { true };
-        private:
-            struct GUI_ItemInputs {
-                char freq_start[7] { "30000" };
-                char freq_inc[7] { "10" };
-                char num_of_inc[4] { "2" };
-                int voltage_range_combo { 0 };
-                int pga_gain_combo { 0 };
-                int settling_multiplier_combo { 0 };
-                char settling_number[4] { "15" };
-                int sysclk_src_combo { 0 };
+            struct Max {
+                static constexpr uint32_t freq { 100'000 };
+                static constexpr uint32_t freq_start { 99'999 };
+                uint32_t freq_inc { 99'000 };
+                static constexpr uint32_t nine_bit { 511 };
+                uint16_t num_of_inc { nine_bit };
+                static constexpr uint16_t settling_cycles { nine_bit };
             };
-
-            struct NumericValues {
+            Max max {};
+            struct Fields {
                 uint32_t freq_start { 30'000 };
                 uint32_t freq_inc { 10 };
                 uint16_t num_of_inc { 2 };
                 float impedance { 1'000.0f };
-                float impedance_before { impedance };
-                uint16_t settling_number { 15 };
+                int voltage_range_combo { 0 };
+                int pga_gain_combo { 0 };
+                int sysclk_src_combo { 0 };
+                int settling_number { 15 };
+                int settling_multiplier_combo { 0 };
                 uint32_t sysclk_freq { 16'667'000 };
             };
-
-            struct Inputs {
-                GUI_ItemInputs gui {};
-                NumericValues numeric_values {};
-            };
-
-            Inputs inputs {};
+            Fields fields {};
+            size_t index;
+            std::u8string name { name_base };
+            bool first { true };
         public:
             AD5933::Config config {};
             enum class Status {
@@ -91,6 +77,7 @@ namespace GUI {
             ns::CalibrationFile calibration_file;
             float progress_bar_fraction { 0.0f };
         public:
+            std::queue<ns::CalibrationFile> calibration_queue_to_load_into_measurement;
             Calibrate(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm);
             ~Calibrate();
             void draw(bool& enable, const ImGuiID side_id, Lock& lock);
@@ -99,11 +86,6 @@ namespace GUI {
         private:
             const std::optional<Lock> draw_inner();
             void draw_input_fields();
-            void update_freq_start_valid();
-            void update_freq_inc_valid();
-            void update_num_of_inc_valid();
-            void update_impedance_valid();
-            void update_settling_number_valid();
         private:
             static void calibrate_cb(std::stop_token st, Calibrate& self);
             void calibrate();

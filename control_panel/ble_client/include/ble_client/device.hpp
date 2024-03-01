@@ -57,6 +57,10 @@ namespace BLE_Client {
             inline bool get_connected() const {
                 return connected;
             }
+
+            inline void update_connected(const bool in) {
+                connected = in;
+            }
         private:
             template<typename T>
             std::string_view get_string_view(const T& array) const {

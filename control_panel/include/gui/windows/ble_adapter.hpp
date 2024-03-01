@@ -22,6 +22,7 @@ namespace GUI {
             std::optional<size_t> selected { std::nullopt };
             std::vector<Windows::Client>& client_windows;
             bool show_ble_off_error_pop_up { false };
+            bool show_connection_attempt_timeout_error_pop_up { false };
             std::vector<std::stop_source> stop_sources;
         public:
             static constexpr std::u8string_view name { u8"BLE Adapter" };

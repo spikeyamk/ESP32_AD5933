@@ -29,8 +29,26 @@ namespace BLE_Client {
         peripheral{ peripheral },
         service { characteristics },
         channels{ body_composition_measurement_channel, hid_information_channel },
-        child_shm{ child_shm }
+        child_shm{ child_shm },
+        connection_checker{ connection_checker_cb, std::ref(*this) }
     {}
+
+    ESP32_AD5933::~ESP32_AD5933() {
+        connection_checker.request_stop();
+        connection_checker.join();
+    }
+
+    void ESP32_AD5933::connection_checker_cb(std::stop_token st, ESP32_AD5933& self) {
+        while(st.stop_requested() == false) {
+            auto it { std::find_if(self.child_shm->discovery_devices->begin(), self.child_shm->discovery_devices->end(), [&](const auto& e) {
+                return self.peripheral.address() == e.get_address();
+            }) };
+            if(it != self.child_shm->discovery_devices->end()) {
+                it->update_connected(self.peripheral.is_connected());
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+    }
 
     void ESP32_AD5933::update_time() {
         Magic::Events::Commands::Time::UpdateTimeval timeval_command;
