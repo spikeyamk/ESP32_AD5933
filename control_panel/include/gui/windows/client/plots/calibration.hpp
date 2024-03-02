@@ -30,6 +30,12 @@ namespace GUI {
                     std::vector<float> system_phase;
                 };
                 bool first { true };
+                struct Firsts {
+                    bool raw { true };
+                    bool calculated { true };
+                    bool calibration { true };
+                };
+                Firsts firsts {};
             public:
                 Vectors vectors;
                 Calibration() = default;

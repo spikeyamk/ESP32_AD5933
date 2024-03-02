@@ -7,7 +7,6 @@ namespace GUI {
             Calibrate,
             Measure,
             Auto,
-            FileManager,
             UnexpectedDisconnection,
         };
     }

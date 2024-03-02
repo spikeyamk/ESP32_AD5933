@@ -95,10 +95,13 @@ set(GUI_SRCS
 	"ble_client/lib/shm/common/names.cpp"
 	ble_client/lib/shm/parent/specialized.cpp
 	ble_client/lib/shm/parent/parent.cpp
+
 	lib/imgui_custom/spinner.cpp
 	lib/imgui_custom/input_items.cpp
 	lib/imgui_custom/char_filters.cpp
 	lib/imgui_custom/markdown.cpp
+
+	lib/implot_custom/setup_axis_label.cpp
 
 	lib/gui/run.cpp
 	lib/gui/top.cpp
@@ -113,7 +116,6 @@ set(GUI_SRCS
 	lib/gui/windows/client/client.cpp
 	lib/gui/windows/client/calibrate.cpp
 	lib/gui/windows/client/measure.cpp
-	lib/gui/windows/client/file_manager.cpp
 	lib/gui/windows/client/debug.cpp
 	lib/gui/windows/client/auto.cpp
 

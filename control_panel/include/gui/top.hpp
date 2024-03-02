@@ -23,7 +23,6 @@ namespace GUI {
             bool measure { true };
             bool debug { false };
             bool auto_window { true };
-            bool file_manager { true };
             bool measurement_plots { true };
             bool calibration_plots { true };
             bool auto_plots { true };

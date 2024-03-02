@@ -2,12 +2,12 @@
 #include <string_view>
 
 #include "imgui_internal.h"
-#include "implot.h"
 #include <nfd.hpp>
 #include <utf/utf.hpp>
 
 #include "gui/boilerplate.hpp"
 #include "json/graph.hpp"
+#include "implot_custom/setup_axis_label.hpp"
 
 #include "gui/windows/client/plots/calibration.hpp"
 
@@ -82,13 +82,22 @@ namespace GUI {
 
             void Calibration::draw_raw_data() {
                 if(ImPlot::BeginPlot("Calibration Raw Real Data")) {
-                    ImPlot::SetupAxes("f [Hz]", "RAW_REAL_DATA");
+                    if(firsts.raw) {
+                        ImPlot::SetupAxes("f [Hz]", "RAW_REAL_DATA", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                    } else {
+                        ImPlot::SetupAxesLabels("f [Hz]", "RAW_REAL_DATA");
+                    }
                     ImPlot::PlotLine("REAL_DATA [1/Ohm]", vectors.freq.data(), vectors.raw_real_data.data(), std::min(vectors.freq.size(), vectors.raw_imag_data.size()));
                     ImPlot::EndPlot();
                 }
 
                 if(ImPlot::BeginPlot("Calibration Raw Imag Data")) {
-                    ImPlot::SetupAxes("f [Hz]", "RAW_IMAG_DATA");
+                    if(firsts.raw) {
+                        ImPlot::SetupAxes("f [Hz]", "RAW_IMAG_DATA", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        firsts.raw = false;
+                    } else {
+                        ImPlot::SetupAxesLabels("f [Hz]", "RAW_IMAG_DATA");
+                    }
                     ImPlot::PlotLine("IMAG_DATA [1/Ohm]", vectors.freq.data(), vectors.raw_imag_data.data(), std::min(vectors.freq.size(), vectors.raw_imag_data.size()));
                     ImPlot::EndPlot();
                 }
@@ -108,13 +117,22 @@ namespace GUI {
 
             void Calibration::draw_calculated_data() {
                 if(ImPlot::BeginPlot("Calibration Calculated Magnitude")) {
-                    ImPlot::SetupAxes("f [Hz]", "RAW_MAGNITUDE");
+                    if(firsts.calculated) {
+                        ImPlot::SetupAxes("f [Hz]", "RAW_MAGNITUDE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                    } else {
+                        ImPlot::SetupAxesLabels("f [Hz]", "RAW_MAGNITUDE");
+                    }
                     ImPlot::PlotLine("RAW_MAGNITUDE [1/Ohm]", vectors.freq.data(), vectors.raw_magnitude.data(), std::min(vectors.freq.size(), vectors.raw_magnitude.size()));
                     ImPlot::EndPlot();
                 }
 
                 if(ImPlot::BeginPlot("Calibration Calculated Phase")) {
-                    ImPlot::SetupAxes("f [Hz]", "RAW_PHASE");
+                    if(firsts.calculated) {
+                        ImPlot::SetupAxes("f [Hz]", "RAW_PHASE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                    } else {
+                        ImPlot::SetupAxesLabels("f [Hz]", "RAW_PHASE");
+                        firsts.calculated = false;
+                    }
                     ImPlot::PlotLine("RAW_PHASE [rad]", vectors.freq.data(), vectors.raw_phase.data(), std::min(vectors.freq.size(), vectors.raw_phase.size()));
                     ImPlot::EndPlot();
                 }
@@ -134,13 +152,22 @@ namespace GUI {
 
             void Calibration::draw_calibration_data() {
                 if(ImPlot::BeginPlot("Calibration Gain Factor")) {
-                    ImPlot::SetupAxes("f [Hz]", "GAIN_FACTOR");
+                    if(firsts.calibration) {
+                        ImPlot::SetupAxes("f [Hz]", "GAIN_FACTOR", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                    } else {
+                        ImPlot::SetupAxesLabels("f [Hz]", "GAIN_FACTOR");
+                    }
                     ImPlot::PlotLine("GAIN_FACTOR", vectors.freq.data(), vectors.gain_factor.data(), std::min(vectors.freq.size(), vectors.gain_factor.size()));
                     ImPlot::EndPlot();
                 }
 
                 if(ImPlot::BeginPlot("Calibration System Phase")) {
-                    ImPlot::SetupAxes("f [Hz]", "SYSTEM_PHASE");
+                    if(firsts.calibration) {
+                        ImPlot::SetupAxes("f [Hz]", "SYSTEM_PHASE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        firsts.calibration = false;
+                    } else {
+                        ImPlot::SetupAxesLabels("f [Hz]", "SYSTEM_PHASE");
+                    }
                     ImPlot::PlotLine("SYSTEM_PHASE [rad]", vectors.freq.data(), vectors.system_phase.data(), std::min(vectors.freq.size(), vectors.system_phase.size()));
                     ImPlot::EndPlot();
                 }

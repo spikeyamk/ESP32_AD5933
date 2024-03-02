@@ -332,8 +332,9 @@ namespace BLE {
 				return ret;
 			}
 
-			void start_saving(std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933) {
-				std::jthread t1([sender, &ad5933](StopSources& stop_sources) {
+			void start_saving(const Magic::Events::Commands::Auto::Save& event, std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933) {
+				std::jthread t1([sender, &ad5933, sleep_ms = std::chrono::milliseconds(1 + event.tick_ms)](StopSources& stop_sources) {
+					std::cout << "BLE::Server::Actions::Auto::start_saving sleep_ms: " << sleep_ms << std::endl;
 					stop_sources.save = true;
 
 					size_t bytes_total;
@@ -394,7 +395,7 @@ namespace BLE {
 					while(stop_sources.save == true) {
 						ad5933.reset();
 						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::StandbyMode);
-						std::this_thread::sleep_for(std::chrono::seconds(1));
+						std::this_thread::sleep_for(sleep_ms);
 						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::InitStartFreq);
 						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::StartFreqSweep);
 						do {
@@ -449,14 +450,15 @@ namespace BLE {
 				t1.detach();
 			}
 
-			void start_sending(std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933) {
-				std::jthread t1([sender, &ad5933](StopSources& stop_sources) {
+			void start_sending(const Magic::Events::Commands::Auto::Send& event, std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933) {
+				std::jthread t1([sender, &ad5933, sleep_ms = std::chrono::milliseconds(1 + event.tick_ms)](StopSources& stop_sources) {
+					std::cout << "BLE::Server::Actions::Auto::start_sending sleep_ms: " << sleep_ms << std::endl;
 					stop_sources.send = true;
 					ad5933.driver.program_all_registers(default_config.to_raw_array());
 					while(stop_sources.send == true) {
 						ad5933.reset();
 						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::StandbyMode);
-						std::this_thread::sleep_for(std::chrono::seconds(1));
+						std::this_thread::sleep_for(sleep_ms);
 						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::InitStartFreq);
 						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::StartFreqSweep);
 						do {

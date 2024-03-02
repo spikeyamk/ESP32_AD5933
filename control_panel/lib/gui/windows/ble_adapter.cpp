@@ -63,21 +63,10 @@ namespace GUI {
                 if constexpr (std::is_same_v<T_Decay, BLE_Client::StateMachines::Adapter::States::off>) {
                     if(ImGui::Button("Retry")) {
                         shm->cmd.send_adapter(BLE_Client::StateMachines::Adapter::Events::turn_on{});
+                        shm->cmd.send_adapter(BLE_Client::StateMachines::Adapter::Events::start_discovery{});
                         validate_start_attempt();
                     }
-                } else if constexpr (std::is_same_v<T_Decay, BLE_Client::StateMachines::Adapter::States::on>) {
-                    if(ImGui::Button("Scan")) {
-                        shm->cmd.send_adapter(BLE_Client::StateMachines::Adapter::Events::start_discovery{});
-                    }
-                } else if constexpr (std::is_same_v<T_Decay, BLE_Client::StateMachines::Adapter::States::discovering>) {
-                    if(ImGui::Button("Stop")) {
-                        shm->cmd.send_adapter(BLE_Client::StateMachines::Adapter::Events::stop_discovery{});
-                    }
-                    ImGui::SameLine();
-                    const float scale = GUI::Boilerplate::get_scale();
-                    Spinner::Spinner("Scanning", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
-                }
-                if constexpr (!std::is_same_v<T_Decay, BLE_Client::StateMachines::Adapter::States::off>) {
+                } else {
                     static bool connecting = false;
                     if(
                         shm->discovery_devices->empty() == false

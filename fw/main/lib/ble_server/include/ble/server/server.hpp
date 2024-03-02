@@ -152,8 +152,8 @@ namespace BLE {
 
 		namespace Auto {
 			std::array<char, 28> get_record_file_name_zero_terminated();
-			void start_saving(std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933);
-			void start_sending(std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933);
+			void start_saving(const Magic::Events::Commands::Auto::Save& event, std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933);
+			void start_sending(const Magic::Events::Commands::Auto::Send& event, std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933);
 			void stop_saving(StopSources& stop_sources);
 			void stop_sending(StopSources& stop_sources);
 		}

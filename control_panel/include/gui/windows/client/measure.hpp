@@ -51,7 +51,6 @@ namespace GUI {
                 Numeric numeric {};
             };
             Inputs inputs {};
-;
             float progress_bar_fraction { 0.0f };
             bool periodically_sweeping { false };
         public:

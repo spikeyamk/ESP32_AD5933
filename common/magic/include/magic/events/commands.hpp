@@ -353,25 +353,37 @@ namespace Magic {
             namespace Auto {
                 struct Save {
                     static constexpr Header header { Header::AutoSave };
-                    using T_RawData = std::array<uint8_t, 1>;
+                    uint16_t tick_ms;
+                    using T_RawData = std::array<uint8_t, 1 + sizeof(tick_ms)>;
                     inline constexpr T_RawData to_raw_data() const {
-                        return std::array<uint8_t, 1> { static_cast<uint8_t>(header) };
+                        return T_RawData {
+                            static_cast<uint8_t>(header),
+                            static_cast<uint8_t>((tick_ms >> (0 * 8)) & (0xFF)),
+                            static_cast<uint8_t>((tick_ms >> (1 * 8)) & (0xFF)),
+                        };
                     }
                     static inline constexpr Save from_raw_data(const T_RawData& raw_data) {
-                        (void)raw_data;
-                        return Save {};
+                        return Save {
+                            .tick_ms = *static_cast<const uint16_t*>(static_cast<const void*>(raw_data.data() + 1))
+                        };
                     }
                 };
 
                 struct Send {
                     static constexpr Header header { Header::AutoSend };
-                    using T_RawData = std::array<uint8_t, 1>;
+                    uint16_t tick_ms;
+                    using T_RawData = std::array<uint8_t, 1 + sizeof(tick_ms)>;
                     inline constexpr T_RawData to_raw_data() const {
-                        return std::array<uint8_t, 1> { static_cast<uint8_t>(header) };
+                        return T_RawData {
+                            static_cast<uint8_t>(header),
+                            static_cast<uint8_t>((tick_ms >> (0 * 8)) & (0xFF)),
+                            static_cast<uint8_t>((tick_ms >> (1 * 8)) & (0xFF)),
+                        };
                     }
                     static inline constexpr Send from_raw_data(const T_RawData& raw_data) {
-                        (void)raw_data;
-                        return Send {};
+                        return Send {
+                            .tick_ms = *static_cast<const uint16_t*>(static_cast<const void*>(raw_data.data() + 1))
+                        };
                     }
                 };
 
@@ -382,7 +394,7 @@ namespace Magic {
                         return T_RawData { static_cast<uint8_t>(header) };
                     }
                     static inline constexpr End from_raw_data(const T_RawData& raw_data) {
-                        (void)raw_data;
+                        (void) raw_data;
                         return End {};
                     }
                 };

@@ -33,7 +33,7 @@ void print_usage(const char* bin_name) {
 
 void send_bin_name_and_args_to_cout(const int argc, char** argv) {
 	std::cout << argv[0] << ':';
-	for(size_t i = 1; i < argc; i++) {
+	for(int i = 1; i < argc; i++) {
 		std::cout << " '" << argv[i] << '\'';
 		if(i == argc - 1) {
 			std::cout << ':';
@@ -83,6 +83,43 @@ bool is_aligned(const std::filesystem::path& path) {
 	return true;
 }
 
+int do_work(const std::filesystem::path& input_path, std::ostream& os) {
+	const size_t wished_num_of_records { (get_size(input_path) - Magic::Events::Results::Auto::Record::file_header.size()) / Magic::Events::Results::Auto::Record::size };
+	std::ifstream input_file { input_path, std::ios::in | std::ios::binary };
+	if(input_file.is_open() == false) {
+		std::cout << "Could not open the input file: '" << input_path.string() << '\'' << std::endl;
+		return -1;
+	}
+	input_file.seekg(Magic::Events::Results::Auto::Record::file_header.size(), std::ios::beg);
+	std::array<uint8_t, Magic::Events::Results::Auto::Record::size> record_serialized;
+
+	for(size_t i = 0; input_file.read(reinterpret_cast<char*>(record_serialized.data()), record_serialized.size()); i++) {
+		std::array<uint8_t, sizeof(Magic::Events::Results::Auto::Timeval::T_RawData)> timeval_serialized;
+		std::copy(record_serialized.begin(), record_serialized.begin() + timeval_serialized.size(), timeval_serialized.begin());
+		std::array<uint8_t, sizeof(Magic::Events::Results::Auto::Point::T_RawData)> point_serialized;
+		std::copy(record_serialized.begin() + timeval_serialized.size(), record_serialized.end(), point_serialized.begin());
+		const ns::Record record {
+			Magic::Events::Results::Auto::Timeval::from_raw_data(timeval_serialized),
+			Magic::Events::Results::Auto::Point::from_raw_data(point_serialized)
+		};
+		const json j = record;
+
+		static bool first { true };
+		if(first == true) {
+			os << '[';
+			first = false;
+		} else {
+			os << ',' << std::endl;
+		}
+		os << std::setw(4) << j;
+		if(i == wished_num_of_records - 1) {
+			os << ']' << std::endl;
+		}
+	}
+
+	return 0;
+}
+
 int main(int argc, char** argv) {
 	try {
 		if(argc != 2) {
@@ -117,37 +154,8 @@ int main(int argc, char** argv) {
 			return EXIT_FAILURE;
 		}
 
-		const size_t wished_num_of_records { (get_size(input_path) - Magic::Events::Results::Auto::Record::file_header.size()) / Magic::Events::Results::Auto::Record::size };
-		std::ifstream input_file { input_path, std::ios::in | std::ios::binary };
-		if(input_file.is_open() == false) {
-			std::cout << "Could not open the input file: '" << input_path.string() << '\'' << std::endl;
+		if(do_work(input_path, std::cout) != 0) {
 			return EXIT_FAILURE;
-		}
-		input_file.seekg(Magic::Events::Results::Auto::Record::file_header.size(), std::ios::beg);
-		std::array<uint8_t, Magic::Events::Results::Auto::Record::size> record_serialized;
-
-		for(size_t i = 0; input_file.read(reinterpret_cast<char*>(record_serialized.data()), record_serialized.size()); i++) {
-			std::array<uint8_t, sizeof(Magic::Events::Results::Auto::Timeval::T_RawData)> timeval_serialized;
-			std::copy(record_serialized.begin(), record_serialized.begin() + timeval_serialized.size(), timeval_serialized.begin());
-			std::array<uint8_t, sizeof(Magic::Events::Results::Auto::Point::T_RawData)> point_serialized;
-			std::copy(record_serialized.begin() + timeval_serialized.size(), record_serialized.end(), point_serialized.begin());
-			const ns::Record record {
-				Magic::Events::Results::Auto::Timeval::from_raw_data(timeval_serialized),
-				Magic::Events::Results::Auto::Point::from_raw_data(point_serialized)
-			};
-			const json j = record;
-
-			static bool first { true };
-			if(first == true) {
-				std::cout << '[';
-				first = false;
-			} else {
-				std::cout << ',' << std::endl;
-			}
-			std::cout << std::setw(4) << j;
-			if(i == wished_num_of_records - 1) {
-				std::cout << ']' << std::endl;
-			}
 		}
 
 		return EXIT_SUCCESS;

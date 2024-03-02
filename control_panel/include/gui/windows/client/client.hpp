@@ -24,7 +24,6 @@
 #include "gui/windows/client/plots/calibration.hpp"
 #include "gui/windows/client/measure.hpp"
 #include "gui/windows/client/plots/measurement.hpp"
-#include "gui/windows/client/file_manager.hpp"
 #include "gui/windows/client/debug.hpp"
 #include "gui/windows/client/auto.hpp"
 #include "gui/windows/client/plots/auto.hpp"
@@ -49,7 +48,6 @@ namespace GUI {
             Windows::Plots::Calibration calibration_plots_window;
             Windows::Measure measure_window;
             Windows::Plots::Measurement measurement_plots_window;
-            Windows::FileManager file_manager_window;
             Windows::Debug debug_window;
             Windows::Auto auto_window;
             Windows::Plots::Auto auto_plots_window;

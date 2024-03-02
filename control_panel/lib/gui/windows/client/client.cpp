@@ -18,7 +18,6 @@ namespace GUI {
             calibration_plots_window { index },
             measure_window { index, parent_shm },
             measurement_plots_window { index },
-            file_manager_window { index, parent_shm },
             debug_window { index, parent_shm },
             auto_window { index, parent_shm },
             auto_plots_window { index }
@@ -70,7 +69,6 @@ namespace GUI {
                     debug_window.draw(enables.debug, dockspace_id, lock);
                     calibrate_window.draw(enables.calibrate, dockspace_id, lock);
                     measure_window.draw(enables.measure, dockspace_id, lock);
-                    file_manager_window.draw(enables.file_manager, dockspace_id, lock);
                     auto_window.draw(enables.auto_window, dockspace_id, lock);
                     ImGui::DockBuilderFinish(dockspace_id);
                     first = false;
@@ -96,6 +94,9 @@ namespace GUI {
                         if(auto_window.send_points.empty() == false) {
                             auto_plots_window.update_send_vectors(auto_window.send_points);
                         }
+                        if(auto_window.save_points.empty() == false) {
+                            auto_plots_window.update_save_vectors(auto_window.save_points);
+                        }
                         auto_plots_window.draw(enables.auto_plots, ImGui::GetID(static_cast<void*>(nullptr)));
                     }
                     if(enables.debug) {
@@ -111,9 +112,6 @@ namespace GUI {
                         }
                         measure_window.draw(enables.measure, ImGui::GetID(static_cast<void*>(nullptr)), lock);
                     }
-                    if(enables.file_manager) {
-                        file_manager_window.draw(enables.file_manager, ImGui::GetID(static_cast<void*>(nullptr)), lock);
-                    }
                     if(enables.auto_window) {
                         auto_window.draw(enables.auto_window, ImGui::GetID(static_cast<void*>(nullptr)), lock);
                     }
@@ -126,7 +124,7 @@ namespace GUI {
             }) };
 
             if(it != shm->discovery_devices->end()) {
-                if(it->get_connected() == false && lock != Lock::UnexpectedDisconnection) {
+                if(it->get_connected() == false && lock != Lock::UnexpectedDisconnection ) {
                     ImGui::OpenPopup("Error##2");
                     // Always center this window when appearing
                     ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));

@@ -22,6 +22,17 @@ namespace GUI {
                 size_t index;
                 std::u8string name { name_base };
                 bool first { true };
+                struct Firsts {
+                    struct Inner {
+                        bool raw { true };
+                        bool calculated { true };
+                        bool corrected_gon { true };
+                        bool corrected_alg { true };
+                    };
+                    Inner single {};
+                    Inner periodic {};
+                };
+                Firsts firsts {};
             private:
                 template<typename T>
                 struct Raw {
