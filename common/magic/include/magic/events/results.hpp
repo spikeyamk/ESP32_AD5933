@@ -25,6 +25,8 @@ namespace Magic {
                 FileSize,
                 FileDownload,
                 FileUpload,
+                FileFormat,
+                FileCreateTestFiles,
 
                 /* Auto Results */
                 AutoTimeval,
@@ -70,25 +72,25 @@ namespace Magic {
             namespace File {
                 struct Free {
                     static constexpr Header header { Header::FileFree };
-                    uint64_t bytes_free;
-                    uint64_t bytes_total;
-                    using T_RawData = std::array<uint8_t, 1 + sizeof(bytes_free) + sizeof(bytes_total)>;
+                    uint64_t used_bytes;
+                    uint64_t total_bytes;
+                    using T_RawData = std::array<uint8_t, 1 + sizeof(used_bytes) + sizeof(total_bytes)>;
                     inline constexpr T_RawData to_raw_data() const {
                         T_RawData ret { static_cast<uint8_t>(header) };
-                        std::generate(ret.begin() + 1, ret.begin() + 1 + sizeof(bytes_free), [index = 0, this]() mutable {
-                            return static_cast<uint8_t>((bytes_free >> (8 * index++)) & 0xFF);
+                        std::generate(ret.begin() + 1, ret.begin() + 1 + sizeof(used_bytes), [index = 0, this]() mutable {
+                            return static_cast<uint8_t>((used_bytes >> (8 * index++)) & 0xFF);
                         });
-                        std::generate(ret.begin() + 1 + sizeof(bytes_free), ret.end(), [index = 0, this]() mutable {
-                            return static_cast<uint8_t>((bytes_total >> (8 * index++)) & 0xFF);
+                        std::generate(ret.begin() + 1 + sizeof(used_bytes), ret.end(), [index = 0, this]() mutable {
+                            return static_cast<uint8_t>((total_bytes >> (8 * index++)) & 0xFF);
                         });
                         return ret;
                     }
                     static inline constexpr Free from_raw_data(const T_RawData& raw_data) {
-                        const decltype(bytes_free)* tmp_bytes_free = static_cast<const decltype(bytes_free)*>(static_cast<const void*>(raw_data.data() + 1));
-                        const decltype(bytes_total)* tmp_bytes_total = static_cast<const decltype(bytes_total)*>(static_cast<const void*>(raw_data.data() + 1 + sizeof(bytes_free)));
+                        const decltype(used_bytes)* tmp_used_bytes = static_cast<const decltype(used_bytes)*>(static_cast<const void*>(raw_data.data() + 1));
+                        const decltype(total_bytes)* tmp_total_bytes = static_cast<const decltype(total_bytes)*>(static_cast<const void*>(raw_data.data() + 1 + sizeof(used_bytes)));
                         return Free { 
-                            .bytes_free = *tmp_bytes_free, 
-                            .bytes_total = *tmp_bytes_total,
+                            .used_bytes = *tmp_used_bytes, 
+                            .total_bytes = *tmp_total_bytes,
                         };
                     }
                 };
@@ -178,6 +180,32 @@ namespace Magic {
                         return Upload { tmp };
                     }
                 };
+
+                struct Format {
+                    static constexpr Header header { Header::FileFormat };
+                    bool status;
+                    using T_RawData = std::array<uint8_t, 1 + sizeof(status)>;
+                    inline constexpr T_RawData to_raw_data() const {
+                        return T_RawData { static_cast<uint8_t>(header), static_cast<uint8_t>(status) };
+                    }
+                    static inline constexpr Format from_raw_data(const T_RawData& raw_data) {
+                        (void)raw_data;
+                        return Format { static_cast<bool>(raw_data[1]) };
+                    }
+                };
+
+                struct CreateTestFiles {
+                    static constexpr Header header { Header::FileCreateTestFiles };
+                    bool status;
+                    using T_RawData = std::array<uint8_t, 1 + sizeof(status)>;
+                    inline constexpr T_RawData to_raw_data() const {
+                        return T_RawData { static_cast<uint8_t>(header), static_cast<uint8_t>(status) };
+                    }
+                    static inline constexpr CreateTestFiles from_raw_data(const T_RawData& raw_data) {
+                        (void)raw_data;
+                        return CreateTestFiles { static_cast<bool>(raw_data[1]) };
+                    }
+                };
             }
 
             namespace Auto {
@@ -190,27 +218,27 @@ namespace Magic {
                             static_cast<uint8_t>(header),
                         };
 
-                        std::generate(ret.begin() + 1, ret.begin() + sizeof(decltype(mytimeval64_t::tv_sec)), [index = 0, this]() mutable {
+                        std::generate(ret.begin() + 1, ret.begin() + 1 + sizeof(decltype(mytimeval64_t::tv_sec)), [index = 0, this]() mutable {
                             return static_cast<uint8_t>((tv.tv_sec >> (index++ * 8)) & 0xFF);
                         });
 
-                        std::generate(ret.begin() + sizeof(decltype(mytimeval64_t::tv_sec)), ret.end(), [index = 0, this]() mutable {
+                        std::generate(ret.begin() + 1 + sizeof(decltype(mytimeval64_t::tv_sec)), ret.end(), [index = 0, this]() mutable {
                             return static_cast<uint8_t>((tv.tv_usec >> (index++ * 8)) & 0xFF);
                         });
 
                         return ret;
                     }
 
+                    #ifndef ESP_PLATFORM
                     static inline constexpr Timeval from_raw_data(const T_RawData& raw_data) {
                         const decltype(mytimeval64_t::tv_sec)* tmp_sec = static_cast<const decltype(mytimeval64_t::tv_sec)*>(static_cast<const void*>(raw_data.data() + 1));
-                        const decltype(mytimeval64_t::tv_usec)* tmp_usec = static_cast<const decltype(mytimeval64_t::tv_usec)*>(static_cast<const void*>(raw_data.data() + 1 + sizeof(decltype(mytimeval64_t::tv_sec))));
+                        // This ugly duckling static_cast is here because although sizeof(timeval) on ESP32 is 16 bytes therefore made out of 2 8-byte long numbers tv_sec is 8 bytes and tv_usec is 4 bytes out of pure magic and I can't solve this mystery
+                        const int32_t* tmp_usec = static_cast<const int32_t*>(static_cast<const void*>(raw_data.data() + 1 + sizeof(decltype(mytimeval64_t::tv_sec))));
                         return Timeval {
-                            mytimeval64_t { *tmp_sec, *tmp_usec }
+                            mytimeval64_t { *tmp_sec, static_cast<int64_t>(*tmp_usec) }
                         };
                     }
-
-
-
+                    #endif
                 };
 
                 struct Point {
@@ -302,6 +330,8 @@ namespace Magic {
                 File::Size,
                 File::Download,
                 File::Upload,
+                File::Format,
+                File::CreateTestFiles,
 
                 /* Auto Results */
                 Auto::Timeval,
@@ -309,7 +339,7 @@ namespace Magic {
             >;
 
             struct Map {
-                static constexpr std::array<Variant, 10> map {
+                static constexpr std::array<Variant, 12> map {
                     /* Debug Results */
                     Debug::Dump{},
 
@@ -323,6 +353,8 @@ namespace Magic {
                     File::Size{},
                     File::Download{},
                     File::Upload{},
+                    File::Format{},
+                    File::CreateTestFiles{},
 
                     /* Auto Results */
                     Auto::Timeval{},

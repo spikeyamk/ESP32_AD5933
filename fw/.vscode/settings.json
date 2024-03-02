@@ -79,5 +79,8 @@
         "ble_hs.h": "c",
         "ble_hs_mbuf.h": "c",
         "ble_hs_priv.h": "c"
-    }
+    },
+    "idf.openOcdConfigs": [
+        "board/esp32c6-ftdi.cfg"
+    ]
 }

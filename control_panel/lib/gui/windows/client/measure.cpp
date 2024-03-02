@@ -38,7 +38,7 @@ namespace GUI {
             calibration_vectors.freq_uint32_t = configs.calibration.get_freq_vector<uint32_t>();
             calibration_vectors.freq_float = configs.calibration.get_freq_vector<float>();
             inputs.numeric.freq_start = configs.calibration.get_start_freq().unwrap();
-            inputs.numeric.freq_end = configs.calibration.get_freq_end();
+            inputs.numeric.freq_end = configs.calibration.get_freq_end().unwrap();
             status = Status::Loaded;
         }
 
@@ -188,7 +188,7 @@ namespace GUI {
                 return;
             }
 
-            const auto freq_end_it { std::find(self.calibration_vectors.freq_float.begin(), self.calibration_vectors.freq_float.end(), static_cast<float>(self.configs.measurement.get_freq_end())) };
+            const auto freq_end_it { std::find(self.calibration_vectors.freq_float.begin(), self.calibration_vectors.freq_float.end(), static_cast<float>(self.configs.measurement.get_freq_end().unwrap())) };
             if(freq_end_it == self.calibration_vectors.freq_float.end()) {
                 self.status = Status::Failed;
                 return;
@@ -299,6 +299,28 @@ namespace GUI {
                     Magic::Events::Commands::Sweep::End{}
                 }
             );
+
+            self.shm->cmd.send(
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
+                    self.index,
+                    Magic::Events::Commands::Debug::Start{}
+                }
+            );
+
+            self.shm->cmd.send(
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
+                    self.index,
+                    Magic::Events::Commands::Debug::CtrlHB{ static_cast<uint8_t>(AD5933::Masks::Or::Ctrl::HB::Command::PowerDownMode) }
+                }
+            );
+
+            self.shm->cmd.send(
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
+                    self.index,
+                    Magic::Events::Commands::Debug::End{}
+                }
+            );
+
             self.status = Status::Loaded;
             self.single_plotted = false;
         }
@@ -317,7 +339,7 @@ namespace GUI {
                 return;
             }
 
-            const auto freq_end_it { std::find(self.calibration_vectors.freq_float.begin(), self.calibration_vectors.freq_float.end(), static_cast<float>(self.configs.measurement.get_freq_end())) };
+            const auto freq_end_it { std::find(self.calibration_vectors.freq_float.begin(), self.calibration_vectors.freq_float.end(), static_cast<float>(self.configs.measurement.get_freq_end().unwrap())) };
             if(freq_end_it == self.calibration_vectors.freq_float.end()) {
                 self.status = Status::Failed;
                 return;
@@ -439,6 +461,28 @@ namespace GUI {
                     Magic::Events::Commands::Sweep::End{}
                 }
             );
+
+            self.shm->cmd.send(
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
+                    self.index,
+                    Magic::Events::Commands::Debug::Start{}
+                }
+            );
+
+            self.shm->cmd.send(
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
+                    self.index,
+                    Magic::Events::Commands::Debug::CtrlHB{ static_cast<uint8_t>(AD5933::Masks::Or::Ctrl::HB::Command::PowerDownMode) }
+                }
+            );
+
+            self.shm->cmd.send(
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
+                    self.index,
+                    Magic::Events::Commands::Debug::End{}
+                }
+            );
+
             self.status = Status::Loaded;
             self.single_plotted = false;
         }
@@ -452,11 +496,9 @@ namespace GUI {
         }
         
         void Measure::draw_input_elements() {
-            ImGui::Slider_uint32_t_Valid(
+            if(ImGui::Input_uint32_t_WithCallbackTextReadOnly(
                 "Start Frequency [Hz]",
                 &inputs.numeric.freq_start,
-            )
-            if(ImGui::Input_uint32_t_WithCallbackTextReadOnly(
                 configs.calibration.get_inc_freq().unwrap(),
                 configs.calibration.get_inc_freq().unwrap(),
                 ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_CallbackCharFilter,
@@ -480,8 +522,8 @@ namespace GUI {
                 ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_CallbackCharFilter,
                 ImGui::plus_minus_dot_char_filter_cb
             )) {
-                if(inputs.numeric.freq_end > configs.calibration.get_freq_end()) {
-                    inputs.numeric.freq_end = configs.calibration.get_freq_end();
+                if(inputs.numeric.freq_end > configs.calibration.get_freq_end().unwrap()) {
+                    inputs.numeric.freq_end = configs.calibration.get_freq_end().unwrap();
                 } else if (inputs.numeric.freq_end <= inputs.numeric.freq_start) {
                     inputs.numeric.freq_end += configs.calibration.get_inc_freq().unwrap();
                 } else {
@@ -489,7 +531,7 @@ namespace GUI {
                 }
             }
 
-            if(ImGui::SliderInt("Settling Time Cycles", &inputs.numeric.settling_number, 1, 511, "%d", ImGuiSliderFlags_AlwaysClamp)) {
+            if(ImGui::SliderInt("Settling Time Cycles", &inputs.numeric.settling_number, 1, max_9bit)) {
                 configs.measurement.set_settling_time_cycles_number(AD5933::uint9_t { static_cast<uint16_t>(inputs.numeric.settling_number) });
             }
 

@@ -44,10 +44,12 @@ namespace GUI {
                 max.freq_inc = Max::freq - fields.freq_start;
                 if(fields.freq_inc > max.freq_inc) {
                     fields.freq_inc = max.freq_inc;
+                    config.set_inc_freq(AD5933::uint_incfreq_t{ fields.freq_inc });
                 }
-                max.num_of_inc = ((Max::freq - fields.freq_start) / fields.freq_inc);
+                max.num_of_inc = ((Max::freq - fields.freq_start) / fields.freq_inc) > Max::nine_bit ? Max::nine_bit : ((Max::freq - fields.freq_start) / fields.freq_inc);
                 if(fields.num_of_inc > max.num_of_inc) {
                     fields.num_of_inc = max.num_of_inc;
+                    config.set_num_of_inc(AD5933::uint9_t{ fields.num_of_inc });
                 }
             }
 
@@ -61,9 +63,10 @@ namespace GUI {
                 ImGuiSliderFlags_AlwaysClamp
             )) {
                 config.set_inc_freq(AD5933::uint_incfreq_t{ fields.freq_inc });
-                max.num_of_inc = ((Max::freq - fields.freq_start) / fields.freq_inc);
+                max.num_of_inc = ((Max::freq - fields.freq_start) / fields.freq_inc) > Max::nine_bit ? Max::nine_bit : ((Max::freq - fields.freq_start) / fields.freq_inc);
                 if(fields.num_of_inc > max.num_of_inc) {
                     fields.num_of_inc = max.num_of_inc;
+                    config.set_num_of_inc(AD5933::uint9_t{ fields.num_of_inc });
                 }
             }
 
@@ -296,6 +299,27 @@ namespace GUI {
                 BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     self.index,
                     Magic::Events::Commands::Sweep::End{}
+                }
+            );
+
+            self.shm->cmd.send(
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
+                    self.index,
+                    Magic::Events::Commands::Debug::Start{}
+                }
+            );
+
+            self.shm->cmd.send(
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
+                    self.index,
+                    Magic::Events::Commands::Debug::CtrlHB{ static_cast<uint8_t>(AD5933::Masks::Or::Ctrl::HB::Command::PowerDownMode) }
+                }
+            );
+
+            self.shm->cmd.send(
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
+                    self.index,
+                    Magic::Events::Commands::Debug::End{}
                 }
             );
 

@@ -4,14 +4,15 @@
 #include <cstdint>
 #include <cstdio>
 #include <thread>
+#include <fstream>
 
 #include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <esp_vfs_fat.h>
+#include <esp_littlefs.h>
+#include <trielo/trielo.hpp>
 
 #include "ble/server/server.hpp"
-#include "trielo/trielo.hpp"
 #include "esp_system.h"
 #include "util.hpp"
 #include "magic/events/results.hpp"
@@ -24,22 +25,14 @@
 #include "ad5933/measurement/measurement.hpp"
 
 namespace BLE {
-	namespace Events {
-		namespace Debug {
-		}
-
-		namespace FreqSweep {
-		};
-	}
-
 	namespace Actions {
 		void turn_on() {
-			Util::Blinky::get_instance().start(std::chrono::milliseconds(100));
+			Util::Blinky::get_instance().start(std::chrono::milliseconds(50));
 			Server::run();
 		};
 
 		void advertise() {
-			Util::Blinky::get_instance().set_blink_time(std::chrono::milliseconds(200));
+			Util::Blinky::get_instance().set_blink_time(std::chrono::milliseconds(100));
 			Server::advertise();
 		};
 
@@ -47,7 +40,7 @@ namespace BLE {
 		};
 
 		void set_connected_blink_time() {
-			Util::Blinky::get_instance().set_blink_time(std::chrono::milliseconds(500));
+			Util::Blinky::get_instance().set_blink_time(std::chrono::milliseconds(1'000));
 		};
 
 		void disconnect(StopSources& stop_sources) {
@@ -64,8 +57,9 @@ namespace BLE {
 
 		void sleep() {
 			Util::Blinky::get_instance().stop();
-			//Trielo::trielo<SD_Card::deinit>();
-			Server::stop();
+			Trielo::trielo<SD_Card::deinit>();
+			std::this_thread::sleep_for(std::chrono::seconds(3));
+			Trielo::trielo<Server::stop>();
 		}
 
 		namespace Debug {
@@ -153,11 +147,11 @@ namespace BLE {
 
 		namespace File {
 			void free(std::shared_ptr<Server::Sender> &sender) {
-				uint64_t bytes_total;
-				uint64_t bytes_free;
-				if(Trielo::trielo<esp_vfs_fat_info>(Trielo::OkErrCode(ESP_OK), SD_Card::mount_point.data(), &bytes_total, &bytes_free) == ESP_OK) {
-					std::cout << "BLE::Actions::File::free: \n\tbytes_total: " << bytes_total << "\n\tbytes_free: " << bytes_free << std::endl;
-					const Magic::Events::Results::File::Free file_free_event { .bytes_free = bytes_free, .bytes_total = bytes_total };
+				size_t total_bytes;
+				size_t used_bytes;
+				if(Trielo::trielo<esp_littlefs_sdmmc_info>(Trielo::OkErrCode(ESP_OK), &SD_Card::card, &total_bytes, &used_bytes) == ESP_OK) {
+					std::cout << "BLE::Actions::File::free: \n\ttotal_bytes: " << total_bytes << "\n\tused_bytes: " << used_bytes << std::endl;
+					const Magic::Events::Results::File::Free file_free_event { .used_bytes = used_bytes, .total_bytes = total_bytes };
 					const Magic::OutComingPacket<Magic::Events::Results::File::Free> file_free_packet { file_free_event };
 					sender->notify_hid_information(file_free_packet);
 				}
@@ -291,6 +285,35 @@ namespace BLE {
 			void upload(const Magic::Events::Commands::File::Upload& event) {
 
 			}
+
+			void format(std::shared_ptr<Server::Sender> &sender) {
+				const Magic::Events::Results::File::Format format_result {
+					.status = Trielo::trielo<SD_Card::format>(Trielo::OkErrCode(0)) == 0 ? true : false,
+				};
+				const Magic::OutComingPacket<Magic::Events::Results::File::Format> format_result_packet {
+					format_result
+				};
+				sender->notify_hid_information(format_result_packet);
+			}
+
+			void create_test_files(std::shared_ptr<Server::Sender> &sender) {
+				const Magic::Events::Results::File::CreateTestFiles create_test_files_result {
+					.status = Trielo::trielo<SD_Card::create_test_files>(Trielo::OkErrCode(0)) == 0,
+				};
+
+				try {
+					static char junk[] { "ratatatatata\nabba\nbaba\nhaha\n" };
+					std::ofstream(Auto::get_record_file_name_zero_terminated().data(), std::ios::out) << junk;
+				} catch(...) {
+
+				}
+
+				Trielo::trielo<SD_Card::print_test_files>();
+				const Magic::OutComingPacket<Magic::Events::Results::File::CreateTestFiles> create_test_files_packet {
+					create_test_files_result
+				};
+				sender->notify_hid_information(create_test_files_packet);
+			}
 		}
 
 		namespace Auto {
@@ -301,11 +324,11 @@ namespace BLE {
 				AD5933::Calibration<float> { 9811605.0f, -1.2277723550796509f },
 			};
 
-			std::array<char, 20> get_record_file_name_zero_terminated() {
+			std::array<char, 28> get_record_file_name_zero_terminated() {
 				const time_t time { std::chrono::high_resolution_clock::to_time_t(std::chrono::high_resolution_clock::now()) };
 				const tm* tm { std::localtime(&time) };
-				std::array<char, 20> ret;
-				std::strftime(ret.data(), sizeof(ret), "%Y-%m-%d-%H_%M_%S", tm);
+				std::array<char, 28> ret;
+				std::strftime(ret.data(), sizeof(ret), "/sdcard/%Y-%m-%d-%H_%M_%S", tm);
 				return ret;
 			}
 
@@ -313,55 +336,65 @@ namespace BLE {
 				std::jthread t1([sender, &ad5933](StopSources& stop_sources) {
 					stop_sources.save = true;
 
-					uint64_t bytes_total;
-					uint64_t bytes_free;
+					size_t bytes_total;
+					size_t bytes_free;
 					
-					{
-						const esp_err_t ret = esp_vfs_fat_info(SD_Card::mount_point.data(), &bytes_total, &bytes_free);
-						if(ret != ESP_OK) {
-							std::cout << "ERROR: BLE::Actions::Auto::start_saving: esp_vfs_fat_info failed: " << ret << std::endl;
-							return;
-						}
+					if(Trielo::trielo<esp_littlefs_sdmmc_info>(Trielo::OkErrCode(ESP_OK), &SD_Card::card, &bytes_total, &bytes_free) != ESP_OK) {
+						return;
 					}
 
 					if(bytes_free < sizeof(Magic::Events::Results::Auto::Timeval::T_RawData) + sizeof(Magic::Events::Results::Auto::Point::T_RawData)) {
+						// We should never get here, this is bad
 						std::cout << "ERROR: BLE::Actions::Auto::start_saving: filesystem ain't got no space in it: bytes_free: " << bytes_free << std::endl;
+						return;
 					}
 
-					const auto record_filepath {
-						[]() {
-							const std::array<char, 20> record_file_name { get_record_file_name_zero_terminated() };
-							std::array<char, SD_Card::mount_point_prefix.size() + record_file_name.size()> ret;
-							std::copy(SD_Card::mount_point_prefix.begin(), SD_Card::mount_point_prefix.end(), ret.begin());
-							std::copy(record_file_name.begin(), record_file_name.end(), ret.begin() + SD_Card::mount_point_prefix.size());
-							return ret;
-						}()
+					// This is so bad, I don't even know what to say
+					std::array<char, 28U> record_filepath { 0 };
+					for(uint8_t i = 0, stopper = 16;
+						std::ifstream((record_filepath = get_record_file_name_zero_terminated()).data()).is_open() && i <= stopper;
+						i++
+					) {
+						if(i == stopper) {
+							// Removes the record file if it exists we should never get here
+							FILE* file_to_remove = Trielo::trielo<std::fopen>(Trielo::FailErrCode<FILE*>(nullptr), record_filepath.data(), "r");
+							if(file_to_remove != nullptr) {
+								Trielo::trielo<std::fclose>(Trielo::OkErrCode(0), file_to_remove);
+								Trielo::trielo<unlink>(Trielo::OkErrCode(0), record_filepath.data());
+							}
+						}
+						std::cout << "ERROR: BLE::Actions::Auto::start_saving: file: " << record_filepath.data() << " already exits: waiting for std::chrono::seconds(1)\n";
+						std::this_thread::sleep_for(std::chrono::seconds(1));
+					}
+
+					// I hate this xddd, but it's much better than anything I've come up with so far
+					struct Scoped_FILE {
+						AD5933::Extension& ad5933;
+						FILE* file {  };
+						~Scoped_FILE() {
+							if(file != nullptr) {
+								std::fclose(file);
+							}
+
+							ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::PowerDownMode);
+						}
 					};
 
-					{
-						// Removes the record file if it exists
-						FILE* file_to_remove = Trielo::trielo<std::fopen>(Trielo::FailErrCode<FILE*>(nullptr), record_filepath.data(), "r");
-						if(file_to_remove != nullptr) {
-							Trielo::trielo<std::fclose>(Trielo::OkErrCode(0), file_to_remove);
-							Trielo::trielo<unlink>(Trielo::OkErrCode(0), record_filepath.data());
-						}
-					}
+					Scoped_FILE file {
+						.ad5933 = ad5933,
+						.file = Trielo::trielo<std::fopen>(Trielo::FailErrCode<FILE*>(nullptr), record_filepath.data(), "w")
+					};
 
-					{
-						FILE* file = Trielo::trielo<std::fopen>(Trielo::FailErrCode<FILE*>(nullptr), record_filepath.data(), "w");
-						if(file == nullptr) {
-							std::cout << "ERROR: BLE::Actions::Auto::start_saving: Could not open file at first try\n";
-							return;
-						}
-						if(Trielo::trielo<std::fclose>(Trielo::OkErrCode(0), file) != 0) {
-							return;
-						}
+					if(file.file == nullptr) {
+						std::cout << "ERROR: BLE::Actions::Auto::start_saving: Could not open file at first try\n";
+						return;
 					}
 
 					ad5933.driver.program_all_registers(default_config.to_raw_array());
 					while(stop_sources.save == true) {
 						ad5933.reset();
 						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::StandbyMode);
+						std::this_thread::sleep_for(std::chrono::seconds(1));
 						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::InitStartFreq);
 						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::StartFreqSweep);
 						do {
@@ -370,46 +403,47 @@ namespace BLE {
 							}
 							const auto raw_data { ad5933.read_impe_data() };
 							if(raw_data.has_value() && ad5933.has_status_condition(AD5933::Masks::Or::Status::FreqSweepComplete)) {
-								const AD5933::Data data { raw_data.value() };
-								const AD5933::Measurement measurement { data, default_calibration[2] };
-								const Magic::Events::Results::Auto::Point point {
-									.status = static_cast<uint8_t>(Magic::Events::Results::Auto::Point::Status::Valid),
-									.impedance = measurement.get_magnitude(),
-									.phase = measurement.get_phase(),
+								const auto now { std::chrono::high_resolution_clock::now() };
+								const auto since_epoch { now.time_since_epoch() };
+								const auto seconds { std::chrono::duration_cast<std::chrono::seconds>(since_epoch) };
+								const auto useconds { std::chrono::duration_cast<std::chrono::microseconds>(since_epoch) };
+								const Magic::Events::Results::Auto::Timeval timeval {
+									.tv = {
+										.tv_sec = static_cast<time_t>(seconds.count()),
+										.tv_usec = static_cast<suseconds_t>(useconds.count() - std::chrono::duration_cast<std::chrono::microseconds>(seconds).count())
+									}
 								};
-								const Magic::T_OutComingPacket<Magic::Events::Results::Auto::Point, sizeof(Magic::Events::Results::Auto::Point::T_RawData)> point_packet { point };
 
-								FILE* file = std::fopen(record_filepath.data(), "w");
-								if(file == nullptr) {
-									std::cout << "ERROR: BLE::Actions::Auto::start_saving: Could not open file for writing in the loop\n";
-									return;
-								}
+								const time_t time { std::chrono::high_resolution_clock::to_time_t(now) };
+								const tm* tm { std::localtime(&time) };
+								std::array<char, 20> time_log { 0 };
+								std::strftime(time_log.data(), sizeof(time_log), "%Y-%m-%d-%H_%M_%S", tm);
+								std::cout << "BLE::Actions::Auto::Save: " << time_log.data() << std::endl;
 
-								const auto point_serialized { point.to_raw_data() };
-								const size_t point_written_size = std::fwrite(point_serialized.data(), sizeof(point_serialized[0]), point_serialized.size(), file);
-								if(point_written_size != point_serialized.size()) {
-									std::cout << "ERROR: BLE::Actions::Auto::start_saving: Could not open file for writing in the loop: point_written_size != point_serialized.size(): point_written_size: " << point_written_size << std::endl;
-									return;
-								}
-
-								Magic::Events::Results::Auto::Timeval timeval;
-								gettimeofday(&timeval.tv, nullptr);
 								const auto timeval_serialized { timeval.to_raw_data() };
-								const size_t timeval_written_size = std::fwrite(timeval_serialized.data(), sizeof(timeval_serialized[0]), timeval_serialized.size(), file);
+								const size_t timeval_written_size = std::fwrite(timeval_serialized.data(), sizeof(timeval_serialized[0]), timeval_serialized.size(), file.file);
 								if(timeval_written_size != timeval_serialized.size()) {
 									std::cout << "ERROR: BLE::Actions::Auto::start_saving: Could not open file for writing in the loop: timeval_written_size != timeval_serialized.size(): timeval_written_size: " << timeval_written_size << std::endl;
 									return;
 								}
 
-								if(std::fclose(file) != 0) {
-									std::cout << "ERROR: BLE::Actions::Auto::start_saving: Could not close the file\n";
+								const AD5933::Data data { raw_data.value() };
+								const AD5933::Measurement measurement { data, default_calibration[2] };
+								const Magic::Events::Results::Auto::Point point {
+									.status = static_cast<uint8_t>(Magic::Events::Results::Auto::Point::Status::Valid),
+									.config = static_cast<uint8_t>(Magic::Events::Results::Auto::Point::Config::Default),
+									.impedance = measurement.get_magnitude(),
+									.phase = measurement.get_phase(),
+								};
+								const auto point_serialized { point.to_raw_data() };
+								const size_t point_written_size = std::fwrite(point_serialized.data(), sizeof(point_serialized[0]), point_serialized.size(), file.file);
+								if(point_written_size != point_serialized.size()) {
+									std::cout << "ERROR: BLE::Actions::Auto::start_saving: Could not open file for writing in the loop: point_written_size != point_serialized.size(): point_written_size: " << point_written_size << std::endl;
 									return;
 								}
 							}
 							ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::IncFreq);
 						} while(ad5933.has_status_condition(AD5933::Masks::Or::Status::FreqSweepComplete) == false);
-
-						std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
 					}
 				}, std::ref(stop_sources));
 				t1.detach();
@@ -422,6 +456,7 @@ namespace BLE {
 					while(stop_sources.send == true) {
 						ad5933.reset();
 						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::StandbyMode);
+						std::this_thread::sleep_for(std::chrono::seconds(1));
 						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::InitStartFreq);
 						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::StartFreqSweep);
 						do {
@@ -438,13 +473,15 @@ namespace BLE {
 									.phase = measurement.get_phase(),
 								};
 								const Magic::T_OutComingPacket<Magic::Events::Results::Auto::Point, 11> point_packet { point };
-								sender->notify_body_composition_measurement(point_packet);
+								if(sender->notify_body_composition_measurement(point_packet) == false) {
+									ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::PowerDownMode);
+									return;
+								}
 							}
 							ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::IncFreq);
 						} while(ad5933.has_status_condition(AD5933::Masks::Or::Status::FreqSweepComplete) == false);
-
-						std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
 					}
+					ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::PowerDownMode);
 				}, std::ref(stop_sources));
 				t1.detach();
 			}

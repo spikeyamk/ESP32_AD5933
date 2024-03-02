@@ -28,6 +28,8 @@ namespace GUI {
                 Listing,
                 Listed,
                 Downloading,
+                Formatting,
+                CreatingTestFiles,
                 Failed,
             };
         private:
@@ -39,7 +41,7 @@ namespace GUI {
             ListTable list_table {};
             std::optional<size_t> selected { std::nullopt };
             struct Bytes {
-                uint64_t free { 0 };
+                uint64_t used { 0 };
                 uint64_t total { 0 };
             };
             Bytes bytes {};
@@ -56,10 +58,14 @@ namespace GUI {
             void list();
             void remove();
             void download();
+            void create_test_files();
+            void format();
         private:
             std::stop_source stop_source;
             static void list_cb(std::stop_token st, FileManager& self);
             static void download_cb(std::stop_token st, FileManager& self, const std::filesystem::path outPath);
+            static void create_test_files_cb(std::stop_token st, FileManager& self);
+            static void format_cb(std::stop_token st, FileManager& self);
         };
     }
 }

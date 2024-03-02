@@ -77,6 +77,13 @@ namespace GUI {
             set_scale(sdl_scale);
         }
 
+        void set_implot_scale() {
+            const auto default_style { ImPlotStyle() };
+            const float scale { Boilerplate::get_scale() };
+            ImPlot::GetStyle().PlotDefaultSize.x = default_style.PlotDefaultSize.x * scale;
+            ImPlot::GetStyle().PlotDefaultSize.y = default_style.PlotDefaultSize.y * scale;
+        }
+
         std::tuple<SDL_Window*, SDL_Renderer*, ns::SettingsFile> init() {
             ns::SettingsFile settings_file;
             if(Trielo::trielo_lambda<SDL_Init>(Trielo::OkErrCode(0), sdl_error_lambda, SDL_INIT_VIDEO) != 0) {
@@ -175,7 +182,7 @@ namespace GUI {
             try {
                 std::ifstream file(ns::settings_file_path);
                 if(file.is_open() == false) {
-                    throw std::exception("ns::settings_file_path doesn't exist");
+                    throw std::runtime_error("ns::settings_file_path doesn't exist");
                 }
 
                 json j;
@@ -223,13 +230,6 @@ namespace GUI {
 
             return std::tuple { window, renderer, settings_file };
         } 
-
-        void set_implot_scale() {
-            const auto default_style { ImPlotStyle() };
-            const float scale { Boilerplate::get_scale() };
-            ImPlot::GetStyle().PlotDefaultSize.x = default_style.PlotDefaultSize.x * scale;
-            ImPlot::GetStyle().PlotDefaultSize.y = default_style.PlotDefaultSize.y * scale;
-        }
 
         void process_events(bool &done, SDL_Window* window, SDL_Renderer* renderer) {
             SDL_Event event;

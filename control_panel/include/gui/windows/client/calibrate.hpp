@@ -58,7 +58,19 @@ namespace GUI {
             std::u8string name { name_base };
             bool first { true };
         public:
-            AD5933::Config config {};
+            AD5933::Config config {
+                AD5933::Masks::Or::Ctrl::HB::Command::StandbyMode,
+                AD5933::Masks::Or::Ctrl::HB::VoltageRange::Two_Vppk,
+                AD5933::Masks::Or::Ctrl::HB::PGA_Gain::OneTime,
+                AD5933::Masks::Or::Ctrl::LB::SysClkSrc::Internal,
+
+                AD5933::uint_startfreq_t { 30'000 },
+                AD5933::uint_incfreq_t { 10 },
+                AD5933::uint9_t { 2 },
+
+                AD5933::uint9_t { 15 },
+                AD5933::Masks::Or::SettlingTimeCyclesHB::Multiplier::OneTime
+            };
             enum class Status {
                 NotCalibrated,
                 Calibrating,

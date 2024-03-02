@@ -14,7 +14,7 @@ if(NOT TARGET magic)
 endif()
 
 if(NOT TARGET nlohmann)
-	set(NLOHMANN_JSON_DIR ${CMAKE_CURRENT_LIST_DIR}/../gui/lib/extern/json)
+	set(NLOHMANN_JSON_DIR ${CMAKE_CURRENT_LIST_DIR}/../control_panel/lib/extern/json)
 	add_subdirectory(${NLOHMANN_JSON_DIR} ${CMAKE_BINARY_DIR}/json)
 endif()
 

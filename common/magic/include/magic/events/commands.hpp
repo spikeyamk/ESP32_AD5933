@@ -34,6 +34,8 @@ namespace Magic {
                 FileRemove,
                 FileDownload,
                 FileUpload,
+                FileFormat,
+                FileCreateTestFiles,
                 FileEnd,
 
                 /* Time Commands */
@@ -254,6 +256,28 @@ namespace Magic {
                         return Download { tmp };
                     }
                 };
+                struct Format {
+                    static constexpr Header header { Header::FileFormat };
+                    using T_RawData = std::array<uint8_t, 1>;
+                    inline constexpr T_RawData to_raw_data() const {
+                        return T_RawData { static_cast<uint8_t>(header) };
+                    }
+                    static inline constexpr Format from_raw_data(const T_RawData& raw_data) {
+                        (void)raw_data;
+                        return Format {};
+                    }
+                };
+                struct CreateTestFiles {
+                    static constexpr Header header { Header::FileCreateTestFiles };
+                    using T_RawData = std::array<uint8_t, 1>;
+                    inline constexpr T_RawData to_raw_data() const {
+                        return T_RawData { static_cast<uint8_t>(header) };
+                    }
+                    static inline constexpr CreateTestFiles from_raw_data(const T_RawData& raw_data) {
+                        (void)raw_data;
+                        return CreateTestFiles {};
+                    }
+                };
                 struct End {
                     static constexpr Header header { Header::FileEnd };
                     using T_RawData = std::array<uint8_t, 1>;
@@ -386,6 +410,8 @@ namespace Magic {
                 File::Remove,
                 File::Download,
                 File::Upload,
+                File::Format,
+                File::CreateTestFiles,
                 File::End,
 
                 /* Time Commands */
@@ -399,7 +425,7 @@ namespace Magic {
             >;
 
             struct Map {
-                static constexpr std::array<Variant, 22> map {
+                static constexpr std::array<Variant, 24> map {
                     /* Debug Commands */
                     Debug::Start{},
                     Debug::Dump{},
@@ -421,6 +447,8 @@ namespace Magic {
                     File::Remove{},
                     File::Download{},
                     File::Upload{},
+                    File::Format{},
+                    File::CreateTestFiles{},
                     File::End{},
 
                     /* Time Commands */

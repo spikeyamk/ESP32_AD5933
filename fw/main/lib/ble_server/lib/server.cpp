@@ -1,14 +1,9 @@
-#include <iostream>
 #include <thread>
 #include <chrono>
 #include <cstring>
 #include <memory>
-#include <atomic>
 #include <array>
 #include <cstdint>
-#include <variant>
-#include <unordered_map>
-#include <functional>
 #include <utility>
 #include <ctime>
 
@@ -21,7 +16,7 @@
 #include "services/gatt/ble_svc_gatt.h"
 #include "modlog/modlog.h"
 #include "esp_bt.h"
-#include "trielo/trielo.hpp"
+#include <trielo/trielo.hpp>
 
 #include "ble/server/server.hpp"
 #include "magic/packets/incoming.hpp"

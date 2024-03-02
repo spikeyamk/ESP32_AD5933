@@ -99,7 +99,7 @@ namespace GUI {
                             const BLE_Client::StateMachines::Connector::Events::connect connect_event { shm->discovery_devices->at(selected.value()).get_address() };
                             shm->cmd.send(connect_event);
                             std::jthread t1([](std::stop_token st, auto shm, const BLE_Client::StateMachines::Connector::Events::connect connect_event, bool& connecting, std::vector<Windows::Client>& client_windows, bool& show_connection_attempt_timeout_error_pop_up) {
-                                for(size_t i = 0, timeout_ms = 5'000; i < timeout_ms; i++) {
+                                for(size_t i = 0, timeout_ms = 25'000; i < timeout_ms; i++) {
                                     if(st.stop_requested()) {
                                         return;
                                     }

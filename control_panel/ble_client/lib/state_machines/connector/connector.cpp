@@ -59,7 +59,7 @@ namespace BLE_Client {
                 }
 
                 bool failed(const BLE_Client::StateMachines::Connector::Events::connect& event, SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm, std::vector<decltype(BLE_Client::StateMachines::Connection::Dummy<int>::sm)*>& connections) {
-                    return successful(event, adapter, shm, connections);
+                    return !successful(event, adapter, shm, connections);
                 }
             }
         }

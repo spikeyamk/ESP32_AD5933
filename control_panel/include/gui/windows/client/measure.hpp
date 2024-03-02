@@ -51,17 +51,7 @@ namespace GUI {
                 Numeric numeric {};
             };
             Inputs inputs {};
-
-            struct VaildTextInputs {
-                bool freq_start { true };
-                bool freq_end { true };
-                bool freq_inc { true };
-                bool settling_number { true };
-                inline bool all_true() const {
-                    return freq_start && freq_end && freq_inc && settling_number;
-                }
-            };
-            VaildTextInputs valid_fields {};
+;
             float progress_bar_fraction { 0.0f };
             bool periodically_sweeping { false };
         public:

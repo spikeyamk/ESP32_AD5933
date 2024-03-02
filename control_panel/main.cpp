@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
     //std::jthread t1(BLE_Client::child_main);
     try {
         ble_client = std::move(boost::process::child { self_path, ble_client_magic_key.data() });
-        //ble_client = std::move(boost::process::child { "dummy.exe"});
+        //ble_client = std::move(boost::process::child { "dummy"});
     } catch(const boost::interprocess::interprocess_exception& e) {
         std::cout << "ERROR: GUI: Failed to open ble_client child process: exception: " << e.what() << std::endl;
         return EXIT_FAILURE;

@@ -52,7 +52,7 @@ namespace GUI {
         }
 
         const std::optional<Lock> FileManager::draw_inner() {
-            if(status == Status::Listing || status == Status::Downloading) {
+            if(status == Status::Listing || status == Status::Downloading || status == Status::Formatting || status == Status::CreatingTestFiles) {
                 ImGui::BeginDisabled();
                 ImGui::Button("List");
                 ImGui::EndDisabled();
@@ -61,14 +61,37 @@ namespace GUI {
                     const float scale = GUI::Boilerplate::get_scale();
                     Spinner::Spinner("Processing", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                 }
+
+                ImGui::BeginDisabled();
+                ImGui::Button("Format");
+                ImGui::EndDisabled();
+                if(status == Status::Formatting) {
+                    ImGui::SameLine();
+                    const float scale { GUI::Boilerplate::get_scale() };
+                    Spinner::Spinner("Processing", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                }
+                ImGui::BeginDisabled();
+                ImGui::Button("Create Test Files");
+                if(status == Status::CreatingTestFiles) {
+                    ImGui::SameLine();
+                    const float scale { GUI::Boilerplate::get_scale() };
+                    Spinner::Spinner("Processing", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                }
+                ImGui::EndDisabled();
             } else {
                 if(ImGui::Button("List")) {
                     list();
                 }
+                if(ImGui::Button("Format")) {
+                    format();
+                }
+                if(ImGui::Button("Create Test Files")) {
+                    create_test_files();
+                }
             }
 
             ImGui::Text("Total: %llu [Bytes]", bytes.total);
-            ImGui::Text("Free:  %llu [Bytes]", bytes.free);
+            ImGui::Text("Used:  %llu [Bytes]", bytes.used);
 
             if(ImGui::BeginTable("List Table", 2, ImGuiTableFlags_Resizable | ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_Borders)) {
                 ImGui::TableNextRow();
@@ -147,6 +170,85 @@ namespace GUI {
             ImGui::End();
         }
 
+        void FileManager::create_test_files_cb(std::stop_token st, FileManager& self) {
+            self.status = Status::CreatingTestFiles;
+            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Start{} });
+            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::CreateTestFiles{} });
+            const auto create_test_files_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(60'000)) };
+
+            if(create_test_files_payload.has_value() == false) {
+                std::cout << "GUI::Windows::FileManager::create_test_files_cb: timeout\n";
+                self.status = Status::Failed;
+                return;
+            }
+
+            if(variant_tester<Magic::Events::Results::File::CreateTestFiles>(create_test_files_payload.value()) == false) {
+                std::cout << "GUI::Windows::FileManager::create_test_files_cb: create_test_files_payload: bad variant type\n";
+                self.status = Status::Failed;
+                return;
+            }
+
+            if(
+                [&]() {
+                    bool ret { false };
+                    std::visit([&](auto&& event) {
+                        if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Events::Results::File::CreateTestFiles>) {
+                            ret = event.status;
+                        }
+                    }, create_test_files_payload.value());
+                    return ret;
+                }() == false
+            ) {
+                self.status = Status::Failed;
+                std::cout << "GUI::Windows::FileManager::create_test_files_cb: create_test_files_payload.value().status == false\n";
+                return;
+            }
+
+            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::End{} });
+
+            self.status = Status::NotListed;
+            self.list();
+        }
+
+        void FileManager::format_cb(std::stop_token st, FileManager& self) {
+            self.status = Status::Formatting;
+            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Start{} });
+            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Format{} });
+            const auto format_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(60'000)) };
+
+            if(format_payload.has_value() == false) {
+                std::cout << "GUI::Windows::FileManager::format_cb: timeout\n";
+                self.status = Status::Failed;
+                return;
+            }
+
+            if(variant_tester<Magic::Events::Results::File::Format>(format_payload.value()) == false) {
+                std::cout << "GUI::Windows::FileManager::format_cb: format_payload: bad variant type\n";
+                self.status = Status::Failed;
+                return;
+            }
+
+            if(
+                [&]() {
+                    bool ret { false };
+                    std::visit([&](auto&& event) {
+                        if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Events::Results::File::Format>) {
+                            ret = event.status;
+                        }
+                    }, format_payload.value());
+                    return ret;
+                }() == false
+            ) {
+                self.status = Status::Failed;
+                std::cout << "GUI::Windows::FileManager::format_cb: format_payload.value().status == false\n";
+                return;
+            }
+
+            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::End{} });
+            self.status = Status::NotListed;
+            self.list();
+        }
+
         void FileManager::list_cb(std::stop_token st, FileManager& self) {
             self.status = Status::Listing;
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Start{} });
@@ -167,8 +269,8 @@ namespace GUI {
 
             std::visit([&self](auto&& event) {
                 if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Events::Results::File::Free>) {
-                    self.bytes.free = event.bytes_free;
-                    self.bytes.total = event.bytes_total;
+                    self.bytes.used = event.used_bytes;
+                    self.bytes.total = event.total_bytes;
                 }
             }, free_payload.value());
 
@@ -257,6 +359,20 @@ namespace GUI {
             self.status = Status::Listed;
         }
 
+        void FileManager::create_test_files() {
+            selected = std::nullopt;
+            std::jthread t1(create_test_files_cb, std::ref(*this));
+            t1.detach();
+            stop_source = t1.get_stop_source();
+        }
+
+        void FileManager::format() {
+            selected = std::nullopt;
+            std::jthread t1(format_cb, std::ref(*this));
+            t1.detach();
+            stop_source = t1.get_stop_source();
+        }
+
         void FileManager::list() {
             selected = std::nullopt;
             std::jthread t1(list_cb, std::ref(*this));
@@ -273,7 +389,8 @@ namespace GUI {
 
         void FileManager::download() {
             nfdchar_t* path = nullptr;
-            const nfdresult_t result = NFD::SaveDialog(path, nullptr, 0, nullptr, std::string(list_table.paths[selected.value()].path.begin(), list_table.paths[selected.value()].path.end()).c_str());
+            const std::array<nfdfilteritem_t, 1> filterItem { { "Record", "rcd" } };
+            const nfdresult_t result = NFD::SaveDialog(path, filterItem.data(), filterItem.size(), nullptr, std::string(list_table.paths[selected.value()].path.begin(), list_table.paths[selected.value()].path.end()).c_str());
             if(result == NFD_OKAY) {
                 progress_bar_fraction = 0.0f;
                 std::jthread t1(download_cb, std::ref(*this), std::filesystem::path(path));
@@ -339,6 +456,9 @@ namespace GUI {
                 }
 
                 std::ofstream file(path, std::ios::out | std::ios::binary);
+                for(const auto e: Magic::Events::Results::Auto::Record::file_header) {
+                    file << e;
+                }
 
                 uint64_t i = 0;
                 for(const auto& slice: download_slices) {

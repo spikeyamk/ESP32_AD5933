@@ -82,8 +82,6 @@ namespace GUI {
         console.draw();
         Boilerplate::render(renderer);
 
-        client_windows.push_back(Windows::Client{"dummy", 0, shm});
-
         while(done == false && ble_client.running()) {
             Boilerplate::process_events(done, window, renderer);
             Boilerplate::start_new_frame();

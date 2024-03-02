@@ -9,7 +9,6 @@
 extern "C" void app_main() {
 	Trielo::trielo<Util::init_restart_button>();
 	Trielo::trieloxit<SD_Card::init>(Trielo::OkErrCode(0));
-
 	I2C::Bus i2c_bus {};
 	i2c_bus.scan();
 	while(i2c_bus.device_add(AD5933::SLAVE_ADDRESS) == false) {

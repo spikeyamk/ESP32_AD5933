@@ -37,13 +37,13 @@ namespace GUI {
                 ImGui::EndDisabled();
             } else if(status == Status::BLE || status == Status::SD_Card) {
                 ImGui::BeginDisabled();
-                ImGui::Button("Record over BLE");
+                ImGui::Button("Over BLE");
                 if(status == Status::BLE) {
                     const float scale = GUI::Boilerplate::get_scale();
                     ImGui::SameLine();
                     Spinner::Spinner("SendingSinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                 }
-                ImGui::Button("Record to SD Card");
+                ImGui::Button("To SD Card");
                 if(status == Status::SD_Card) {
                     const float scale = GUI::Boilerplate::get_scale();
                     ImGui::SameLine();
@@ -102,16 +102,18 @@ namespace GUI {
         }
 
         void Auto::stop() {
-            stop_source.request_stop();
+            shm->cmd.send(
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
+                    index,
+                    Magic::Events::Commands::Auto::End{}
+                }
+            );
+
             if(status == Status::BLE) {
-                status = Status::Off;
-                shm->cmd.send(
-                    BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
-                        index,
-                        Magic::Events::Commands::Auto::End{}
-                    }
-                );
+                stop_source.request_stop();
             }
+
+            status = Status::Off;
         }
 
         void Auto::over_ble_cb(std::stop_token st, Auto& self) {

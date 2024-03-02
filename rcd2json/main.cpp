@@ -85,7 +85,7 @@ bool is_aligned(const std::filesystem::path& path) {
 
 int main(int argc, char** argv) {
 	try {
-		if(argc != 3) {
+		if(argc != 2) {
 			send_bin_name_and_args_to_cout(argc, argv);
 			std::cout << "Invalid input: Needs exactly 2 arguments: number of arguments: " << argc - 1 << std::endl;
 			print_usage(argv[0]);
@@ -117,24 +117,10 @@ int main(int argc, char** argv) {
 			return EXIT_FAILURE;
 		}
 
-
-		const std::filesystem::path output_path { argv[2] };
-		if(path_exists(output_path)) {
-			send_bin_name_and_args_to_cout(argc, argv);
-			std::cout << "Invalid input: specified output file: '" << output_path.string() << "' already exists" << std::endl;
-			return EXIT_FAILURE;
-		}
-
-		std::ofstream output_file { output_path, std::ios::out | std::ios::binary };
-		if(output_file.is_open()) {
-			std::cout << "Could not open the output file: '" << output_path.string() << '\'' << std::endl;
-			return EXIT_FAILURE;
-		}
-
 		const size_t wished_num_of_records { (get_size(input_path) - Magic::Events::Results::Auto::Record::file_header.size()) / Magic::Events::Results::Auto::Record::size };
 		std::ifstream input_file { input_path, std::ios::in | std::ios::binary };
 		if(input_file.is_open() == false) {
-			std::cout << "Could not open the input file: '" << output_path.string() << '\'' << std::endl;
+			std::cout << "Could not open the input file: '" << input_path.string() << '\'' << std::endl;
 			return EXIT_FAILURE;
 		}
 		input_file.seekg(Magic::Events::Results::Auto::Record::file_header.size(), std::ios::beg);
@@ -153,14 +139,14 @@ int main(int argc, char** argv) {
 
 			static bool first { true };
 			if(first == true) {
-				output_file << '[';
+				std::cout << '[';
 				first = false;
 			} else {
-				output_file << ',';
+				std::cout << ',' << std::endl;
 			}
-			output_file << std::setw(4) << j;
+			std::cout << std::setw(4) << j;
 			if(i == wished_num_of_records - 1) {
-				output_file << ']';
+				std::cout << ']' << std::endl;
 			}
 		}
 

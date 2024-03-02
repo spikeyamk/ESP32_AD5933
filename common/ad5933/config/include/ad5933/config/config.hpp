@@ -320,8 +320,8 @@ namespace AD5933 {
 			return ret;
 		}
 
-		constexpr uint32_t get_freq_end() const {
-            return get_start_freq().unwrap() + (get_num_of_inc().unwrap() * get_inc_freq().unwrap());
+		constexpr uint_freq_t<1001> get_freq_end() const {
+            return uint_freq_t<1001> { get_start_freq().unwrap() + (get_num_of_inc().unwrap() * get_inc_freq().unwrap()) };
 		}
 	};
 }

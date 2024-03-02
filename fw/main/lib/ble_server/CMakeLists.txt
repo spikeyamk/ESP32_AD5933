@@ -3,6 +3,6 @@ if(ESP_PLATFORM)
         "lib/state_machine.cpp"
         "lib/server.cpp"
         INCLUDE_DIRS "include" "../../include"
-        REQUIRES "nvs_flash" "bt" "trielo_wrapper" "magic" "sml_wrapper" "extension" "masks" "my_util" "vfs" "spi_flash" "fatfs" "data" "config" "calibration" "measurement"
+        REQUIRES "nvs_flash" "bt" "trielo_wrapper" "magic" "sml_wrapper" "extension" "masks" "my_util" "vfs" "spi_flash" "joltwallet__littlefs" "sdmmc" "data" "config" "calibration" "measurement"
     )
 endif()

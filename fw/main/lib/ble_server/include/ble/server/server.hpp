@@ -146,9 +146,12 @@ namespace BLE {
 			void remove(const Magic::Events::Commands::File::Remove& event);
 			void download(const Magic::Events::Commands::File::Download& event, std::shared_ptr<Server::Sender> &sender, StopSources& stop_sources);
 			void upload(const Magic::Events::Commands::File::Upload& event);
+			void format(std::shared_ptr<Server::Sender> &sender);
+			void create_test_files(std::shared_ptr<Server::Sender> &sender);
 		}
 
 		namespace Auto {
+			std::array<char, 28> get_record_file_name_zero_terminated();
 			void start_saving(std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933);
 			void start_sending(std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933);
 			void stop_saving(StopSources& stop_sources);
@@ -215,18 +218,18 @@ namespace BLE {
 
 		       	//state<States::sleeping>    + event<Events::wakeup>      		 / function{Actions::wakeup}      		   = state<States::advertise>,
 
-				state<States::connected>   + event<Events::disconnect>   		 / function{Actions::disconnect}   		   	   = state<States::advertise>,
-				state<States::connected>   + event<Magic::Events::Commands::Debug::Start> / function{Actions::Debug::start}    = state<States::debug>,
+				state<States::connected>   + event<Events::disconnect>   		 / function{Actions::disconnect}   		   	            = state<States::advertise>,
+				state<States::connected>   + event<Magic::Events::Commands::Debug::Start>										        = state<States::debug>,
 				state<States::connected>   + event<Magic::Events::Commands::Sweep::Configure> / function{Actions::FreqSweep::configure} = state<States::FreqSweep::configuring>,
-				state<States::connected>   + event<Magic::Events::Commands::File::Start>									   = state<States::file>,
-				state<States::connected>   + event<Magic::Events::Commands::Auto::Save>	/ function{Actions::Auto::start_saving}  = state<States::Auto::save>,
-				state<States::connected>   + event<Magic::Events::Commands::Auto::Send>	/ function{Actions::Auto::start_sending} = state<States::Auto::send>,
+				state<States::connected>   + event<Magic::Events::Commands::File::Start>									            = state<States::file>,
+				state<States::connected>   + event<Magic::Events::Commands::Auto::Save>	/ function{Actions::Auto::start_saving}         = state<States::Auto::save>,
+				state<States::connected>   + event<Magic::Events::Commands::Auto::Send>	/ function{Actions::Auto::start_sending}        = state<States::Auto::send>,
 
-				state<States::debug> + event<Events::disconnect>     / function{Actions::disconnect}     = state<States::advertise>,
-				state<States::debug> + event<Events::Debug::end>     / function{Actions::Debug::end}     = state<States::connected>,
-				state<States::debug> + event<Magic::Events::Commands::Debug::Dump> / function{Actions::Debug::dump}    = state<States::debug>,
+				state<States::debug> + event<Events::disconnect>                      / function{Actions::disconnect}     = state<States::advertise>,
+				state<States::debug> + event<Magic::Events::Commands::Debug::End> 										  = state<States::connected>,
+				state<States::debug> + event<Magic::Events::Commands::Debug::Dump>    / function{Actions::Debug::dump}    = state<States::debug>,
 				state<States::debug> + event<Magic::Events::Commands::Debug::Program> / function{Actions::Debug::program} = state<States::debug>,
-				state<States::debug> + event<Magic::Events::Commands::Debug::CtrlHB> / function{Actions::Debug::command} = state<States::debug>,
+				state<States::debug> + event<Magic::Events::Commands::Debug::CtrlHB>  / function{Actions::Debug::command} = state<States::debug>,
 
 				state<States::FreqSweep::configuring> + event<Events::disconnect>     									 / function{Actions::disconnect}     = state<States::advertise>,
 				state<States::FreqSweep::configuring> + event<Magic::Events::Commands::Sweep::End> 						 / function{Actions::FreqSweep::end} = state<States::connected>,
@@ -250,6 +253,8 @@ namespace BLE {
 				state<States::file> + event<Magic::Events::Commands::File::Remove> / function{Actions::File::remove} = state<States::file>,
 				state<States::file> + event<Magic::Events::Commands::File::Download> / function{Actions::File::download} = state<States::file>,
 				state<States::file> + event<Magic::Events::Commands::File::Upload> / function{Actions::File::upload} = state<States::file>,
+				state<States::file> + event<Magic::Events::Commands::File::CreateTestFiles> / function{Actions::File::create_test_files} = state<States::file>,
+				state<States::file> + event<Magic::Events::Commands::File::Format> / function{Actions::File::format} = state<States::file>,
 
 				// for auto save commands
 				state<States::Auto::save>  + event<Events::disconnect> / function{Actions::Auto::stop_saving} = state<States::advertise>,
