@@ -535,6 +535,7 @@ namespace GUI {
                         }
                     }
 
+                    std::queue<Point> tmp_points;
                     for(
                         auto it = file_content.begin();
                         it < file_content.end() && it + Magic::Events::Results::Auto::Record::size < file_content.end();
@@ -550,13 +551,14 @@ namespace GUI {
 
                         const auto timeval { Magic::Events::Results::Auto::Timeval::from_raw_data(timeval_serialized) };
                         const auto point { Magic::Events::Results::Auto::Point::from_raw_data(point_serialized) };
-                        self.save_points.push(
+                        tmp_points.push(
                             {
                                 .time = static_cast<double>(timeval.tv.tv_sec) + (static_cast<double>(timeval.tv.tv_usec) / 1'000'000.0),
                                 .auto_meas = point
                             } 
                         );
                     }
+                    self.save_points = tmp_points;
                 }
 
                 self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::End{} });
