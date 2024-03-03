@@ -5,7 +5,7 @@
 
 int main(int argc, char* argv[]) {
     static const boost::filesystem::path self_path {
-        #ifdef _MSC_VER
+        #ifdef _WIN32
         // This is needed in order for the path to work on Windows with UTF-16 special characters (Windows uses const wchar_t* for paths) in the path and whitespace otherwise launching the child process will fail
         []() {
             std::basic_string<boost::filesystem::path::value_type> ret;
@@ -16,8 +16,17 @@ int main(int argc, char* argv[]) {
             }
             return ret;
         }().data()
-        #else
-        argv[0]
+        #elif  __linux__
+        []() {
+            std::string ret;
+            ret.resize(PATH_MAX);
+            ssize_t len = readlink("/proc/self/exe", ret.data(), ret.size() - 1);
+            if(len != -1) {
+                ret[len] = '\0';
+                return ret;
+            }
+            return std::string("");
+        }()
         #endif
     };
 
