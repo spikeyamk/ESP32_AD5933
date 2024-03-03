@@ -21,11 +21,12 @@ int main(int argc, char* argv[]) {
             std::string ret;
             ret.resize(PATH_MAX);
             ssize_t len = readlink("/proc/self/exe", ret.data(), ret.size() - 1);
-            if(len != -1) {
-                ret[len] = '\0';
-                return ret;
+            if(len == -1) {
+                return std::string("");
             }
-            return std::string("");
+
+            ret[len] = '\0';
+            return ret;
         }()
         #endif
     };
