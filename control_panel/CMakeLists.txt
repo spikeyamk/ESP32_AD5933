@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.28)
 set(CURRENT_PROJECT_NAME "esp32_ad5933_control_panel")
-project(${CURRENT_PROJECT_NAME} C CXX ASM)
+project(${CURRENT_PROJECT_NAME} C CXX)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_BUILD_TYPE Debug)
@@ -11,6 +11,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	# Makes UTF-8 glyphs work
 	add_compile_options("/utf-8")
+	set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
 endif()
 
 set(TRIELO_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/trielo_wrapper/trielo)
@@ -40,9 +41,12 @@ set(NATIVE_FILE_DIALOG_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/nativefiledialog
 set(SEMVER_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/semver)
 set(UTFCONV_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/utfconv)
 
-set(Boost_USE_MULTITHREADED ON)
-set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost REQUIRED COMPONENTS date_time filesystem)
+set(Boost_USE_STATIC_LIBS    ON)
+set(Boost_USE_DEBUG_LIBS     ON)
+set(Boost_USE_RELEASE_LIBS  OFF)
+set(Boost_USE_MULTITHREADED  ON)
+set(Boost_USE_STATIC_RUNTIME ON)
+find_package(Boost COMPONENTS date_time filesystem)
 
 set(BOOST_SML_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/sml_wrapper/sml)
 add_subdirectory(${BOOST_SML_DIR} ${CMAKE_BINARY_DIR}/sml)
@@ -183,32 +187,6 @@ target_link_libraries(${CURRENT_PROJECT_NAME} PRIVATE
 
 if(WIN32)
 	target_compile_definitions(${CURRENT_PROJECT_NAME} PRIVATE _WIN32_WINNT=0x0A00)
-endif()
-
-if(SHM_CLEANER)
-	set(SHM_CLEANER shm_cleaner)
-
-	add_executable(${SHM_CLEANER}
-		misc/shm_cleaner.cpp
-		"ble_client/lib/shm/common/names.cpp"
-		ble_client/lib/shm/common/clean.cpp
-	)
-
-	target_link_libraries(${SHM_CLEANER} PRIVATE
-		trielo
-		nlohmann_json
-		magic
-		${Boost_LIBRARIES}
-	)
-
-	target_include_directories(${SHM_CLEANER} PRIVATE
-		${CMAKE_CURRENT_LIST_DIR}/ble_client/include
-		${Boost_INCLUDE_DIRS}
-	)
-
-	if(WIN32)
-		target_compile_definitions(${SHM_CLEANER} PRIVATE _WIN32_WINNT=0x0A00)
-	endif()
 endif()
 
 add_executable(dummy misc/dummy.cpp)
