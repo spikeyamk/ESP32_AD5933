@@ -9,7 +9,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	add_compile_options(-Wall -Wextra -Wpedantic)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-	# Makes UTF-8 glyphs work
+	# Makes UTF-8 work
 	add_compile_options("/utf-8")
 	set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
 endif()
@@ -41,11 +41,15 @@ set(NATIVE_FILE_DIALOG_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/nativefiledialog
 set(SEMVER_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/semver)
 set(UTFCONV_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/utfconv)
 
+if(WIN32)
+	set(BOOST_ROOT "C:/Users/janco/source/boost_1_84_0")
+	set(BOOST_INCLUDEDIR "C:/Users/janco/source/boost_1_84_0/boost")
+	set(BOOST_LIBRARYDIR "C:/Users/janco/source/boost_1_84_0/lib64-msvc-14.3")
+	set(Boost_NO_SYSTEM_PATHS    ON)
+	set(Boost_USE_STATIC_RUNTIME ON)
+endif()
 set(Boost_USE_STATIC_LIBS    ON)
-set(Boost_USE_DEBUG_LIBS     ON)
-set(Boost_USE_RELEASE_LIBS  OFF)
 set(Boost_USE_MULTITHREADED  ON)
-set(Boost_USE_STATIC_RUNTIME ON)
 find_package(Boost COMPONENTS date_time filesystem)
 
 set(BOOST_SML_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/sml_wrapper/sml)
@@ -90,10 +94,9 @@ add_subdirectory(${SEMVER_DIR})
 # This just creates an alias that the CMakeLists.txt inside the ${UTFCONV_DIR} is looking for
 add_library(mbits::semver ALIAS semver)
 add_subdirectory(${UTFCONV_DIR})
-
 add_subdirectory(${BLE_CLIENT_DIR})
 
-set(GUI_SRCS
+add_executable(${CURRENT_PROJECT_NAME}
 	main.cpp
 	ble_client/lib/shm/common/clean.cpp
 	"ble_client/lib/shm/common/names.cpp"
@@ -147,7 +150,7 @@ set(GUI_SRCS
 	${IMPLOT_SRCS}
 )
 
-set(GUI_INCLUDE_DIRS
+target_include_directories(${CURRENT_PROJECT_NAME} PRIVATE
 	${CMAKE_CURRENT_LIST_DIR}/include
 	${CMAKE_CURRENT_LIST_DIR}/ble_client/include
 	${IMGUI_DIR}
@@ -155,7 +158,7 @@ set(GUI_INCLUDE_DIRS
     ${Boost_INCLUDE_DIRS}
 )
 
-set(GUI_LINK_LIBRARIES
+target_link_libraries(${CURRENT_PROJECT_NAME} PRIVATE
 	trielo
 	simpleble::simpleble
 	magic
@@ -171,18 +174,6 @@ set(GUI_LINK_LIBRARIES
 	nlohmann_json 
 	ble_client
 	utfconv
-)
-
-add_executable(${CURRENT_PROJECT_NAME}
-	${GUI_SRCS}
-)
-
-target_include_directories(${CURRENT_PROJECT_NAME} PRIVATE
-	${GUI_INCLUDE_DIRS}
-)
-
-target_link_libraries(${CURRENT_PROJECT_NAME} PRIVATE
-	${GUI_LINK_LIBRARIES}
 )
 
 if(WIN32)
