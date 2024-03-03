@@ -5,7 +5,6 @@
 #include <memory>
 #include <queue>
 #include <stop_token>
-#include <filesystem>
 #include <optional>
 
 #include "imgui.h"
@@ -54,8 +53,8 @@ namespace GUI {
             };
             Bytes bytes {};
             float progress_bar_fraction { 0.0f };
-            uint16_t tick_ms_min { 20 };
-            uint16_t tick_ms { 300 };
+            uint16_t tick_ms_min { 500 };
+            uint16_t tick_ms { 500 };
             uint16_t tick_ms_max { std::numeric_limits<uint16_t>::max() };
         public:
             struct Point {
@@ -86,7 +85,7 @@ namespace GUI {
             void format();
         private:
             static void list_cb(std::stop_token st, Auto& self);
-            static void download_cb(std::stop_token st, Auto& self, const std::filesystem::path path);
+            static void download_cb(std::stop_token st, Auto& self);
             static void create_test_files_cb(std::stop_token st, Auto& self);
             static void format_cb(std::stop_token st, Auto& self);
         };

@@ -3,7 +3,6 @@
 
 #include "imgui_internal.h"
 #include <utf/utf.hpp>
-#include <nfd.hpp>
 
 #include "misc/variant_tester.hpp"
 #include "magic/misc/gettimeofday.hpp"
@@ -312,33 +311,10 @@ namespace GUI {
         }
 
         void Auto::download() {
-            nfdchar_t* path = nullptr;
-            const std::array<nfdfilteritem_t, 1> filterItem { { "Record", "rcd" } };
-            const nfdresult_t result = NFD::SaveDialog(path, filterItem.data(), filterItem.size(), nullptr, std::string(list_table.paths[selected.value()].path.begin(), list_table.paths[selected.value()].path.end()).c_str());
-            if(result == NFD_OKAY) {
-                progress_bar_fraction = 0.0f;
-                std::jthread t1(download_cb, std::ref(*this), std::filesystem::path(path));
-                t1.detach();
-                stop_source = t1.get_stop_source();
-                if(path != nullptr) {
-                    NFD::FreePath(path);
-                    path = nullptr;
-                }
-            } else if(result == NFD_CANCEL) {
-                std::printf("User pressed cancel!\n");
-                if(path != nullptr) {
-                    NFD::FreePath(path);
-                    path = nullptr;
-                }
-                return;
-            } else {
-                std::printf("Error: %s\n", NFD::GetError());
-                if(path != nullptr) {
-                    NFD::FreePath(path);
-                    path = nullptr;
-                }
-                return;
-            }
+            progress_bar_fraction = 0.0f;
+            std::jthread t1(download_cb, std::ref(*this));
+            t1.detach();
+            stop_source = t1.get_stop_source();
         }
 
         void Auto::create_test_files() {
@@ -465,7 +441,7 @@ namespace GUI {
             self.status = Status::Off;
         }
 
-        void Auto::download_cb(std::stop_token st, Auto& self, const std::filesystem::path path) {
+        void Auto::download_cb(std::stop_token st, Auto& self) {
             try {
                 self.status = Status::Downloading;
                 self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Start{} });
@@ -504,24 +480,6 @@ namespace GUI {
                 }
                 
                 {
-                    std::ofstream file(path, std::ios::out | std::ios::binary);
-                    for(const auto e: Magic::Events::Results::Auto::Record::file_header) {
-                        file << e;
-                    }
-
-                    uint64_t i = 0;
-                    for(const auto& slice: download_slices) {
-                        for(const uint8_t e: slice.slice) {
-                            if(i == wished_file_size) {
-                                break;
-                            }
-                            file << e;
-                            i++;
-                        }
-                    }
-                }
-
-                {
                     uint64_t i = 0;
                     std::vector<uint8_t> file_content;
                     file_content.reserve(wished_file_size);
@@ -538,23 +496,21 @@ namespace GUI {
                     std::queue<Point> tmp_points;
                     for(
                         auto it = file_content.begin();
-                        it < file_content.end() && it + Magic::Events::Results::Auto::Record::size < file_content.end();
-                        it += Magic::Events::Results::Auto::Record::size
+                        it < file_content.end() && it + sizeof(Magic::Events::Results::Auto::Record::Entry) < file_content.end();
+                        it += sizeof(Magic::Events::Results::Auto::Record::Entry)
                     ) {
-                        std::array<uint8_t, Magic::Events::Results::Auto::Record::size> record_serialized { 0 };
-                        std::copy(it, it + Magic::Events::Results::Auto::Record::size, record_serialized.begin());
+                        std::array<uint8_t, sizeof(Magic::Events::Results::Auto::Record::Entry)> entry_serialized { 0 };
+                        std::copy(it, it + sizeof(Magic::Events::Results::Auto::Record::Entry), entry_serialized.begin());
 
-                        std::array<uint8_t, sizeof(Magic::Events::Results::Auto::Timeval::T_RawData)> timeval_serialized;
-                        std::copy(record_serialized.begin(), record_serialized.begin() + timeval_serialized.size(), timeval_serialized.begin());
-                        std::array<uint8_t, sizeof(Magic::Events::Results::Auto::Point::T_RawData)> point_serialized;
-                        std::copy(record_serialized.begin() + timeval_serialized.size(), record_serialized.end(), point_serialized.begin());
+                        const auto entry { Magic::Events::Results::Auto::Record::Entry::from_raw_data(entry_serialized) };
 
-                        const auto timeval { Magic::Events::Results::Auto::Timeval::from_raw_data(timeval_serialized) };
-                        const auto point { Magic::Events::Results::Auto::Point::from_raw_data(point_serialized) };
                         tmp_points.push(
                             {
-                                .time = static_cast<double>(timeval.tv.tv_sec) + (static_cast<double>(timeval.tv.tv_usec) / 1'000'000.0),
-                                .auto_meas = point
+                                .time = entry.unix_timestamp,
+                                .auto_meas = {
+                                    .impedance = entry.impedance,
+                                    .phase = entry.phase,
+                                }
                             } 
                         );
                     }
@@ -573,7 +529,7 @@ namespace GUI {
             self.status = Status::CreatingTestFiles;
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Start{} });
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::CreateTestFiles{} });
-            const auto create_test_files_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(60'000)) };
+            const auto create_test_files_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(10 * 60'000)) };
 
             if(create_test_files_payload.has_value() == false) {
                 std::cout << "GUI::Windows::RecordManager::create_test_files_cb: timeout\n";

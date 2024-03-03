@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <variant>
+#include <chrono>
 
 #include "magic/misc/gettimeofday.hpp"
 #include "magic/events/common.hpp"
@@ -312,6 +313,66 @@ namespace Magic {
                     static constexpr size_t size {
                         sizeof(Magic::Events::Results::Auto::Point::T_RawData)
                         + sizeof(Magic::Events::Results::Auto::Timeval::T_RawData)
+                    };
+
+                    struct Entry {
+                        double unix_timestamp;
+                        float impedance;
+                        float phase;
+
+                        Entry() = default;
+
+                        inline Entry(const double unix_timestamp, const float impedance, float phase) :
+                            unix_timestamp{ unix_timestamp },
+                            impedance{ impedance },
+                            phase{ phase }
+                        {}
+
+                        inline Entry(const float impedance, float phase) :
+                            unix_timestamp{ []() {
+								const auto now { std::chrono::high_resolution_clock::now() };
+								const auto since_epoch { now.time_since_epoch() };
+                                const auto sec { std::chrono::duration_cast<std::chrono::seconds>(since_epoch) };
+								const double tv_sec { static_cast<double>(sec.count()) };
+								const double tv_usec { static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(since_epoch).count() - std::chrono::duration_cast<std::chrono::microseconds>(sec).count()) };
+                                return tv_sec + (tv_usec / 1'000'000.0);
+                            }() },
+                            impedance{ impedance },
+                            phase{ phase }
+                        {}
+
+                        using T_RawData = std::array<uint8_t, sizeof(unix_timestamp) + sizeof(impedance) + sizeof(phase)>;
+                        inline constexpr T_RawData to_raw_data() const {
+                            T_RawData ret {};
+
+                            const int64_t* tmp_unix_timestamp = static_cast<const int64_t*>(static_cast<const void*>(&unix_timestamp));
+                            std::generate(ret.begin(), ret.begin() + sizeof(unix_timestamp), [index = 0, tmp_unix_timestamp]() mutable {
+                                return static_cast<uint8_t>(*tmp_unix_timestamp >> (8 * index++)) & 0xFF;
+                            });
+
+                            const int32_t* tmp_impedance = static_cast<const int32_t*>(static_cast<const void*>(&impedance));
+                            std::generate(ret.begin() + sizeof(unix_timestamp), ret.begin() + sizeof(unix_timestamp) + sizeof(impedance), [index = 0, tmp_impedance]() mutable {
+                                return static_cast<uint8_t>(*tmp_impedance >> (8 * index++)) & 0xFF;
+                            });
+
+                            const int32_t* tmp_phase = static_cast<const int32_t*>(static_cast<const void*>(&phase));
+                            std::generate(ret.begin() + sizeof(unix_timestamp) + sizeof(impedance), ret.begin() + sizeof(unix_timestamp) + sizeof(impedance) + sizeof(phase), [index = 0, tmp_phase]() mutable {
+                                return static_cast<uint8_t>(*tmp_phase >> (8 * index++)) & 0xFF;
+                            });
+
+                            return ret;
+                        }
+
+                        static inline constexpr Entry from_raw_data(const T_RawData& raw_data) {
+                            const double* tmp_unix_timestamp = static_cast<const double*>(static_cast<const void*>(raw_data.data()));
+                            const float* tmp_impedance = static_cast<const float*>(static_cast<const void*>(raw_data.data() + sizeof(unix_timestamp)));
+                            const float* tmp_phase = static_cast<const float*>(static_cast<const void*>(raw_data.data() + sizeof(unix_timestamp) + sizeof(impedance)));
+                            return Entry {
+                                *tmp_unix_timestamp,
+                                *tmp_impedance,
+                                *tmp_phase,
+                            };
+                        }
                     };
                 }
             }

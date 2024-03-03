@@ -14,6 +14,6 @@ namespace SD_Card {
     esp_err_t format();
     int create_test_files();
     void print_test_files();
-    int create_megabyte_test_file();
-    int print_megabyte_test_file();
+    int create_test_file(const size_t size_bytes, const std::string_view& name);
+    int print_test_file(const std::string_view& name);
 }

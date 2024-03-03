@@ -74,7 +74,6 @@ namespace BLE_Client {
             service.uuid(),
             service.body_composition_measurement.uuid(),
             [&](SimpleBLE::ByteArray captured_payload) {
-                child_shm->console.log("BLE_Client::SimpleBLE::Peripheral::body_composition_measurement::notify_callback\n");
                 Magic::T_MaxPacket raw_bytes;
                 std::copy(captured_payload.begin(), captured_payload.end(), raw_bytes.begin());
                 const Magic::InComingPacket<Magic::Events::Results::Variant, Magic::Events::Results::Map> incoming_packet { raw_bytes };
@@ -89,7 +88,6 @@ namespace BLE_Client {
             service.uuid(),
             service.hid_information.uuid(),
             [&](SimpleBLE::ByteArray captured_payload) {
-                child_shm->console.log("BLE_Client::SimpleBLE::Peripheral::hid_information::notify_callback\n");
                 Magic::T_MaxPacket raw_bytes;
                 std::copy(captured_payload.begin(), captured_payload.end(), raw_bytes.begin());
                 const Magic::InComingPacket<Magic::Events::Results::Variant, Magic::Events::Results::Map> incoming_packet { raw_bytes };

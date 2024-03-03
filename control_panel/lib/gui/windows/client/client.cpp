@@ -63,13 +63,13 @@ namespace GUI {
                     ImGui::DockBuilderAddNode(dockspace_id, dockspace_flags);
                     ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetWindowSize());
                     const ImGuiID right_id = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.5f, nullptr, &dockspace_id);
-                    measurement_plots_window.draw(enables.measurement_plots, right_id);
                     calibration_plots_window.draw(enables.calibration_plots, right_id);
+                    measurement_plots_window.draw(enables.measurement_plots, right_id);
                     auto_plots_window.draw(enables.auto_plots, right_id);
-                    debug_window.draw(enables.debug, dockspace_id, lock);
-                    calibrate_window.draw(enables.calibrate, dockspace_id, lock);
-                    measure_window.draw(enables.measure, dockspace_id, lock);
                     auto_window.draw(enables.auto_window, dockspace_id, lock);
+                    measure_window.draw(enables.measure, dockspace_id, lock);
+                    calibrate_window.draw(enables.calibrate, dockspace_id, lock);
+                    debug_window.draw(enables.debug, dockspace_id, lock);
                     ImGui::DockBuilderFinish(dockspace_id);
                     first = false;
                 } else {

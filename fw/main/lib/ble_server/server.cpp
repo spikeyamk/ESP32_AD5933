@@ -18,13 +18,12 @@
 #include "esp_bt.h"
 #include <trielo/trielo.hpp>
 
-#include "ble/server/server.hpp"
 #include "magic/packets/incoming.hpp"
 #include "util.hpp"
-
 #include "ad5933/driver/driver.hpp"
 #include "ad5933/extension/extension.hpp"
-#include "ble/server/server.hpp"
+
+#include "ble_server/server.hpp"
 
 namespace BLE {
     namespace Server {
@@ -50,13 +49,12 @@ namespace BLE {
 
     namespace Server {
         void stop() {//! Call this function to stop BLE 
-            std::printf("BLE::Server::stop\n");
-            //! Below is the sequence of APIs to be called to disable/deinit NimBLE host and ESP controller:
-            printf("\n Stoping BLE and notification task \n");
-            if(Trielo::trielo<nimble_port_stop>(Trielo::OkErrCode(0)) == 0) {
+            std::printf("BLE::Server::stop: Stoping BLE and notification task\n");
+            std::thread([]() {
+                // This must run in a separate thread because otherwise it'll stall the nimble event thread and that one will never consume the stop event because this stop function is called within the function pointers of the nimble events
+                Trielo::trielo<nimble_port_stop>(Trielo::OkErrCode(0));
                 Trielo::trielo<nimble_port_deinit>(Trielo::OkErrCode(ESP_OK));
-            }
-            Trielo::trielo<esp_bt_controller_disable>(Trielo::OkErrCode(ESP_OK));
+            }).detach();
         }
 
         static void wakeup_cb() {
@@ -316,7 +314,6 @@ namespace BLE {
             std::printf("BLE::Server::sync_cb\n");
             Trielo::trielo<&ble_hs_util_ensure_addr>(Trielo::OkErrCode(0), 0);
             Trielo::trielo<&ble_hs_id_infer_auto>(Trielo::OkErrCode(0), 0, &own_addr_type);
-            dummy_state_machine.process_event(Events::advertise{});
         }
 
         void gatt_register_cb(ble_gatt_register_ctxt *ctxt, void *arg) {
@@ -490,6 +487,9 @@ namespace BLE {
             Trielo::trielo<&ble_gatts_add_svcs>(Trielo::OkErrCode(0), gatt_services);
             Trielo::trielo<ble_att_set_preferred_mtu>(Trielo::OkErrCode(0), 23);
             Trielo::trielo<nimble_port_freertos_init>(task_cb);
+            Trielo::trielo<&ble_hs_util_ensure_addr>(Trielo::OkErrCode(0), 0);
+            Trielo::trielo<&ble_hs_id_infer_auto>(Trielo::OkErrCode(0), 0, &own_addr_type);
+            dummy_state_machine.process_event(Events::advertise{});
         }
     }
 

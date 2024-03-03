@@ -109,7 +109,7 @@ namespace GUI {
 
                 if(ImGui::Button("Save")) {
                     static constexpr char graph_name[] { "auto_send_corrected_gon" };
-                    ns::CorrectedAlgGraph2D_File<graph_name, double, ns::ValueNames::unix_timestamp> graph_file {};
+                    ns::CorrectedGonGraph2D_File<graph_name, double, ns::ValueNames::unix_timestamp> graph_file {};
                     ns::load_graph2D_file(
                         send_vectors.time,
                         send_vectors.impedance,
@@ -188,7 +188,7 @@ namespace GUI {
 
                 if(ImGui::Button("Save")) {
                     static constexpr char graph_name[] { "auto_save_corrected_gon" };
-                    ns::CorrectedAlgGraph2D_File<graph_name, double, ns::ValueNames::unix_timestamp> graph_file {};
+                    ns::CorrectedGonGraph2D_File<graph_name, double, ns::ValueNames::unix_timestamp> graph_file {};
                     ns::load_graph2D_file(
                         save_vectors.time,
                         save_vectors.impedance,

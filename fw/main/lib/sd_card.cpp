@@ -28,8 +28,8 @@
 
 namespace SD_Card {
     namespace Pins {
-        static constexpr gpio_num_t mosi { GPIO_NUM_15 };
-        static constexpr gpio_num_t miso { GPIO_NUM_23 };
+        static constexpr gpio_num_t miso { GPIO_NUM_15 };
+        static constexpr gpio_num_t mosi { GPIO_NUM_23 };
         static constexpr gpio_num_t clk  { GPIO_NUM_22 };
         static constexpr gpio_num_t cs   { GPIO_NUM_21 };
     }
@@ -88,6 +88,8 @@ namespace SD_Card {
         .gpio_wp_polarity = SDSPI_IO_ACTIVE_LOW,
     };
 
+    sdspi_dev_handle_t handle;
+
     int init() {
         if(Trielo::trielo<spi_bus_initialize>(Trielo::OkErrCode(ESP_OK), slot_config.host_id, &bus_cfg, SDSPI_DEFAULT_DMA)) {
             return -1;
@@ -97,7 +99,6 @@ namespace SD_Card {
             return -2;
         }
 
-        sdspi_dev_handle_t handle;
         if(Trielo::trielo<sdspi_host_init_device>(Trielo::OkErrCode(ESP_OK), &slot_config, &handle) != ESP_OK) {
             return -3;
         }
@@ -170,22 +171,29 @@ namespace SD_Card {
     }
 
     esp_err_t deinit() {
-        return Trielo::trielo<esp_vfs_littlefs_unregister_sdmmc>(Trielo::OkErrCode(ESP_OK), &card);
-        //const esp_err_t ret { esp_vfs_fat_sdcard_unmount(mount_point.data(), card) };
-        //return ret;
-        return -1;
-        /*
+        esp_err_t ret { Trielo::trielo<esp_vfs_littlefs_unregister_sdmmc>(Trielo::OkErrCode(ESP_OK), &card) };
         if(ret != ESP_OK) {
             return ret;
         }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-        return spi_bus_free(slot_config.host_id);
-        */
+        ret = Trielo::trielo<sdspi_host_remove_device>(Trielo::OkErrCode(ESP_OK), handle);
+        if(ret != ESP_OK) {
+            return ret;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        ret = Trielo::trielo<sdspi_host_deinit>(Trielo::OkErrCode(ESP_OK));
+        if(ret != ESP_OK) {
+            return ret;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        return Trielo::trielo<spi_bus_free>(Trielo::OkErrCode(ESP_OK), slot_config.host_id);
     }
 
-    int create_megabyte_test_file() {
-        const std::filesystem::path test_megabyte { std::filesystem::path(mount_point).append("test4") };
-        static constexpr size_t size_megabyte { 1024 * 1024 };
+    int create_test_file(const size_t size_bytes, const std::string_view& name) {
+        const std::filesystem::path test_megabyte { std::filesystem::path(mount_point).append(name) };
 
         std::ofstream file(test_megabyte);
         if(file.is_open() == false) {
@@ -194,29 +202,29 @@ namespace SD_Card {
         size_t i = 1;
         try {
             char c { 'a' };
-            for(; i <= size_megabyte; i++) {
+            for(; i <= size_bytes; i++) {
                 file << c;
                 if(c == 'z') {
                     c = 'a';
                 } else {
                     c++;
                 }
-                if((i % 16384) == 0) {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                if((i % 512) == 0) {
+                    file.flush();
                 }
             }
         } catch(const std::exception& e) {
             return -2;
         }
 
-        if(i < size_megabyte) {
+        if(i < size_bytes) {
             return static_cast<int>(i);
         }
         return 0;
     }
 
-    int print_megabyte_test_file() {
-        const std::filesystem::path test_megabyte { std::filesystem::path(mount_point).append("test4") };
+    int print_test_file(const std::string_view& name) {
+        const std::filesystem::path test_megabyte { std::filesystem::path(mount_point).append(name) };
         static constexpr size_t size_megabyte { 1 * 1024 * 1024 };
         std::ifstream file(test_megabyte);
         if(file.is_open() == false) {
