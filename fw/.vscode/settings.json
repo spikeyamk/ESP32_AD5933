@@ -1,7 +1,7 @@
 {
     "idf.adapterTargetName": "esp32c6",
     "idf.flashType": "UART",
-    "idf.port": "/dev/ttyACM0",
+    "idf.port": "/dev/ttyUSB0",
     "files.associations": {
         "*.tcc": "cpp",
         "chrono": "cpp",

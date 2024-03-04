@@ -9,6 +9,7 @@
 #include <chrono>
 #include <array>
 #include <atomic>
+#include <semaphore>
 #include <span>
 #include <memory>
 
@@ -39,21 +40,29 @@ namespace BLE {
 
     namespace Server {
         class Sender {
+		private:
+			std::counting_semaphore<40> sem { 40 };
         public:
             std::mutex mutex;
             Sender() = default;
 
 			template<typename T_OutComingPacket>
-			inline bool notify_hid_information(const T_OutComingPacket& event) const {
+			inline bool notify_hid_information(const T_OutComingPacket& event) {
 				auto tmp_array { event.get_raw_data() };
+				sem.acquire();
 				return BLE::Server::notify_hid_information(std::span(tmp_array.begin(), tmp_array.end()));
             }
 
 			template<typename T_OutComingPacket>
-			inline bool notify_body_composition_measurement(const T_OutComingPacket& event) const {
+			inline bool notify_body_composition_measurement(const T_OutComingPacket& event) {
 				auto tmp_array { event.get_raw_data() };
+				sem.acquire();
 				return BLE::Server::notify_body_composition_measurement(std::span(tmp_array.begin(), tmp_array.end()));
             }
+
+			inline void release() {
+				sem.release();
+			}
         };
     }
 
@@ -135,7 +144,7 @@ namespace BLE {
 			void configure(std::atomic<bool> &processing, AD5933::Extension &ad5933, const Magic::Events::Commands::Sweep::Configure &configure_event);
 			//static void run(Sender &sender, AD5933::Extension &ad5933, boost::sml::back::process<Events::FreqSweep::Private::sweep_complete> process_event) {
 			void run(std::atomic<bool> &processing, std::shared_ptr<Server::Sender> &sender, AD5933::Extension &ad5933, StopSources& stop_sources);
-			void end();
+			void end(std::shared_ptr<Server::Sender> &sender, StopSources& stop_sources);
 		}
 
 		namespace File {
@@ -143,19 +152,19 @@ namespace BLE {
 			void list_count(std::shared_ptr<Server::Sender>& sender);
 			void list(std::shared_ptr<Server::Sender>& sender);
 			void size(const Magic::Events::Commands::File::Size& event, std::shared_ptr<Server::Sender>& sender);
-			void remove(const Magic::Events::Commands::File::Remove& event);
+			void remove(const Magic::Events::Commands::File::Remove& event, std::shared_ptr<Server::Sender> &sender);
 			void download(const Magic::Events::Commands::File::Download& event, std::shared_ptr<Server::Sender> &sender, StopSources& stop_sources);
-			void upload(const Magic::Events::Commands::File::Upload& event);
 			void format(std::shared_ptr<Server::Sender> &sender);
 			void create_test_files(std::shared_ptr<Server::Sender> &sender);
+			void end(std::shared_ptr<Server::Sender> &sender, StopSources& stop_sources);
 		}
 
 		namespace Auto {
 			std::array<char, 28> get_record_file_name_zero_terminated();
 			void start_saving(const Magic::Events::Commands::Auto::Save& event, std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933);
 			void start_sending(const Magic::Events::Commands::Auto::Send& event, std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933);
-			void stop_saving(StopSources& stop_sources);
-			void stop_sending(StopSources& stop_sources);
+			void stop_saving(std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources);
+			void stop_sending(std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources);
 		}
 	}
 
@@ -245,24 +254,23 @@ namespace BLE {
 
 				// for file commands
 				state<States::file> + event<Events::disconnect> / function{Actions::disconnect} = state<States::advertise>,
-				state<States::file> + event<Magic::Events::Commands::File::End> = state<States::connected>,
+				state<States::file> + event<Magic::Events::Commands::File::End> / function{Actions::File::end} = state<States::connected>,
 				state<States::file> + event<Magic::Events::Commands::File::Free> / function{Actions::File::free} = state<States::file>,
 				state<States::file> + event<Magic::Events::Commands::File::ListCount> / function{Actions::File::list_count} = state<States::file>,
 				state<States::file> + event<Magic::Events::Commands::File::List> / function{Actions::File::list} = state<States::file>,
 				state<States::file> + event<Magic::Events::Commands::File::Size> / function{Actions::File::size} = state<States::file>,
 				state<States::file> + event<Magic::Events::Commands::File::Remove> / function{Actions::File::remove} = state<States::file>,
 				state<States::file> + event<Magic::Events::Commands::File::Download> / function{Actions::File::download} = state<States::file>,
-				state<States::file> + event<Magic::Events::Commands::File::Upload> / function{Actions::File::upload} = state<States::file>,
 				state<States::file> + event<Magic::Events::Commands::File::CreateTestFiles> / function{Actions::File::create_test_files} = state<States::file>,
 				state<States::file> + event<Magic::Events::Commands::File::Format> / function{Actions::File::format} = state<States::file>,
 
 				// for auto save commands
-				state<States::Auto::save>  + event<Events::disconnect> / function{Actions::Auto::stop_saving} = state<States::advertise>,
-				state<States::Auto::save>  + event<Magic::Events::Commands::Auto::End> / function{Actions::Auto::stop_saving} = state<States::connected>,
+				state<States::Auto::save> + event<Events::disconnect> / function{Actions::Auto::stop_saving} = state<States::advertise>,
+				state<States::Auto::save> + event<Magic::Events::Commands::Auto::End> / function{Actions::Auto::stop_saving} = state<States::connected>,
 
 				// for auto send commands
-				state<States::Auto::send>  + event<Events::disconnect> / function{Actions::Auto::stop_sending} = state<States::advertise>,
-				state<States::Auto::send>  + event<Magic::Events::Commands::Auto::End> / function{Actions::Auto::stop_sending} = state<States::connected>
+				state<States::Auto::send> + event<Events::disconnect> / function{Actions::Auto::stop_sending} = state<States::advertise>,
+				state<States::Auto::send> + event<Magic::Events::Commands::Auto::End> / function{Actions::Auto::stop_sending} = state<States::connected>
 			);
 			return ret;
 		}

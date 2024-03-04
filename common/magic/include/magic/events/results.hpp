@@ -24,9 +24,9 @@ namespace Magic {
                 FileListCount,
                 FileList,
                 FileSize,
-                FileDownload,
-                FileUpload,
+                FileRemove,
                 FileFormat,
+                FileDownload,
                 FileCreateTestFiles,
 
                 /* Auto Results */
@@ -150,6 +150,36 @@ namespace Magic {
                     }
                 };
 
+                struct Remove {
+                    static constexpr Header header { Header::FileRemove };
+                    bool status;
+                    using T_RawData = std::array<uint8_t, 1 + sizeof(status)>;
+                    inline constexpr T_RawData to_raw_data() const {
+                        T_RawData ret { static_cast<uint8_t>(header), static_cast<uint8_t>(status) };
+                        return ret;
+                    }
+                    static inline constexpr Remove from_raw_data(const T_RawData& raw_data) {
+                        return Remove {
+                            .status = static_cast<bool>(raw_data[1])
+                        };
+                    }
+                };
+
+                struct Format {
+                    static constexpr Header header { Header::FileFormat };
+                    bool status;
+                    using T_RawData = std::array<uint8_t, 1 + sizeof(status)>;
+                    inline constexpr T_RawData to_raw_data() const {
+                        T_RawData ret { static_cast<uint8_t>(header), static_cast<uint8_t>(status) };
+                        return ret;
+                    }
+                    static inline constexpr Format from_raw_data(const T_RawData& raw_data) {
+                        return Format {
+                            .status = static_cast<bool>(raw_data[1])
+                        };
+                    }
+                };
+
                 struct Download {
                     static constexpr Header header { Header::FileDownload };
                     T_MaxDataSlice slice { 0 };
@@ -163,35 +193,6 @@ namespace Magic {
                         decltype(slice) tmp;
                         std::copy(raw_data.begin() + 1, raw_data.end(), tmp.begin());
                         return Download { tmp };
-                    }
-                };
-
-                struct Upload {
-                    static constexpr Header header { Header::FileUpload };
-                    T_MaxDataSlice slice { 0 };
-                    using T_RawData = T_MaxPacket;
-                    inline constexpr T_RawData to_raw_data() const {
-                        T_RawData ret { static_cast<uint8_t>(header) };
-                        std::copy(slice.begin(), slice.end(), ret.begin() + 1);
-                        return ret;
-                    }
-                    static inline constexpr Upload from_raw_data(const T_RawData& raw_data) {
-                        decltype(slice) tmp;
-                        std::copy(raw_data.begin() + 1, raw_data.end(), tmp.begin());
-                        return Upload { tmp };
-                    }
-                };
-
-                struct Format {
-                    static constexpr Header header { Header::FileFormat };
-                    bool status;
-                    using T_RawData = std::array<uint8_t, 1 + sizeof(status)>;
-                    inline constexpr T_RawData to_raw_data() const {
-                        return T_RawData { static_cast<uint8_t>(header), static_cast<uint8_t>(status) };
-                    }
-                    static inline constexpr Format from_raw_data(const T_RawData& raw_data) {
-                        (void)raw_data;
-                        return Format { static_cast<bool>(raw_data[1]) };
                     }
                 };
 
@@ -389,9 +390,9 @@ namespace Magic {
                 File::ListCount,
                 File::List,
                 File::Size,
-                File::Download,
-                File::Upload,
+                File::Remove,
                 File::Format,
+                File::Download,
                 File::CreateTestFiles,
 
                 /* Auto Results */
@@ -412,9 +413,9 @@ namespace Magic {
                     File::ListCount{},
                     File::List{},
                     File::Size{},
-                    File::Download{},
-                    File::Upload{},
+                    File::Remove{},
                     File::Format{},
+                    File::Download{},
                     File::CreateTestFiles{},
 
                     /* Auto Results */

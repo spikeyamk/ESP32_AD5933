@@ -41,7 +41,7 @@ namespace BLE {
         std::shared_ptr<Server::Sender> sender { std::make_shared<Server::Sender>() };
         AD5933::Driver dummy_driver {};
         AD5933::Extension dummy_extension { dummy_driver };
-        std::atomic<bool> processing = false;
+        std::atomic<bool> processing { false };
         my_logger logger {};
         StopSources stop_sources {};
         T_StateMachine dummy_state_machine { logger, sender, dummy_extension, processing, stop_sources };
@@ -131,6 +131,9 @@ namespace BLE {
                             event->mtu.value);
                 break;
             case BLE_GAP_EVENT_NOTIFY_TX:
+                if((event->notify_tx.status == 0) || (event->notify_tx.status == BLE_HS_EDONE)) {
+                    sender->release();
+                }
                 break;
             case BLE_GAP_EVENT_NOTIFY_RX:
                 break;

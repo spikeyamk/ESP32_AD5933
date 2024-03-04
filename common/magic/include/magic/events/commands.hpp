@@ -33,7 +33,6 @@ namespace Magic {
                 FileSize,
                 FileRemove,
                 FileDownload,
-                FileUpload,
                 FileFormat,
                 FileCreateTestFiles,
                 FileEnd,
@@ -241,21 +240,7 @@ namespace Magic {
                         return Download { tmp };
                     }
                 };
-                struct Upload {
-                    static constexpr Header header { Header::FileUpload };
-                    T_MaxDataSlice path { 0 };
-                    using T_RawData = T_MaxPacket;
-                    inline constexpr T_RawData to_raw_data() const {
-                        T_RawData ret { static_cast<uint8_t>(header) };
-                        std::copy(path.begin(), path.end(), ret.begin() + 1);
-                        return ret;
-                    }
-                    static inline constexpr Download from_raw_data(const T_RawData& raw_data) {
-                        decltype(path) tmp;
-                        std::copy(raw_data.begin() + 1, raw_data.end(), tmp.begin());
-                        return Download { tmp };
-                    }
-                };
+
                 struct Format {
                     static constexpr Header header { Header::FileFormat };
                     using T_RawData = std::array<uint8_t, 1>;
@@ -267,6 +252,7 @@ namespace Magic {
                         return Format {};
                     }
                 };
+
                 struct CreateTestFiles {
                     static constexpr Header header { Header::FileCreateTestFiles };
                     using T_RawData = std::array<uint8_t, 1>;
@@ -421,7 +407,6 @@ namespace Magic {
                 File::Size,
                 File::Remove,
                 File::Download,
-                File::Upload,
                 File::Format,
                 File::CreateTestFiles,
                 File::End,
@@ -458,7 +443,6 @@ namespace Magic {
                     File::Size{},
                     File::Remove{},
                     File::Download{},
-                    File::Upload{},
                     File::Format{},
                     File::CreateTestFiles{},
                     File::End{},
