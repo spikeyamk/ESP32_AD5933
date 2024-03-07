@@ -323,7 +323,7 @@ namespace Magic {
 
                         Entry() = default;
 
-                        inline Entry(const double unix_timestamp, const float impedance, float phase) :
+                        inline constexpr Entry(const double unix_timestamp, const float impedance, float phase) :
                             unix_timestamp{ unix_timestamp },
                             impedance{ impedance },
                             phase{ phase }

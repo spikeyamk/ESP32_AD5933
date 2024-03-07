@@ -87,9 +87,9 @@ namespace GUI {
             void Auto::draw_send_corrected_gon_data() {
                 if(ImPlot::BeginPlot("Auto Send Measurement Corrected Data")) {
                     if(firsts.send.corrected_gon) {
-                        ImPlot::SetupAxes("Time", "CORRECTED_IMPEDANCE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("Time", "IMPEDANCE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                     } else {
-                        ImPlot::SetupAxesLabels("Time", "CORRECTED_IMPEDANCE");
+                        ImPlot::SetupAxesLabels("Time", "IMPEDANCE");
                     }
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
                     ImPlot::PlotLine("IMPEDANCE [Ohm]", send_vectors.time.data(), send_vectors.impedance.data(), std::min(send_vectors.time.size(), send_vectors.impedance.size()));
@@ -97,10 +97,10 @@ namespace GUI {
                 }
                 if(ImPlot::BeginPlot("Auto Send Measurement Calculated Phase")) {
                     if(firsts.send.corrected_gon) {
-                        ImPlot::SetupAxes("Time", "CORRECTED_PHASE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("Time", "PHASE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                         firsts.send.corrected_gon = false;
                     } else {
-                        ImPlot::SetupAxesLabels("Time", "CORRECTED_PHASE");
+                        ImPlot::SetupAxesLabels("Time", "PHASE");
                     }
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
                     ImPlot::PlotLine("PHASE [rad]", send_vectors.time.data(), send_vectors.phase.data(), std::min(send_vectors.time.size(), send_vectors.phase.size()));
@@ -166,9 +166,9 @@ namespace GUI {
             void Auto::draw_save_corrected_gon_data() {
                 if(ImPlot::BeginPlot("Auto Save Measurement Corrected Data")) {
                     if(firsts.save.corrected_gon) {
-                        ImPlot::SetupAxes("Time", "CORRECTED_IMPEDANCE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("Time", "IMPEDANCE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                     } else {
-                        ImPlot::SetupAxesLabels("Time", "CORRECTED_IMPEDANCE");
+                        ImPlot::SetupAxesLabels("Time", "IMPEDANCE");
                     }
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
                     ImPlot::PlotLine("IMPEDANCE [Ohm]", save_vectors.time.data(), save_vectors.impedance.data(), std::min(save_vectors.time.size(), save_vectors.impedance.size()));
@@ -176,10 +176,10 @@ namespace GUI {
                 }
                 if(ImPlot::BeginPlot("Auto Save Measurement Calculated Phase")) {
                     if(firsts.save.corrected_gon) {
-                        ImPlot::SetupAxes("Time", "CORRECTED_PHASE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("Time", "PHASE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                         firsts.save.corrected_gon = false;
                     } else {
-                        ImPlot::SetupAxesLabels("Time", "CORRECTED_PHASE");
+                        ImPlot::SetupAxesLabels("Time", "PHASE");
                     }
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
                     ImPlot::PlotLine("PHASE [rad]", save_vectors.time.data(), save_vectors.phase.data(), std::min(save_vectors.time.size(), save_vectors.phase.size()));

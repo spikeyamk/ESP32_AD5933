@@ -34,12 +34,45 @@ namespace GUI {
                 // for Records
                 Listing,
                 Downloading,
+                Removing,
                 Formatting,
                 CreatingTestFiles,
 
                 Error,
             };
             Status status { Status::Off };
+
+            enum class Error {
+                Off,
+
+                // for Control
+                Send,
+                Save,
+
+                // for Records
+                List,
+                Download,
+                Remove,
+                Format,
+                CreateTestFiles,
+            };
+            Error error { Error::Off };
+            enum class PopupShows {
+                Off,
+                Format,
+                Remove,
+            };
+            PopupShows popup_shows { PopupShows::Off };
+            struct Popup {
+                bool shown { false };
+                std::string name;
+                std::string content;
+                Popup(const std::string& name, const std::string& content) :
+                    name { name },
+                    content { content }
+                {}
+            };
+            std::optional<Popup> popup { std::nullopt };
         private:
             struct ListTable {
                 std::vector<Magic::Events::Results::File::List> paths;
@@ -53,8 +86,8 @@ namespace GUI {
             };
             Bytes bytes {};
             float progress_bar_fraction { 0.0f };
-            uint16_t tick_ms_min { 500 };
-            uint16_t tick_ms { 500 };
+            uint16_t tick_ms_min { 0 };
+            uint16_t tick_ms { 0 };
             uint16_t tick_ms_max { std::numeric_limits<uint16_t>::max() };
         public:
             struct Point {
@@ -78,12 +111,14 @@ namespace GUI {
         private:
             void draw_list_table();
             void draw_list_table_rows();
+            void draw_popups();
             void list();
             void remove();
             void download();
             void create_test_files();
             void format();
         private:
+            static void remove_cb(Auto& self);
             static void list_cb(std::stop_token st, Auto& self);
             static void download_cb(std::stop_token st, Auto& self);
             static void create_test_files_cb(std::stop_token st, Auto& self);

@@ -34,6 +34,31 @@ namespace GUI {
         const ImGuiID dock_id_left = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.225f, nullptr, &dock_id_center);
         return { dock_id_left, dock_id_center };
     }
+
+    void draw_quit_popup(bool& sdl_event_quit, bool& done, const auto& client_windows) {
+        if(sdl_event_quit) {
+            if(client_windows.empty()) {
+                done = true;
+            } else {
+                ImGui::OpenPopup("Quit");
+                ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+            }
+            sdl_event_quit = false;
+        }
+
+        if(ImGui::BeginPopupModal("Quit")) {
+            ImGui::Text("Some connections are still open.\nAre you sure you want to quit?");
+            if(ImGui::Button("OK")) {
+                ImGui::CloseCurrentPopup();
+                done = true;
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Cancel")) {
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
+    }
 }
 
 namespace GUI {
@@ -56,7 +81,8 @@ namespace GUI {
             return;
         }
 
-        Boilerplate::process_events(done, window, renderer);
+        bool sdl_event_quit { false };
+        Boilerplate::process_events(window, renderer, sdl_event_quit);
         Boilerplate::start_new_frame();
         Top top { settings_file };
         ImGuiID top_id = top.draw(done);
@@ -83,8 +109,10 @@ namespace GUI {
         Boilerplate::render(renderer);
 
         while(done == false && ble_client.running()) {
-            Boilerplate::process_events(done, window, renderer);
+            Boilerplate::process_events(window, renderer, sdl_event_quit);
+
             Boilerplate::start_new_frame();
+            draw_quit_popup(sdl_event_quit, done, client_windows);
             top_id = top.draw(done);
             
             ble_connector.draw(top.menu_bar_enables.ble_adapter, top_ids.left);

@@ -45,7 +45,7 @@ namespace GUI {
                 }
 
                 if(ImGui::Button("Format")) {
-                    format();
+                    popup_shows = PopupShows::Format;
                 }
 
                 if(ImGui::Button("Create Test Files")) {
@@ -58,18 +58,18 @@ namespace GUI {
 
                 ImGui::Button("Start Sending");
                 if(status == Status::Sending) {
-                    const float scale { GUI::Boilerplate::get_scale() };
                     ImGui::SameLine();
                     ImGui::EndDisabled();
+                    const float scale { GUI::Boilerplate::get_scale() };
                     Spinner::Spinner("SendingSinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                     ImGui::BeginDisabled();
                 }
 
                 ImGui::Button("Start Saving");
                 if(status == Status::Saving) {
-                    const float scale { GUI::Boilerplate::get_scale() };
                     ImGui::SameLine();
                     ImGui::EndDisabled();
+                    const float scale { GUI::Boilerplate::get_scale() };
                     Spinner::Spinner("SavingSinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                     ImGui::BeginDisabled();
                 }
@@ -86,18 +86,18 @@ namespace GUI {
 
                 ImGui::Button("List");
                 if(status == Status::Listing) {
-                    const float scale { GUI::Boilerplate::get_scale() };
                     ImGui::EndDisabled();
                     ImGui::SameLine();
+                    const float scale { GUI::Boilerplate::get_scale() };
                     Spinner::Spinner("ListingSpinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                     ImGui::BeginDisabled();
                 }
 
                 ImGui::Button("Format");
                 if(status == Status::Formatting) {
-                    const float scale { GUI::Boilerplate::get_scale() };
                     ImGui::EndDisabled();
                     ImGui::SameLine();
+                    const float scale { GUI::Boilerplate::get_scale() };
                     Spinner::Spinner("FormattingSpinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                     ImGui::BeginDisabled();
                 }
@@ -117,28 +117,42 @@ namespace GUI {
             ImGui::Text("Total: %llu [Bytes]", bytes.total);
             ImGui::Text("Used: %llu [Bytes]", bytes.used);
 
-            draw_list_table();
-
-            if(selected.has_value()) {
-                if(status == Status::Off) {
-                    if(ImGui::Button("Download")) {
-                        download();
-                    }
-                    if(ImGui::Button("Remove")) {
-                        remove();
-                    }
-                } else {
-                    ImGui::BeginDisabled();
-                    ImGui::Button("Download");
-                    if(status == Status::Downloading) {
-                        ImGui::EndDisabled();
-                        ImGui::SameLine();
-                        ImGui::ProgressBar(progress_bar_fraction);
-                        ImGui::BeginDisabled();
-                    }
-                    ImGui::Button("Remove");
-                    ImGui::EndDisabled();
+            if(selected.has_value() && status == Status::Off) {
+                if(ImGui::Button("Download")) {
+                    download();
                 }
+                if(ImGui::Button("Remove")) {
+                    popup_shows = PopupShows::Remove;
+                }
+            } else {
+                ImGui::BeginDisabled();
+
+                ImGui::Button("Download");
+                if(status == Status::Downloading) {
+                    ImGui::EndDisabled();
+                    ImGui::SameLine();
+                    ImGui::ProgressBar(progress_bar_fraction);
+                    ImGui::BeginDisabled();
+                }
+
+                ImGui::Button("Remove");
+                if(status == Status::Removing) {
+                    ImGui::EndDisabled();
+                    ImGui::SameLine();
+                    const float scale { GUI::Boilerplate::get_scale() };
+                    Spinner::Spinner("RemovingSpinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                    ImGui::BeginDisabled();
+                }
+
+                ImGui::EndDisabled();
+            }
+
+            if(status != Status::Off) {
+                ImGui::BeginDisabled();
+                draw_list_table();
+                ImGui::EndDisabled();
+            } else {
+                draw_list_table();
             }
 
             if(status != Status::Off) {
@@ -172,6 +186,67 @@ namespace GUI {
                 }
             }
             ImGui::End();
+            draw_popups();
+        }
+
+        void Auto::draw_popups() {
+            switch(popup_shows) {
+                case PopupShows::Format:
+                    ImGui::OpenPopup(std::string("Format##").append(std::to_string(index)).c_str());
+                    ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+                    popup_shows = PopupShows::Off;
+                    break;
+                case PopupShows::Remove:
+                    ImGui::OpenPopup(std::string("Remove##").append(std::to_string(index)).c_str());
+                    ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+                    popup_shows = PopupShows::Off;
+                    break;
+                default:
+                    break;
+            }
+
+            if(ImGui::BeginPopupModal(std::string("Format##").append(std::to_string(index)).c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text("Are you sure you want to proceed?");
+                if(ImGui::Button("OK")) {
+                    ImGui::CloseCurrentPopup();
+                    format();
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Cancel")) {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
+
+            if(ImGui::BeginPopupModal(std::string("Remove##").append(std::to_string(index)).c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text("Are you sure you want to proceed?");
+                if(ImGui::Button("OK")) {
+                    ImGui::CloseCurrentPopup();
+                    remove();
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Cancel")) {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
+            
+            if(popup.has_value()) {
+                if(popup.value().shown == false) {
+                    ImGui::OpenPopup(popup.value().name.c_str());
+                    ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+                    popup.value().shown = true;
+                }
+
+                if(ImGui::BeginPopupModal(popup.value().name.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+                    ImGui::Text(popup.value().content.c_str());
+                    if(ImGui::Button("OK")) {
+                        ImGui::CloseCurrentPopup();
+                        popup = std::nullopt;
+                    }
+                    ImGui::EndPopup();
+                }
+            }
         }
     }
 
@@ -262,12 +337,26 @@ namespace GUI {
                 if(rx_payload.has_value() == false) {
                     std::cout << "ERROR: GUI::Windows::Auto::start_sending_cb: rx_payload: timeout\n";
                     self.status = Status::Error;
+                    const std::optional<Popup> tmp_popup {
+                        {
+                            std::string("Timeout##").append(std::to_string(self.index)),
+                            "GUI::Windows::Auto::start_sending_cb: rx_payload: timeout"
+                        }
+                    };
+                    self.popup = tmp_popup;
                     return;
                 }
 
                 if(variant_tester<Magic::Events::Results::Auto::Point>(rx_payload.value()) == false) {
                     std::cout << "ERROR: GUI::Windows::Auto::start_sending_cb: rx_payload: bad variant type\n";
                     self.status = Status::Error;
+                    const std::optional<Popup> tmp_popup {
+                        {
+                            std::string("Bad variant type##").append(std::to_string(self.index)),
+                            "GUI::Windows::Auto::start_sending_cb: rx_payload: bad variant type"
+                        }
+                    };
+                    self.popup = tmp_popup;
                     return;
                 }
 
@@ -304,10 +393,60 @@ namespace GUI {
         }
 
         void Auto::remove() {
-            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Events::Commands::File::Start{} });
-            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Events::Commands::File::Remove::from_raw_data(list_table.paths[selected.value()].to_raw_data()) });
-            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Events::Commands::File::End{} });
-            list();
+            status = Status::Removing;
+            std::thread(remove_cb, std::ref(*this)).detach();
+        }
+
+        void Auto::remove_cb(Auto& self) {
+            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Start{} });
+            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Remove::from_raw_data(self.list_table.paths[self.selected.value()].to_raw_data()) });
+            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::End{} });
+
+            const auto remove_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(5'000)) };
+
+            if(remove_payload.has_value() == false) {
+                std::cout << "GUI::Windows::Auto::remove_cb: remove_payload timeout\n";
+                self.status = Status::Error;
+                const std::optional<Popup> tmp_popup {
+                    {
+                        std::string("Timeout##").append(std::to_string(self.index)),
+                        "GUI::Windows::Auto::remove_cb: remove_payload timeout"
+                    }
+                };
+                self.popup = tmp_popup;
+                return;
+            }
+
+            if(variant_tester<Magic::Events::Results::File::Remove>(remove_payload.value()) == false) {
+                std::cout << "GUI::Windows::Auto::remove_cb: remove_payload wrong variant type\n";
+                self.status = Status::Error;
+                return;
+            }
+
+            if(
+                [&remove_payload]() {
+                    bool ret = false;
+                    std::visit([&remove_payload, &ret](auto&& event) {
+                        if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Events::Results::File::Remove>) {
+                            ret = event.status;
+                        }
+                    }, remove_payload.value());
+                    return ret;
+                }() == false
+            ) {
+                std::cout << "GUI::Windows::Auto::remove_cb: remove_payload.status == false\n";
+                self.status = Status::Error;
+                const std::optional<Popup> tmp_popup {
+                    {
+                        std::string("Remove##").append(std::to_string(self.index)),
+                        "GUI::Windows::Auto::remove_cb: remove_payload.status == false"
+                    }
+                };
+                self.popup = tmp_popup;
+                return;
+            }
+
+            self.list();
         }
 
         void Auto::download() {
@@ -338,14 +477,28 @@ namespace GUI {
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Free{} });
             const auto free_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(5'000)) };
             if(free_payload.has_value() == false) {
-                self.status = Status::Error;
                 std::cout << "ERROR: GUI::Windows::RecordManager::list_cb: failed to retreive free: timeout\n";
+                self.status = Status::Error;
+                const std::optional<Popup> tmp_popup {
+                    {
+                        std::string("Timeout##").append(std::to_string(self.index)),
+                        "GUI::Windows::RecordManager::list_cb: failed to retreive free: timeout"
+                    }
+                };
+                self.popup = tmp_popup;
                 return;
             }
 
             if(variant_tester<Magic::Events::Results::File::Free>(free_payload.value()) == false) {
-                self.status = Status::Error;
                 std::cout << "ERROR: GUI::Windows::RecordManager::list_cb: failed to retreive free: wrong variant type\n";
+                self.status = Status::Error;
+                const std::optional<Popup> tmp_popup {
+                    {
+                        std::string("Bad variant type##").append(std::to_string(self.index)),
+                        "GUI::Windows::RecordManager::list_cb: failed to retreive free: wrong variant type"
+                    }
+                };
+                self.popup = tmp_popup;
                 return;
             }
 
@@ -360,14 +513,28 @@ namespace GUI {
             const auto list_count_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(5'000)) };
 
             if(list_count_payload.has_value() == false) { 
-                self.status = Status::Error;
                 std::cout << "ERROR: GUI::Windows::RecordManager::list_cb: failed to retreive list_count: timeout\n";
+                self.status = Status::Error;
+                const std::optional<Popup> tmp_popup {
+                    {
+                        std::string("Timeout##").append(std::to_string(self.index)),
+                        "GUI::Windows::RecordManager::list_cb: failed to retreive list_count: timeout"
+                    }
+                };
+                self.popup = tmp_popup;
                 return;
             }
             
             if(variant_tester<Magic::Events::Results::File::ListCount>(list_count_payload.value()) == false) {
                 self.status = Status::Error;
-                std::cout << "ERROR: GUI::Windows::RecordManager::list_cb: failed to retreive list_count: wrong variant type\n";
+                std::cout << "ERROR: GUI::Windows::RecordManager::list_cb: failed to retreive list_count: bad variant type\n";
+                const std::optional<Popup> tmp_popup {
+                    {
+                        std::string("Bad variant type##").append(std::to_string(self.index)),
+                        "GUI::Windows::RecordManager::list_cb: failed to retreive list_count: bad variant type"
+                    }
+                };
+                self.popup = tmp_popup;
                 return;
             }
 
@@ -381,6 +548,13 @@ namespace GUI {
             if(list_count.num_of_files == 0) {
                 self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::End{} });
                 std::cout << "ERROR: GUI::Windows::RecordManager::list_cb: failed to retreive list_count: list_cout empty\n";
+                const std::optional<Popup> tmp_popup {
+                    {
+                        std::string("List##").append(std::to_string(self.index)),
+                        "GUI::Windows::RecordManager::list_cb: failed to retreive list_count: list_cout empty"
+                    }
+                };
+                self.popup = tmp_popup;
                 self.status = Status::Off;
             }
 
@@ -392,12 +566,26 @@ namespace GUI {
                 if(list_payload.has_value() == false) {
                     std::cout << "ERROR: GUI::Windows::RecordManager::list_cb: failed to retreive list_path: timeout\n";
                     self.status = Status::Error;
+                    const std::optional<Popup> tmp_popup {
+                        {
+                            std::string("Timeout##").append(std::to_string(self.index)),
+                            "GUI::Windows::RecordManager::list_cb: failed to retreive list_path: timeout"
+                        }
+                    };
+                    self.popup = tmp_popup;
                     return;
                 }
 
                 if(variant_tester<Magic::Events::Results::File::List>(list_payload.value()) == false) {
-                    std::cout << "ERROR: GUI::Windows::RecordManager::list_cb: failed to retreive list_path: wrong variant type\n";
+                    std::cout << "ERROR: GUI::Windows::RecordManager::list_cb: failed to retreive list_path: bad variant type\n";
                     self.status = Status::Error;
+                    const std::optional<Popup> tmp_popup {
+                        {
+                            std::string("Bad variant type##").append(std::to_string(self.index)),
+                            "GUI::Windows::RecordManager::list_cb: failed to retreive list_path: bad variant type"
+                        }
+                    };
+                    self.popup = tmp_popup;
                     return;
                 }
 
@@ -417,12 +605,26 @@ namespace GUI {
                 if(size_payload.has_value() == false) {
                     std::cout << "ERROR: GUI::Windows::RecordManager::list_cb: failed to retreive list_size: timeout\n";
                     self.status = Status::Error;
+                    const std::optional<Popup> tmp_popup {
+                        {
+                            std::string("Timeout##").append(std::to_string(self.index)),
+                            "GUI::Windows::RecordManager::list_cb: failed to retreive list_size: timeout"
+                        }
+                    };
+                    self.popup = tmp_popup;
                     return;
                 }
 
                 if(variant_tester<Magic::Events::Results::File::Size>(size_payload.value()) == false) {
-                    std::cout << "ERROR: GUI::Windows::RecordManager::list_cb: failed to retreive list_size: wrong variant\n";
+                    std::cout << "ERROR: GUI::Windows::RecordManager::list_cb: failed to retreive list_size: bad variant type\n";
                     self.status = Status::Error;
+                    const std::optional<Popup> tmp_popup {
+                        {
+                            std::string("Bad variant type##").append(std::to_string(self.index)),
+                            "GUI::Windows::RecordManager::list_cb: failed to retreive list_size: bad variant type"
+                        }
+                    };
+                    self.popup = tmp_popup;
                     return;
                 }
 
@@ -462,12 +664,26 @@ namespace GUI {
                     if(download_payload.has_value() == false) {
                         std::cout << "ERROR: GUI::Windows::RecordManager::download_cb: failed to retreive download_payload: timeout\n";
                         self.status = Status::Error;
+                        const std::optional<Popup> tmp_popup {
+                            {
+                                std::string("Timeout##").append(std::to_string(self.index)),
+                                "GUI::Windows::RecordManager::download_cb: failed to retreive download_payload: timeout"
+                            }
+                        };
+                        self.popup = tmp_popup;
                         return;
                     }
 
                     if(variant_tester<Magic::Events::Results::File::Download>(download_payload.value()) == false) {
                         std::cout << "ERROR: GUI::Windows::RecordManager::download_cb: failed to retreive download_payload: wrong variant type\n";
                         self.status = Status::Error;
+                        const std::optional<Popup> tmp_popup {
+                            {
+                                std::string("Bad variant type##").append(std::to_string(self.index)),
+                                "GUI::Windows::RecordManager::download_cb: failed to retreive download_payload: bad variant type"
+                            }
+                        };
+                        self.popup = tmp_popup;
                         return;
                     }
 
@@ -522,6 +738,13 @@ namespace GUI {
            } catch(const std::exception& e) {
                 std::cout << "ERROR: GUI::Windows::RecordManager::download_cb: exception: " << e.what() << std::endl;
                 self.status = Status::Error;
+                const std::optional<Popup> tmp_popup {
+                    {
+                        std::string("Exception##").append(std::to_string(self.index)),
+                        std::string("GUI::Windows::RecordManager::download_cb: exception: ").append(e.what())
+                    }
+                };
+                self.popup = tmp_popup;
             }
         }
 
@@ -534,12 +757,26 @@ namespace GUI {
             if(create_test_files_payload.has_value() == false) {
                 std::cout << "GUI::Windows::RecordManager::create_test_files_cb: timeout\n";
                 self.status = Status::Error;
+                const std::optional<Popup> tmp_popup {
+                    {
+                        std::string("Timeout##").append(std::to_string(self.index)),
+                        "GUI::Windows::RecordManager::create_test_files_cb: timeout"
+                    }
+                };
+                self.popup = tmp_popup;
                 return;
             }
 
             if(variant_tester<Magic::Events::Results::File::CreateTestFiles>(create_test_files_payload.value()) == false) {
                 std::cout << "GUI::Windows::RecordManager::create_test_files_cb: create_test_files_payload: bad variant type\n";
                 self.status = Status::Error;
+                const std::optional<Popup> tmp_popup {
+                    {
+                        std::string("Bad variant type##").append(std::to_string(self.index)),
+                        "GUI::Windows::RecordManager::create_test_files_cb: create_test_files_payload: bad variant type"
+                    }
+                };
+                self.popup = tmp_popup;
                 return;
             }
 
@@ -554,8 +791,15 @@ namespace GUI {
                     return ret;
                 }() == false
             ) {
-                self.status = Status::Error;
                 std::cout << "GUI::Windows::RecordManager::create_test_files_cb: create_test_files_payload.value().status == false\n";
+                self.status = Status::Error;
+                const std::optional<Popup> tmp_popup {
+                    {
+                        std::string("Create Test Files##").append(std::to_string(self.index)),
+                        "GUI::Windows::RecordManager::create_test_files_cb: create_test_files_payload.value().status == false"
+                    }
+                };
+                self.popup = tmp_popup;
                 return;
             }
 
@@ -574,12 +818,26 @@ namespace GUI {
             if(format_payload.has_value() == false) {
                 std::cout << "GUI::Windows::RecordManager::format_cb: timeout\n";
                 self.status = Status::Error;
+                const std::optional<Popup> tmp_popup {
+                    {
+                        std::string("Timeout##").append(std::to_string(self.index)),
+                        "GUI::Windows::RecordManager::format_cb: timeout"
+                    }
+                };
+                self.popup = tmp_popup;
                 return;
             }
 
             if(variant_tester<Magic::Events::Results::File::Format>(format_payload.value()) == false) {
                 std::cout << "GUI::Windows::RecordManager::format_cb: format_payload: bad variant type\n";
                 self.status = Status::Error;
+                const std::optional<Popup> tmp_popup {
+                    {
+                        std::string("Bad variant type##").append(std::to_string(self.index)),
+                        "GUI::Windows::RecordManager::format_cb: format_payload: bad variant type"
+                    }
+                };
+                self.popup = tmp_popup;
                 return;
             }
 
@@ -594,8 +852,15 @@ namespace GUI {
                     return ret;
                 }() == false
             ) {
-                self.status = Status::Error;
                 std::cout << "GUI::Windows::RecordManager::format_cb: format_payload.value().status == false\n";
+                self.status = Status::Error;
+                const std::optional<Popup> tmp_popup {
+                    {
+                        std::string("Format##").append(std::to_string(self.index)),
+                        "GUI::Windows::RecordManager::format_cb: format_payload.value().status == false"
+                    }
+                };
+                self.popup = tmp_popup;
                 return;
             }
 

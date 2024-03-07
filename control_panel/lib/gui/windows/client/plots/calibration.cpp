@@ -83,9 +83,9 @@ namespace GUI {
             void Calibration::draw_raw_data() {
                 if(ImPlot::BeginPlot("Calibration Raw Real Data")) {
                     if(firsts.raw) {
-                        ImPlot::SetupAxes("f [Hz]", "RAW_REAL_DATA", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("f [Hz]", "REAL_DATA", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                     } else {
-                        ImPlot::SetupAxesLabels("f [Hz]", "RAW_REAL_DATA");
+                        ImPlot::SetupAxesLabels("f [Hz]", "REAL_DATA");
                     }
                     ImPlot::PlotLine("REAL_DATA [1/Ohm]", vectors.freq.data(), vectors.raw_real_data.data(), std::min(vectors.freq.size(), vectors.raw_imag_data.size()));
                     ImPlot::EndPlot();
@@ -93,10 +93,10 @@ namespace GUI {
 
                 if(ImPlot::BeginPlot("Calibration Raw Imag Data")) {
                     if(firsts.raw) {
-                        ImPlot::SetupAxes("f [Hz]", "RAW_IMAG_DATA", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("f [Hz]", "IMAG_DATA", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                         firsts.raw = false;
                     } else {
-                        ImPlot::SetupAxesLabels("f [Hz]", "RAW_IMAG_DATA");
+                        ImPlot::SetupAxesLabels("f [Hz]", "IMAG_DATA");
                     }
                     ImPlot::PlotLine("IMAG_DATA [1/Ohm]", vectors.freq.data(), vectors.raw_imag_data.data(), std::min(vectors.freq.size(), vectors.raw_imag_data.size()));
                     ImPlot::EndPlot();

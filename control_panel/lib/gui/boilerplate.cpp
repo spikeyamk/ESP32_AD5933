@@ -231,13 +231,13 @@ namespace GUI {
             return std::tuple { window, renderer, settings_file };
         } 
 
-        void process_events(bool &done, SDL_Window* window, SDL_Renderer* renderer) {
+        void process_events(SDL_Window* window, SDL_Renderer* renderer, bool& out_sdl_event_quit) {
             SDL_Event event;
             while(SDL_PollEvent(&event)) {
                 ImGui_ImplSDL3_ProcessEvent(&event);
                 switch(event.type) {
                     case SDL_EVENT_QUIT:
-                        done = true;
+                        out_sdl_event_quit = true;
                         return;
                    case SDL_EVENT_SYSTEM_THEME_CHANGED:
                         Trielo::trielo<switch_imgui_theme>();
