@@ -15,5 +15,7 @@ namespace SD_Card {
     int create_test_files();
     void print_test_files();
     int create_test_file(const size_t size_bytes, const std::string_view& name);
+    int check_test_file(const size_t size_bytes, const std::string_view& name);
     int print_test_file(const std::string_view& name);
+    size_t integrity_test(const size_t max_bin_pow);
 }

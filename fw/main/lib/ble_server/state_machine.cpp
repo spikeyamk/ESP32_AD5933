@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <esp_littlefs.h>
 #include <trielo/trielo.hpp>
+#include <driver/gpio.h>
 
 #include "ble_server/server.hpp"
 #include "esp_system.h"
@@ -27,13 +28,41 @@
 namespace BLE {
 	namespace Actions {
 		void turn_on() {
-			Util::Blinky::get_instance().start(std::chrono::milliseconds(50));
+			TRIELO_EQ(Util::Blinky::get_instance().start(Util::Blinky::Mode::Single, std::chrono::milliseconds(50)), true);
 			Trielo::trielo<SD_Card::init>(Trielo::OkErrCode(0));
 			Server::run();
 		};
 
 		void advertise() {
-			Util::Blinky::get_instance().set_blink_time(std::chrono::milliseconds(100));
+			static auto auto_save_no_ble_button_enterer { std::thread([]() {
+				Util::Mode::get_instance();
+				Util::init_enter_auto_save_no_ble_button();
+
+				for(size_t i = 0, timeout_ms = 5'000; i <= timeout_ms && gpio_get_level(Util::button) == 1; i++) {
+					std::this_thread::sleep_for(std::chrono::milliseconds(1));
+					if(i == timeout_ms) {
+						Util::mode_status = Util::Status::BLE;
+						SD_Card::deinit();
+						esp_restart();
+					}
+				}
+
+				while(1) {
+					auto status { Util::Mode::get_instance().read() };
+					for(size_t i = 0, timeout_ms = 5'000; i <= timeout_ms && gpio_get_level(Util::button) == 1; i++) {
+						if(i == timeout_ms) {
+							Util::Blinky::get_instance().stop();
+							Trielo::trielo<SD_Card::deinit>();
+							Trielo::trielo<Server::stop>();
+							Util::mode_status = status;
+							esp_restart();
+						}
+						std::this_thread::sleep_for(std::chrono::milliseconds(1));
+					}
+				}
+			}) };
+
+			TRIELO_VOID(Util::Blinky::get_instance().set_blink_time(std::chrono::milliseconds(100)));
 			Server::advertise();
 		};
 
@@ -56,10 +85,11 @@ namespace BLE {
 		}
 
 		void sleep() {
-			Util::Blinky::get_instance().stop();
+			Trielo::trielo<Util::deinit_enter_auto_save_no_ble_button>();
+			TRIELO_EQ(Util::Blinky::get_instance().stop(), true);
 			Trielo::trielo<SD_Card::deinit>();
 			Trielo::trielo<Server::stop>();
-			Trielo::trielo<Util::init_restart_button>();
+			Util::init_wakeup_button(Util::Status::BLE);
 		}
 
 		namespace Debug {
@@ -249,7 +279,7 @@ namespace BLE {
 
 					FILE* file = std::fopen(path.data(), "rb");
 					if(file == NULL) {
-						std::cout << "BLE::Actions::File::download: failed to pen file: " << std::string_view{ reinterpret_cast<const char*>(path.data()), path.size() } << std::endl;
+						std::cout << "BLE::Actions::File::download: failed to open file: " << std::string_view{ reinterpret_cast<const char*>(path.data()), path.size() } << std::endl;
 						return;
 					}
 
@@ -261,7 +291,6 @@ namespace BLE {
 						while(sender->notify_hid_information(download_packet) == false) {
 							std::this_thread::sleep_for(std::chrono::milliseconds(1));
 						}
-						std::this_thread::sleep_for(std::chrono::milliseconds(1));
 					}
 
 					std::fclose(file);
@@ -320,17 +349,10 @@ namespace BLE {
 				AD5933::Calibration<float> { 9813488.0f, -1.2278409004211426f },
 				AD5933::Calibration<float> { 9811605.0f, -1.2277723550796509f },
 			};
-
-			std::array<char, 28> get_record_file_name_zero_terminated() {
-				const time_t time { std::chrono::high_resolution_clock::to_time_t(std::chrono::high_resolution_clock::now()) };
-				const tm* tm { std::localtime(&time) };
-				std::array<char, 28> ret;
-				std::strftime(ret.data(), sizeof(ret), "/sdcard/%Y-%m-%d-%H_%M_%S", tm);
-				return ret;
-			}
-
+			
 			void start_saving(const Magic::Events::Commands::Auto::Save& event, std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933) {
 				std::jthread t1([sender, &ad5933, sleep_ms = std::chrono::milliseconds(1 + event.tick_ms)](StopSources& stop_sources) {
+					static char buf[BUFSIZ];
 					std::cout << "BLE::Server::Actions::Auto::start_saving sleep_ms: " << sleep_ms << std::endl;
 					stop_sources.save = true;
 
@@ -351,7 +373,7 @@ namespace BLE {
 						// This is so bad, I don't even know what to say
 						std::array<char, 28U> record_filepath { 0 };
 						for(uint8_t i = 0, stopper = 16;
-							std::ifstream((record_filepath = get_record_file_name_zero_terminated()).data()).is_open() && i <= stopper;
+							std::ifstream((record_filepath = Util::get_record_file_name_zero_terminated()).data()).is_open() && i <= stopper;
 							i++
 						) {
 							if(i == stopper) {
@@ -384,6 +406,8 @@ namespace BLE {
 							.ad5933 = ad5933,
 							.file = Trielo::trielo<std::fopen>(Trielo::FailErrCode<FILE*>(nullptr), record_filepath.data(), "w")
 						};
+						
+						std::setbuf(file.file, buf);
 
 						if(file.file == nullptr) {
 							std::cout << "ERROR: BLE::Actions::Auto::start_saving: Could not open file at first try\n";
@@ -391,7 +415,7 @@ namespace BLE {
 						}
 
 						ad5933.driver.program_all_registers(default_config.to_raw_array());
-						for(size_t i = 0, max_file_size = 2 * 1024; stop_sources.save == true && i < max_file_size; i += 16) {
+						for(size_t i = 0, max_file_size = 64 * 1024; stop_sources.save == true && i < max_file_size; i += 16) {
 							ad5933.reset();
 							ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::StandbyMode);
 							std::this_thread::sleep_for(sleep_ms);
@@ -423,6 +447,13 @@ namespace BLE {
 									}
 
 									if(std::fflush(file.file) != 0) {
+										const int fd { fileno(file.file) };
+										if(fd == -1) {
+											perror("Error getting file descriptor");
+											return;
+										}
+
+										fsync(fd);
 										std::cout << "ERROR: BLE::Actions::Auto::start_saving: Could not fflush the file for writing in the loop: std::fflush(file.file) != 0\n";
 										return;
 									}

@@ -17,6 +17,7 @@
 #include "modlog/modlog.h"
 #include "esp_bt.h"
 #include <trielo/trielo.hpp>
+#include <esp_log.h>
 
 #include "magic/packets/incoming.hpp"
 #include "util.hpp"
@@ -498,7 +499,6 @@ namespace BLE {
 
     namespace Server {
         bool notify_hid_information(const std::span<uint8_t, std::dynamic_extent>& message) {
-            assert(message.size() <= Magic::MTU);
             struct os_mbuf *txom = ble_hs_mbuf_from_flat(message.data(), message.size());
             if(txom == nullptr) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ");
@@ -516,7 +516,6 @@ namespace BLE {
         }
 
         bool notify_body_composition_measurement(const std::span<uint8_t, std::dynamic_extent>& message) {
-            assert(message.size() <= Magic::MTU);
             struct os_mbuf *txom = ble_hs_mbuf_from_flat(message.data(), message.size());
             if(txom == nullptr) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ");

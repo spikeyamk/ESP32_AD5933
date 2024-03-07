@@ -9,11 +9,11 @@
 #include <chrono>
 #include <array>
 #include <atomic>
-#include <semaphore>
 #include <span>
 #include <memory>
 
 #include <boost/sml.hpp>
+#include <freertos/semphr.h>
 #include "driver/i2c_master.h"
 
 #include "ad5933/extension/extension.hpp"
@@ -41,7 +41,7 @@ namespace BLE {
     namespace Server {
         class Sender {
 		private:
-			std::counting_semaphore<40> sem { 40 };
+			SemaphoreHandle_t sem { xSemaphoreCreateCounting(10, 10) };
         public:
             std::mutex mutex;
             Sender() = default;
@@ -49,19 +49,19 @@ namespace BLE {
 			template<typename T_OutComingPacket>
 			inline bool notify_hid_information(const T_OutComingPacket& event) {
 				auto tmp_array { event.get_raw_data() };
-				sem.acquire();
+				//xSemaphoreTake(sem, portMAX_DELAY);
 				return BLE::Server::notify_hid_information(std::span(tmp_array.begin(), tmp_array.end()));
             }
 
 			template<typename T_OutComingPacket>
 			inline bool notify_body_composition_measurement(const T_OutComingPacket& event) {
 				auto tmp_array { event.get_raw_data() };
-				sem.acquire();
+				//xSemaphoreTake(sem, portMAX_DELAY);
 				return BLE::Server::notify_body_composition_measurement(std::span(tmp_array.begin(), tmp_array.end()));
             }
 
 			inline void release() {
-				sem.release();
+				//xSemaphoreGive(sem);
 			}
         };
     }
@@ -160,7 +160,6 @@ namespace BLE {
 		}
 
 		namespace Auto {
-			std::array<char, 28> get_record_file_name_zero_terminated();
 			void start_saving(const Magic::Events::Commands::Auto::Save& event, std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933);
 			void start_sending(const Magic::Events::Commands::Auto::Send& event, std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933);
 			void stop_saving(std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources);

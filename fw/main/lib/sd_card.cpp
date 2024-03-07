@@ -14,12 +14,11 @@
 #include <string>
 #include <thread>
 
+#include <fcntl.h>
 #include <trielo/trielo.hpp>
-
-#include "driver/gpio.h"
-#include "driver/sdspi_host.h"
-#include "esp_littlefs.h"
-#include <trielo/trielo.hpp>
+#include <esp_littlefs.h>
+#include <driver/gpio.h>
+#include <driver/sdspi_host.h>
 
 #include "sd_card.hpp"
 
@@ -44,9 +43,9 @@ namespace SD_Card {
         .format_if_mount_failed = 1,
         .read_only = 0,
         .dont_mount = 0,
-        .grow_on_mount = 1
+        .grow_on_mount = 0
     };
-
+    
     // This is just = SDSPI_HOST_DEFAULT() but max_freq_khz modified
     static constexpr sdmmc_host_t host {
         .flags = SDMMC_HOST_FLAG_SPI | SDMMC_HOST_FLAG_DEINIT_ARG,
@@ -75,7 +74,14 @@ namespace SD_Card {
         .sclk_io_num = Pins::clk,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
-        .max_transfer_sz = 4000,
+        .data4_io_num = -1,
+        .data5_io_num = -1,
+        .data6_io_num = -1,
+        .data7_io_num = -1,
+        .max_transfer_sz = 4092,
+        .flags = SPICOMMON_BUSFLAG_MASTER,
+        .isr_cpu_id = ESP_INTR_CPU_AFFINITY_0,
+        .intr_flags = 0,
     };
 
     // This corresponds to SDSPI_DEVICE_CONFIG_DEFAULT() just .host_id and .gpio_cs is modified
@@ -84,7 +90,7 @@ namespace SD_Card {
         .gpio_cs   = Pins::cs,
         .gpio_cd   = SDSPI_SLOT_NO_CD,
         .gpio_wp   = SDSPI_SLOT_NO_WP,
-        .gpio_int  = GPIO_NUM_NC,
+        .gpio_int  = SDSPI_SLOT_NO_INT,
         .gpio_wp_polarity = SDSPI_IO_ACTIVE_LOW,
     };
 
@@ -117,7 +123,7 @@ namespace SD_Card {
     }
 
     esp_err_t format() {
-        return esp_littlefs_format_sdmmc(&card);
+        return Trielo::trielo<esp_littlefs_format_sdmmc>(Trielo::OkErrCode(ESP_OK), &card);
     }
 
     int create_test_files() {
@@ -193,38 +199,56 @@ namespace SD_Card {
     }
 
     int create_test_file(const size_t size_bytes, const std::string_view& name) {
+        static char buf[BUFSIZ];
         const std::filesystem::path test_megabyte { std::filesystem::path(mount_point).append(name) };
 
-        std::ofstream file(test_megabyte);
-        if(file.is_open() == false) {
+        FILE* file { std::fopen(test_megabyte.c_str(), "w") };
+        std::setbuf(file, buf);
+        if(file == nullptr) {
             return -1;
         }
-        size_t i = 1;
-        try {
-            char c { 'a' };
-            for(; i <= size_bytes; i++) {
-                file << c;
+
+        char c { 'a' };
+        for(
+            size_t i = 1;
+            i <= size_bytes;
+            [&i, &c]() {
                 if(c == 'z') {
                     c = 'a';
                 } else {
                     c++;
                 }
-                if((i % 512) == 0) {
-                    file.flush();
+
+                i++;
+            }()
+        ) {
+            if(std::fputc(c, file) != c) {
+                return static_cast<int>(i);
+            }
+            if((i % BUFSIZ) == 0) {
+                std::fflush(file);
+                const int fd = fileno(file);
+                if (fd == -1) {
+                    perror("Error getting file descriptor");
+                    return 1;
+                }
+
+                // Syncing data to disk using fsync()
+                if(fsync(fd) == -1) {
+                    perror("Error syncing data to disk");
+                    fsync(fd);
+                    return 1;
                 }
             }
-        } catch(const std::exception& e) {
-            return -2;
         }
-
-        if(i < size_bytes) {
-            return static_cast<int>(i);
-        }
+        std::fclose(file);
         return 0;
     }
 
-    int print_test_file(const std::string_view& name) {
+    int print_test_file(const std::string& name) {
         const std::filesystem::path test_megabyte { std::filesystem::path(mount_point).append(name) };
+        std::cout << "print_test_file: " << test_megabyte << std::endl;
+
         static constexpr size_t size_megabyte { 1 * 1024 * 1024 };
         std::ifstream file(test_megabyte);
         if(file.is_open() == false) {
@@ -241,6 +265,53 @@ namespace SD_Card {
             return static_cast<int>(i);
         }
 
+        return 0;
+    }
+
+    int check_test_file(const size_t size_bytes, const std::string_view& name) {
+        const std::filesystem::path test_megabyte { std::filesystem::path(mount_point).append(name) };
+
+        FILE* file { std::fopen(test_megabyte.c_str(), "r") };
+        if(file == nullptr) {
+            return -1;
+        }
+
+        size_t i = 1;
+        for(
+            char c { 'a' };
+            i <= size_bytes;
+            [&]() {
+                if(c == 'z') {
+                    c = 'a';
+                } else {
+                    c++;
+                }
+                i++;
+            }()
+        ) {
+            if(std::fgetc(file) != c) {
+                std::fclose(file);
+                return static_cast<int>(i + 1);
+            }
+        }
+
+        if(std::fclose(file) != 0) {
+            return -2;
+        }
+
+        return 0;
+    }
+
+    size_t integrity_test(const size_t max_bin_pow) {
+        for(size_t i = 1; i < (2 << max_bin_pow); i *= 2) {
+            const std::string name { std::string("jcb").append(std::to_string(i)) };
+            if(Trielo::trielo<create_test_file>(Trielo::OkErrCode(0), i, name) != 0) {
+                return i;
+            }
+            if(Trielo::trielo<check_test_file>(Trielo::OkErrCode(0), i, name) != 0) {
+                return i;
+            }
+        }
         return 0;
     }
 }

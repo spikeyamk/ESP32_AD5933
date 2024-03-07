@@ -11,6 +11,7 @@
 #include <numeric>
 
 #include <esp_task_wdt.h>
+#include <esp_sleep.h>
 #include <freertos/FreeRTOS.h>
 #include <inttypes.h>
 #include <driver/gpio.h>
@@ -26,29 +27,31 @@ namespace Util {
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 		}
 	}
-	std::mutex Blinky::mutex;
+	
+	Status mode_status { Status::BLE };
 
-	Blinky::Blinky() {}
+	std::mutex Blinky::mutex {};
 
-	bool Blinky::start(const std::chrono::duration<int, std::milli> &in_blink_time) {
+	bool Blinky::start(const Mode in_mode, const std::chrono::duration<int, std::milli> &in_blink_time) {
    		std::unique_lock lock(mutex);
-		if(blink_task_enable == true) {
+		mode = in_mode;
+		if(blink_task_enable.load() == true) {
 			return false;
 		}
 
 		blink_time = in_blink_time;
-		blink_task_enable = true;
+		blink_task_enable.store(true);
 		configure_led();
-		std::thread tmp_thread(blinky_cb, this);
-		thread_handle = std::move(tmp_thread);
+		thread_handle = std::move(std::thread(blinky_cb, std::ref(*this)));
 		return true;
 	}
 
 	bool Blinky::stop() {
    		std::unique_lock lock(mutex);
 		if(thread_handle.has_value() && thread_handle.value().joinable() && led_strip_handle != nullptr) {
-			blink_task_enable = false;	
+			blink_task_enable.store(false);
 			thread_handle.value().join();
+			thread_handle = std::nullopt;
 			led_strip_del(led_strip_handle);
 			return true;
 		} else {
@@ -57,11 +60,18 @@ namespace Util {
 	}
 
 	void Blinky::set_blink_time(const std::chrono::duration<int, std::milli> &in_blink_time) {
+   		std::unique_lock lock(mutex);
 		blink_time = in_blink_time;
 	}
 
+	void Blinky::set_mode(const Mode in_mode) {
+   		std::unique_lock lock(mutex);
+		mode = in_mode;
+	}
+
 	bool Blinky::is_running() const {
-		return blink_task_enable;
+   		std::unique_lock lock(mutex);
+		return blink_task_enable.load() && thread_handle.has_value();
 	}
 
 	void Blinky::toggle_led(const bool led_state) {
@@ -115,12 +125,9 @@ namespace Util {
 				std::vector<uint32_t> primes;
 				primes.clear();
 				size_t reserve_bytes = 4096;
-				try {
-					primes.reserve(reserve_bytes);
-				} catch(...) {
-					std::cerr << "ERROR: prime_test(" << stopper << "): failed to primes.reserve()\n";
-					reserve_bytes--;
-				}
+				primes.reserve(reserve_bytes);
+				std::cerr << "ERROR: prime_test(" << stopper << "): failed to primes.reserve()\n";
+				reserve_bytes--;
 				size_t index = 0;
 				for(; number < stopper; number++) {
 					uint32_t divisor = (number - 1);
@@ -130,12 +137,9 @@ namespace Util {
 						}
 					}
 					if(divisor == 1) {
-						try {
-							primes.push_back(number);
-						} catch(...) {
-							std::cerr << "ERROR: prime_test(" << stopper << "): failed to primes.push_back(number)\n";
-							break;
-						}
+						primes.push_back(number);
+						std::cerr << "ERROR: prime_test(" << stopper << "): failed to primes.push_back(number)\n";
+						break;
 					}
 				}
 				const auto chunk_end = std::chrono::high_resolution_clock::now();
@@ -293,23 +297,80 @@ namespace Util {
 		return ss.str();
 	}
 
-	static void IRAM_ATTR blinky_button_isr_handler(void* arg) {
+	static void IRAM_ATTR wakeup_cb(void* arg) {
+		mode_status = Status::BLE;	
 		esp_restart();
 	}
 
-	void init_restart_button() {
-		const gpio_num_t button { GPIO_NUM_4 };
+	static void IRAM_ATTR enter_auto_save_no_ble_cb(void* arg) {
+		Mode::get_instance().send_from_isr(Status::AutoSaveNoBLE);
+	}
+
+	static void IRAM_ATTR exit_auto_save_no_ble_cb(void* arg) {
+		Mode::get_instance().send_from_isr(Status::BLE);
+	}
+
+	const gpio_num_t button { GPIO_NUM_4 };
+
+	void init_button() {
 		Trielo::trielo<gpio_set_direction>(Trielo::OkErrCode(ESP_OK), button, GPIO_MODE_INPUT);
 		Trielo::trielo<gpio_set_pull_mode>(Trielo::OkErrCode(ESP_OK), button, GPIO_PULLDOWN_ONLY);
 		Trielo::trielo<gpio_set_intr_type>(Trielo::OkErrCode(ESP_OK), button, GPIO_INTR_POSEDGE);
 		Trielo::trielo<gpio_install_isr_service>(Trielo::OkErrCode(ESP_OK), 0);
-		TRIELO_EQ(ESP_OK, gpio_isr_handler_add(button, blinky_button_isr_handler, nullptr));
+	}
+
+	void init_wakeup_button(Util::Status status) {
+		const gpio_num_t wakeup_button { GPIO_NUM_4 };
+		gpio_set_direction(wakeup_button, GPIO_MODE_INPUT);
+		ESP_ERROR_CHECK(esp_deep_sleep_enable_gpio_wakeup(BIT(wakeup_button), ESP_GPIO_WAKEUP_GPIO_HIGH));
+		esp_deep_sleep_start();
+		mode_status = status;
+		esp_restart();
+	}
+
+	void deinit_button() {
+		Trielo::trielo<gpio_intr_disable>(Trielo::OkErrCode(ESP_OK), button);
+		Trielo::trielo<gpio_isr_handler_remove>(Trielo::OkErrCode(ESP_OK), button);
+		Trielo::trielo<gpio_reset_pin>(Trielo::OkErrCode(ESP_OK), button);
+		Trielo::trielo<gpio_uninstall_isr_service>();
+	}
+
+	void init_enter_auto_save_no_ble_button() {
+		Trielo::trielo<init_button>();
+		TRIELO_EQ(ESP_OK, gpio_isr_handler_add(button, enter_auto_save_no_ble_cb, nullptr));
+		Trielo::trielo<gpio_intr_enable>(Trielo::OkErrCode(ESP_OK), button);
+	}
+
+	void deinit_enter_auto_save_no_ble_button() {
+		deinit_button();
+	}
+
+	void init_exit_auto_save_no_ble_button() {
+		Trielo::trielo<init_button>();
+		TRIELO_EQ(ESP_OK, gpio_isr_handler_add(button, exit_auto_save_no_ble_cb, nullptr));
 		Trielo::trielo<gpio_intr_enable>(Trielo::OkErrCode(ESP_OK), button);
 	}
 
     void print_current_time() {
         const time_t current_time { std::chrono::high_resolution_clock::to_time_t(std::chrono::high_resolution_clock::now()) };
+		std::array<char, 50> tz { 0 };
+		gettimeofday(nullptr, tz.data());
+		std::for_each(tz.begin(), tz.end(), [index = 0](const char e) mutable {
+			if((index % 8) == 0) {
+				std::printf("\n\t");
+			}
+			std::printf("0x%02X, ", e);
+			index++;
+		});
         std::cout << "BLE_Server::time_update_control_point_characteristic_access_cb: Current time is: " << std::ctime(&current_time) << std::endl;
     };
+
+	std::array<char, 28> get_record_file_name_zero_terminated() {
+		const time_t time { std::chrono::high_resolution_clock::to_time_t(std::chrono::high_resolution_clock::now() + std::chrono::hours(2)) };
+		const tm* tm { std::localtime(&time) };
+		std::array<char, 28> ret;
+		std::strftime(ret.data(), sizeof(ret), "/sdcard/%Y-%m-%d-%H_%M_%S", tm);
+		return ret;
+	}
 }
 
