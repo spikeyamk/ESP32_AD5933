@@ -5,30 +5,24 @@
 
 int main(int argc, char* argv[]) {
     static const boost::filesystem::path self_path {
-        #ifdef _WIN32
-        // This is needed in order for the path to work on Windows with UTF-16 special characters (Windows uses const wchar_t* for paths) in the path and whitespace otherwise launching the child process will fail
         []() {
             std::basic_string<boost::filesystem::path::value_type> ret;
-            ret.resize(MAX_PATH);
-            if(GetModuleFileNameW(NULL, ret.data(), MAX_PATH) == 0) {
-                std::cout << "ERROR: GUI: GetModuleFileNameW(NULL, ret.data(), MAX_PATH); failed: Could not retrieve self_path\n";
-                std::exit(EXIT_FAILURE);
-            }
-            return ret;
-        }().data()
-        #elif  __linux__
-        []() {
-            std::string ret;
-            ret.resize(PATH_MAX);
-            ssize_t len = readlink("/proc/self/exe", ret.data(), ret.size() - 1);
-            if(len == -1) {
-                return std::string("");
-            }
-
-            ret[len] = '\0';
+            #ifdef _WIN32 // This is needed in order for the path to work on Windows with UTF-16 special characters (Windows uses const wchar_t* for paths) in the path and whitespace otherwise launching the child process will fail
+                ret.resize(MAX_PATH);
+                if(GetModuleFileNameW(NULL, ret.data(), MAX_PATH) == 0) {
+                    std::cout << "ERROR: GUI: GetModuleFileNameW(NULL, ret.data(), MAX_PATH); failed: Could not retrieve self_path\n";
+                    std::exit(EXIT_FAILURE);
+                }
+            #elif __linux__
+                ret.resize(PATH_MAX);
+                ssize_t len = readlink("/proc/self/exe", ret.data(), ret.size() - 1);
+                if(len == -1) {
+                    return std::string("");
+                }
+                ret[len] = '\0';
+            #endif
             return ret;
         }()
-        #endif
     };
 
     static constexpr std::string_view ble_client_magic_key { "okOvDRmWjEUErr3grKvWKpHw2Z0c8L5p6rjl5KT4HAoRGenjFFdPxegc43vCt8BR9ZdWJIPiaMaTYwhr6TMu4od0gHO3r1f7qTQ8pmaQtEm12SqT3IikKLdAsAI46N9E" };
@@ -53,10 +47,8 @@ int main(int argc, char* argv[]) {
     }
 
     boost::process::child ble_client;
-    //std::jthread t1(BLE_Client::child_main);
     try {
         ble_client = std::move(boost::process::child { self_path, ble_client_magic_key.data() });
-        //ble_client = std::move(boost::process::child { "dummy"});
     } catch(const boost::interprocess::interprocess_exception& e) {
         std::cout << "ERROR: GUI: Failed to open ble_client child process: exception: " << e.what() << std::endl;
         return EXIT_FAILURE;

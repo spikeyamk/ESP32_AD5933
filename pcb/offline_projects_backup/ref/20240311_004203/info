@@ -1,0 +1,473 @@
+{
+  "uuid": "bd6fd8af6828c2019298952aade69e3e",
+  "path": "Offline/ref",
+  "name": "ref",
+  "content": "",
+  "created_at": "2024-03-10 16:07:48",
+  "updated_at": "2024-03-11 00:42:03",
+  "stick": "",
+  "documents": [
+    {
+      "uuid": "bc20e6f54f25e18b926840fa7e266979",
+      "title": "Sheet_1",
+      "description": "",
+      "docType": "1",
+      "master": "",
+      "thumb": "/images/thumb-default.png",
+      "components": {
+        "257bd1328c1f451e19897fa692858de7": 1,
+        "cdd28bd7499b4649b20f0c7d6d43304c": 1,
+        "6a3642c06ee7032888c4bf9040dfb752": 1,
+        "2ac02ed1974fc963590ef34abd969109": 1,
+        "c46070141df943d38da0e187571d3c87": 4,
+        "08fec33057125528d13f03b6ac7b8313": 2,
+        "8fdc239302644125bfdac9474abbcbac": 4,
+        "d713a985e457420db40a05acc08289e1": 1,
+        "066563304aaa4c3c9edb6fba19cf2174": 1,
+        "5c1036b53a4146e4841df4ed0a9de8f0": 3,
+        "02aff2ff6e514454bd8e9eaa83aa0cc7": 3,
+        "caa1a0e56b724835858966b7c4323b7e": 1,
+        "b0248eb51e084227889f2cb84eab79c4": 8,
+        "a7a0e276dadd4f8097422d2afc2e1b9c": 9,
+        "736876f24b5b418d94baa3b17df427eb": 1,
+        "98b328584ae043afb7495300bc2638bd": 4,
+        "a9aa2b14f188405792fa87ac344499a4": 2,
+        "5676554bd4914d0989291bb3d92a3b97": 1,
+        "5cbe824183374fac8e4c1ae848199ce3": 1,
+        "04b7d8073e854006b41709a96b7a21a9": 1,
+        "47b55e59631553df73a52e76573a2d5c": 1
+      },
+      "BOM": [
+        [
+          "Value",
+          "Quantity",
+          "Package",
+          "Components",
+          "CustomPara"
+        ],
+        [
+          "24-21/G6C-BM1N2L/2A",
+          1,
+          "LED-SMD_L3.2-W1.6-RD_LTST-C230KFKT",
+          "BLINKY",
+          {
+            "Contributor": "lcsc",
+            "Supplier": "LCSC",
+            "Supplier Part": "C2980185",
+            "Manufacturer": "EVERLIGHT(亿光)",
+            "Manufacturer Part": "24-21/G6C-BM1N2L/2A",
+            "JLCPCB Part Class": "Extended Part",
+            "spiceSymbolName": "24-21/G6C-BM1N2L/2A",
+            "puuid": "f5dddb0bf3494720929414f62b7836ea",
+            "uuid": "caa1a0e56b724835858966b7c4323b7e"
+          }
+        ],
+        [
+          "K2-3.6×6.1_SMD",
+          3,
+          "KEY-SMD_2P-L6.2-W3.6-LS8.0",
+          "BOOT,RESET,WAKEY",
+          {
+            "Supplier Part": "C118141",
+            "Supplier": "LCSC",
+            "Manufacturer Part": "K2-1107ST-A4SW-06",
+            "Contributor": "LCEDA_Lib",
+            "制造商": "韩国韩荣",
+            "spiceSymbolName": "K2-3.6×6.1_SMD",
+            "puuid": "daacbe2eec304950b61eef2efe596556",
+            "uuid": "5c1036b53a4146e4841df4ed0a9de8f0"
+          }
+        ],
+        [
+          "10u",
+          6,
+          "CASE-A_3216",
+          "C1,C2,C3,C7,C10,C12",
+          {
+            "Supplier Part": "",
+            "Supplier": "",
+            "Contributor": "LCEDA_Lib",
+            "spiceSymbolName": "C_Tan_SMD_A_US",
+            "Manufacturer Part": "",
+            "puuid": "ce25118ef0b041b8a773e71ca28ae65d",
+            "uuid": "a7a0e276dadd4f8097422d2afc2e1b9c"
+          }
+        ],
+        [
+          "47nF",
+          1,
+          "C1206",
+          "C5",
+          {
+            "Supplier": "LCSC",
+            "Supplier Part": "C3855647",
+            "Manufacturer": "YAGEO(国巨)",
+            "Manufacturer Part": "CC1206JKNPO9BN473",
+            "JLCPCB Part Class": "Extended Part",
+            "Contributor": "lcsc",
+            "spiceSymbolName": "CC1206JKNPO9BN473",
+            "puuid": "7bdec8012728462a85919a4d0d033579",
+            "uuid": "cdd28bd7499b4649b20f0c7d6d43304c"
+          }
+        ],
+        [
+          "0.1u",
+          3,
+          "CASE-A_3216",
+          "C8,C9,C11",
+          {
+            "Supplier Part": "",
+            "Supplier": "",
+            "Contributor": "LCEDA_Lib",
+            "spiceSymbolName": "C_Tan_SMD_A_US",
+            "Manufacturer Part": "",
+            "puuid": "ce25118ef0b041b8a773e71ca28ae65d",
+            "uuid": "a7a0e276dadd4f8097422d2afc2e1b9c"
+          }
+        ],
+        [
+          "1N5819HW-7-F",
+          1,
+          "SOD-123_L2.7-W1.6-LS3.7-RD",
+          "D1",
+          {
+            "Supplier": "LCSC",
+            "Manufacturer Part": "1N5819HW-7-F",
+            "Manufacturer": "DIODES(美台)",
+            "Supplier Part": "C82544",
+            "JLCPCB Part Class": "Extended Part",
+            "spiceSymbolName": "1N5819HW-7-F",
+            "puuid": "c14b69f696a84be0994330db0de53812",
+            "uuid": "47b55e59631553df73a52e76573a2d5c"
+          }
+        ],
+        [
+          "LESD5D5.0CT1G",
+          3,
+          "SOD-523_L1.2-W0.8-LS1.6-BI",
+          "D2,D3,D4",
+          {
+            "Contributor": "LCSC",
+            "Supplier": "LCSC",
+            "Supplier Part": "C383211",
+            "Manufacturer": "LRC(乐山无线电)",
+            "Manufacturer Part": "LESD5D5.0CT1G",
+            "JLCPCB Part Class": "Extended Part",
+            "spiceSymbolName": "LESD5D5.0CT1G",
+            "puuid": "83d2c26c897548478611a7b637e39735",
+            "uuid": "02aff2ff6e514454bd8e9eaa83aa0cc7"
+          }
+        ],
+        [
+          "HOLE 1.5",
+          4,
+          "HOLEHOLE",
+          "H1,H2,H3,H4",
+          {
+            "Manufacturer": "",
+            "Manufacturer Part": "",
+            "Supplier Part": "",
+            "Supplier": "",
+            "link": "",
+            "Contributor": "Cillié Malan",
+            "spiceSymbolName": "HOLE 1.5",
+            "puuid": "699f37205fd34a24a07be9b1778b994a",
+            "uuid": "98b328584ae043afb7495300bc2638bd"
+          }
+        ],
+        [
+          "HDR-M-2.54_1x2",
+          2,
+          "HDR-M-2.54_1X2",
+          "J1,J2",
+          {
+            "Supplier Part": "C124375",
+            "Supplier": "LCSC",
+            "Manufacturer": "",
+            "Manufacturer Part": "",
+            "Contributor": "LCEDA_Lib",
+            "spiceSymbolName": "HDR-M-2.54_1x2",
+            "puuid": "70aa5812f21f4991bf427395d51849f4",
+            "uuid": "a9aa2b14f188405792fa87ac344499a4"
+          }
+        ],
+        [
+          "50kΩ",
+          4,
+          "R0603",
+          "R1,R2,R3,R4",
+          {
+            "Contributor": "LCSC",
+            "Supplier": "LCSC",
+            "Supplier Part": "C304067",
+            "Manufacturer": "Viking(光颉)",
+            "Manufacturer Part": "AR03BTC5002A",
+            "spiceSymbolName": "AR03BTC5002A",
+            "puuid": "398691f1f785460098bbe5ee6590333c",
+            "uuid": "c46070141df943d38da0e187571d3c87"
+          }
+        ],
+        [
+          "20kΩ",
+          2,
+          "R0805",
+          "R5,R6",
+          {
+            "Supplier": "LCSC",
+            "Manufacturer": "UNI-ROYAL(厚声)",
+            "Manufacturer Part": "0805W8J0203T5E",
+            "Supplier Part": "C25624",
+            "JLCPCB Part Class": "Extended Part",
+            "spiceSymbolName": "0805W8J0203T5E",
+            "puuid": "b60f399a7a7e41848b2be1eb49c79141",
+            "uuid": "08fec33057125528d13f03b6ac7b8313"
+          }
+        ],
+        [
+          "10kΩ",
+          4,
+          "R0603",
+          "R7,R9,R10,RCAL",
+          {
+            "Contributor": "LCSC",
+            "Supplier": "LCSC",
+            "Supplier Part": "C167144",
+            "Manufacturer": "UNI-ROYAL(厚声)",
+            "Manufacturer Part": "0603WAD1002T5E",
+            "JLCPCB Part Class": "Extended Part",
+            "spiceSymbolName": "0603WAD1002T5E",
+            "puuid": "398691f1f785460098bbe5ee6590333c",
+            "uuid": "8fdc239302644125bfdac9474abbcbac"
+          }
+        ],
+        [
+          "1k",
+          5,
+          "R0603",
+          "R11,R12,R13,R15,R18",
+          {
+            "Supplier Part": "",
+            "Supplier": "",
+            "Contributor": "LCEDA_Lib",
+            "spiceSymbolName": "R_0603_US",
+            "Manufacturer Part": "",
+            "puuid": "398691f1f785460098bbe5ee6590333c",
+            "uuid": "b0248eb51e084227889f2cb84eab79c4"
+          }
+        ],
+        [
+          "2k",
+          1,
+          "R0603",
+          "R14",
+          {
+            "Supplier Part": "",
+            "Supplier": "",
+            "Contributor": "LCEDA_Lib",
+            "spiceSymbolName": "R_0603_US",
+            "Manufacturer Part": "",
+            "puuid": "398691f1f785460098bbe5ee6590333c",
+            "uuid": "b0248eb51e084227889f2cb84eab79c4"
+          }
+        ],
+        [
+          "5.1k",
+          2,
+          "R0603",
+          "R16,R17",
+          {
+            "Supplier Part": "",
+            "Supplier": "",
+            "Contributor": "LCEDA_Lib",
+            "spiceSymbolName": "R_0603_US",
+            "Manufacturer Part": "",
+            "puuid": "398691f1f785460098bbe5ee6590333c",
+            "uuid": "b0248eb51e084227889f2cb84eab79c4"
+          }
+        ],
+        [
+          "GT-TF003-H0185-02",
+          1,
+          "SIM-SMD_GT-TF003-H0185-02",
+          "SIM1",
+          {
+            "Supplier": "LCSC",
+            "Supplier Part": "C5155564",
+            "Manufacturer": "G-Switch(品赞)",
+            "Manufacturer Part": "GT-TF003-H0185-02",
+            "JLCPCB Part Class": "Extended Part",
+            "spiceSymbolName": "GT-TF003-H0185-02",
+            "puuid": "83b7656bea5748f2bbfcff4920026d50",
+            "uuid": "066563304aaa4c3c9edb6fba19cf2174"
+          }
+        ],
+        [
+          "LED-0603_R",
+          1,
+          "LED0603_RED",
+          "STAT",
+          {
+            "Manufacturer": "EVERLIGHT(台湾亿光)",
+            "Manufacturer Part": "19-217/R6C-AL1M2VY/3T",
+            "Supplier Part": "C72044",
+            "Supplier": "LCSC",
+            "link": "",
+            "Contributor": "LCEDA_01",
+            "spiceSymbolName": "LED-0603_R",
+            "puuid": "1efb3a885b5b4aecb6d41221a8f4d86b",
+            "uuid": "5cbe824183374fac8e4c1ae848199ce3"
+          }
+        ],
+        [
+          "AD5933YRSZ",
+          1,
+          "SSOP-16_L6.2-W5.3-P0.65-LS7.8-BL",
+          "U1",
+          {
+            "Supplier": "LCSC",
+            "Manufacturer": "ADI(亚德诺)",
+            "Manufacturer Part": "AD5933YRSZ-REEL7",
+            "Supplier Part": "C57767",
+            "JLCPCB Part Class": "Extended Part",
+            "spiceSymbolName": "AD5933YRSZ",
+            "puuid": "98afa47bb0e1414e82b3c9ec5b7f6f02",
+            "uuid": "257bd1328c1f451e19897fa692858de7"
+          }
+        ],
+        [
+          "MCP73831T-2ACI/OT",
+          1,
+          "SOT-23-5_L3.0-W1.7-P0.95-LS2.8-BL",
+          "U2",
+          {
+            "Contributor": "LCSC",
+            "Supplier": "LCSC",
+            "Supplier Part": "C424093",
+            "Manufacturer": "MICROCHIP(美国微芯)",
+            "Manufacturer Part": "MCP73831T-2ACI/OT",
+            "JLCPCB Part Class": "Extended Part",
+            "spiceSymbolName": "MCP73831T-2ACI/OT",
+            "puuid": "a801549ddf8f431796761cd071417387",
+            "uuid": "5676554bd4914d0989291bb3d92a3b97"
+          }
+        ],
+        [
+          "ESP32-H2-MINI-1-H4",
+          1,
+          "COMM-SMD_ESP32-H2-MINI",
+          "U4",
+          {
+            "Supplier": "LCSC",
+            "Supplier Part": "C20416123",
+            "Manufacturer": "null",
+            "Manufacturer Part": "ESP32-H2-MINI-1-H4",
+            "JLCPCB Part Class": "Extended Part",
+            "Contributor": "lcsc",
+            "spiceSymbolName": "ESP32-H2-MINI-1-H4",
+            "puuid": "991de16bf24d4e059134142efc779c47",
+            "uuid": "d713a985e457420db40a05acc08289e1"
+          }
+        ],
+        [
+          "AMS1117-3.3_C347222",
+          1,
+          "SOT-223-4_L6.5-W3.5-P2.30-LS7.0-BR",
+          "U5",
+          {
+            "Contributor": "LCSC",
+            "Supplier": "LCSC",
+            "Supplier Part": "C347222",
+            "Manufacturer": "UMW(友台半导体)",
+            "Manufacturer Part": "AMS1117-3.3",
+            "JLCPCB Part Class": "Extended Part",
+            "spiceSymbolName": "AMS1117-3.3_C347222",
+            "puuid": "09952c2799c54b76904e264324ada8f3",
+            "uuid": "736876f24b5b418d94baa3b17df427eb"
+          }
+        ],
+        [
+          "TYPE-C 16PIN 2MD(073)",
+          1,
+          "USB-C-SMD_TYPE-C-6PIN-2MD-073",
+          "USB1",
+          {
+            "Contributor": "LCSC",
+            "Supplier": "LCSC",
+            "Supplier Part": "C2765186",
+            "Manufacturer": "SHOU HAN(首韩)",
+            "Manufacturer Part": "TYPE-C 16PIN 2MD(073)",
+            "JLCPCB Part Class": "Extended Part",
+            "spiceSymbolName": "TYPE-C 16PIN 2MD(073)",
+            "puuid": "5a7e9ad3682242f88608293ce637ea1d",
+            "uuid": "04b7d8073e854006b41709a96b7a21a9"
+          }
+        ],
+        [
+          "AD8606ARZ-REEL7",
+          1,
+          "SOIC-8_L4.9-W3.9-P1.27-LS6.0-BL",
+          "U3",
+          {
+            "tags": "Low Noise Operational Amplifier",
+            "subpart_no": "1",
+            "image": "http://image.lceda.cn/szlcsc/C26360.jpg",
+            "Supplier Part": "C26360",
+            "Supplier": "LCSC",
+            "Manufacturer": "ADI(亚德诺)",
+            "Manufacturer Part": "AD8606ARZ-REEL7",
+            "JLCPCB Part Class": "Extended Part",
+            "spiceSymbolName": "AD8606ARZ-REEL7",
+            "puuid": "806a55eb4d3c40ab838f70f86785d85e",
+            "uuid": "6a3642c06ee7032888c4bf9040dfb752"
+          }
+        ]
+      ],
+      "updateTime": 1710111468,
+      "createTime": 1710083268,
+      "histories": [],
+      "created_at": "2024-03-10 16:07:48",
+      "updated_at": "2024-03-10 23:57:48"
+    },
+    {
+      "uuid": "5252b4e3ea1c44a3e87183e5ecce59b9",
+      "puuid": "bd6fd8af6828c2019298952aade69e3e",
+      "title": "PCB_ref",
+      "filename": "PCB_ref.json",
+      "description": "",
+      "docType": "3",
+      "master": "",
+      "thumb": "/images/thumb-default.png",
+      "components": {
+        "398691f1f785460098bbe5ee6590333c": 16,
+        "70aa5812f21f4991bf427395d51849f4": 2,
+        "ce25118ef0b041b8a773e71ca28ae65d": 9,
+        "7bdec8012728462a85919a4d0d033579": 1,
+        "b60f399a7a7e41848b2be1eb49c79141": 2,
+        "98afa47bb0e1414e82b3c9ec5b7f6f02": 1,
+        "806a55eb4d3c40ab838f70f86785d85e": 1,
+        "daacbe2eec304950b61eef2efe596556": 3,
+        "f5dddb0bf3494720929414f62b7836ea": 1,
+        "c14b69f696a84be0994330db0de53812": 1,
+        "83d2c26c897548478611a7b637e39735": 3,
+        "699f37205fd34a24a07be9b1778b994a": 4,
+        "1efb3a885b5b4aecb6d41221a8f4d86b": 1,
+        "83b7656bea5748f2bbfcff4920026d50": 1,
+        "a801549ddf8f431796761cd071417387": 1,
+        "991de16bf24d4e059134142efc779c47": 1,
+        "09952c2799c54b76904e264324ada8f3": 1,
+        "5a7e9ad3682242f88608293ce637ea1d": 1
+      },
+      "BOM": [],
+      "updateTime": 1710114123,
+      "createTime": 1710100298,
+      "histories": [],
+      "created_at": "2024-03-10 20:51:38",
+      "updated_at": "2024-03-11 00:42:03"
+    }
+  ],
+  "sort": [],
+  "title": "ref",
+  "foldername": "ref",
+  "schfilename": "ref.json",
+  "schfilemtime": 1710111468674
+}

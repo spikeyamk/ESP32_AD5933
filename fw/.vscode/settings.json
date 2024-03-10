@@ -82,5 +82,7 @@
     },
     "idf.openOcdConfigs": [
         "board/esp32c6-ftdi.cfg"
-    ]
+    ],
+    "idf.espIdfPath": "/home/spikeyamk/Documents/git-repos/esp-idf-v5.2.1",
+    "idf.toolsPath": "/home/spikeyamk/.local/share/esp-idf"
 }

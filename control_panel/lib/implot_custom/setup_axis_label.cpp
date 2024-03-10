@@ -22,4 +22,3 @@ namespace ImPlot {
         SetupAxisLabel(ImAxis_Y1, y_label);
     }
 }
-
