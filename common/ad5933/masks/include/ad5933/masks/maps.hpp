@@ -65,11 +65,11 @@ namespace AD5933 {
                 StatusPair{ Status::NoStatus, "NoStatus" },
                 StatusPair{ Status::ValidTemp, "ValidTemp" },
                 StatusPair{ Status::ValidData, "ValidData" },
-                StatusPair{ Status::ValidDataAndValidTemp, "ValidDataAndValidTemp" },
+                StatusPair{ Status::ValidDataAndValidTemp, "ValidData | ValidTemp" },
                 StatusPair{ Status::FreqSweepComplete, "FreqSweepComplete" },
-                StatusPair{ Status::FreqSweepCompleteAndValidTemp, "FreqSweepCompleteAndValidTemp" },
-                StatusPair{ Status::FreqSweepCompleteAndValidData, "FreqSweepCompleteAndValidData" },
-                StatusPair{ Status::FreqSweepCompleteAndValidDataAndValidTemp, "FreqSweepCompleteAndValidDataAndValidTemp" },
+                StatusPair{ Status::FreqSweepCompleteAndValidTemp, "FreqSweepComplete | ValidTemp" },
+                StatusPair{ Status::FreqSweepCompleteAndValidData, "FreqSweepComplete | ValidData" },
+                StatusPair{ Status::FreqSweepCompleteAndValidDataAndValidTemp, "FreqSweepComplete | ValidData | ValidTemp" },
             };
         }
     }

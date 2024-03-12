@@ -1,0 +1,58 @@
+{
+    "calibration": {
+        "config": {
+            "command": 160,
+            "inc_freq": 10,
+            "num_of_inc": 9,
+            "pga_gain": 1,
+            "range": 0,
+            "set_cycles_mult": 0,
+            "set_cycles_num": 15,
+            "start_freq": 30000,
+            "sysclk_src": 0
+        },
+        "impedance": 1000.0,
+        "points": [
+            {
+                "gain_factor": 9556684.0,
+                "sys_phase": -1.2234646081924438
+            },
+            {
+                "gain_factor": 9596760.0,
+                "sys_phase": -1.2238681316375732
+            },
+            {
+                "gain_factor": 9594800.0,
+                "sys_phase": -1.2241268157958984
+            },
+            {
+                "gain_factor": 9594539.0,
+                "sys_phase": -1.2238953113555908
+            },
+            {
+                "gain_factor": 9592819.0,
+                "sys_phase": -1.2231652736663818
+            },
+            {
+                "gain_factor": 9596580.0,
+                "sys_phase": -1.2233073711395264
+            },
+            {
+                "gain_factor": 9596239.0,
+                "sys_phase": -1.2234052419662476
+            },
+            {
+                "gain_factor": 9593760.0,
+                "sys_phase": -1.223200798034668
+            },
+            {
+                "gain_factor": 9595640.0,
+                "sys_phase": -1.2232718467712402
+            },
+            {
+                "gain_factor": 9596321.0,
+                "sys_phase": -1.2230758666992188
+            }
+        ]
+    }
+}

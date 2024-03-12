@@ -8,207 +8,310 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 
-#include <string.h>
-#include <sys/unistd.h>
-#include <sys/stat.h>
-#include "esp_vfs_fat.h"
-#include "sdmmc_cmd.h"
+#include <fstream>
+#include <iostream>
+#include <filesystem>
+#include <string>
+#include <thread>
+
+#include <fcntl.h>
+#include <trielo/trielo.hpp>
+#include <esp_littlefs.h>
+#include <driver/gpio.h>
+#include <driver/sdspi_host.h>
 
 #include "sd_card.hpp"
 
-#define EXAMPLE_MAX_CHAR_SIZE    64
-
-static const char *TAG = "example";
-
-#define MOUNT_POINT "/sdcard"
-
 // Pin assignments can be set in menuconfig, see "SD SPI Example Configuration" menu.
 // You can also change the pin assignments here by changing the following 4 lines.
-#define CONFIG_EXAMPLE_PIN_MISO 2
-#define CONFIG_EXAMPLE_PIN_CLK  11
-#define CONFIG_EXAMPLE_PIN_MOSI 10
-#define CONFIG_EXAMPLE_PIN_CS   3
-#define CONFIG_EXAMPLE_FORMAT_IF_MOUNT_FAILED
 
-#define PIN_NUM_MISO  CONFIG_EXAMPLE_PIN_MISO
-#define PIN_NUM_MOSI  CONFIG_EXAMPLE_PIN_MOSI
-#define PIN_NUM_CLK   CONFIG_EXAMPLE_PIN_CLK
-#define PIN_NUM_CS    CONFIG_EXAMPLE_PIN_CS
-
-static esp_err_t s_example_write_file(const char *path, char *data)
-{
-    ESP_LOGI(TAG, "Opening file %s", path);
-    FILE *f = fopen(path, "w");
-    if (f == NULL) {
-        ESP_LOGE(TAG, "Failed to open file for writing");
-        return ESP_FAIL;
+namespace SD_Card {
+    namespace Pins {
+        static constexpr gpio_num_t miso { GPIO_NUM_15 };
+        static constexpr gpio_num_t mosi { GPIO_NUM_23 };
+        static constexpr gpio_num_t clk  { GPIO_NUM_22 };
+        static constexpr gpio_num_t cs   { GPIO_NUM_21 };
     }
-    fprintf(f, data);
-    fclose(f);
-    ESP_LOGI(TAG, "File written");
 
-    return ESP_OK;
-}
+    sdmmc_card_t card {};
 
-static esp_err_t s_example_read_file(const char *path)
-{
-    ESP_LOGI(TAG, "Reading file %s", path);
-    FILE *f = fopen(path, "r");
-    if (f == NULL) {
-        ESP_LOGE(TAG, "Failed to open file for reading");
-        return ESP_FAIL;
-    }
-    char line[EXAMPLE_MAX_CHAR_SIZE];
-    fgets(line, sizeof(line), f);
-    fclose(f);
-
-    // strip newline
-    char *pos = strchr(line, '\n');
-    if (pos) {
-        *pos = '\0';
-    }
-    ESP_LOGI(TAG, "Read from file: '%s'", line);
-
-    return ESP_OK;
-}
-
-void spi_sd_card_test(void) {
-    esp_err_t ret;
-
-    // Options for mounting the filesystem.
-    // If format_if_mount_failed is set to true, SD card will be partitioned and
-    // formatted in case when mounting fails.
-    esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-#ifdef CONFIG_EXAMPLE_FORMAT_IF_MOUNT_FAILED
-        .format_if_mount_failed = true,
-#else
-        .format_if_mount_failed = false,
-#endif // EXAMPLE_FORMAT_IF_MOUNT_FAILED
-        .max_files = 5,
-        .allocation_unit_size = 16 * 1024
+    esp_vfs_littlefs_conf_t littlefs_conf {
+        .base_path = mount_point.data(),
+        .partition_label = nullptr,
+        .partition = nullptr,
+        .sdcard = &card,
+        .format_if_mount_failed = 1,
+        .read_only = 0,
+        .dont_mount = 0,
+        .grow_on_mount = 0
     };
-    sdmmc_card_t *card;
-    const char mount_point[] = MOUNT_POINT;
-    ESP_LOGI(TAG, "Initializing SD card");
+    
+    // This is just = SDSPI_HOST_DEFAULT() but max_freq_khz modified
+    static constexpr sdmmc_host_t host {
+        .flags = SDMMC_HOST_FLAG_SPI | SDMMC_HOST_FLAG_DEINIT_ARG,
+        .slot = SDSPI_DEFAULT_HOST,
+        .max_freq_khz = 20'000,
+        .io_voltage = 3.3f,
+        .init = &sdspi_host_init,
+        .set_bus_width = NULL,
+        .get_bus_width = NULL,
+        .set_bus_ddr_mode = NULL,
+        .set_card_clk = &sdspi_host_set_card_clk,
+        .set_cclk_always_on = NULL,
+        .do_transaction = &sdspi_host_do_transaction,
+        .deinit_p = &sdspi_host_remove_device,
+        .io_int_enable = &sdspi_host_io_int_enable,
+        .io_int_wait = &sdspi_host_io_int_wait,
+        .command_timeout_ms = 0,
+        .get_real_freq = &sdspi_host_get_real_freq,
+        .input_delay_phase = SDMMC_DELAY_PHASE_0,
+        .set_input_delay = NULL
+    };
 
-    // Use settings defined above to initialize SD card and mount FAT filesystem.
-    // Note: esp_vfs_fat_sdmmc/sdspi_mount is all-in-one convenience functions.
-    // Please check its source code and implement error recovery when developing
-    // production applications.
-    ESP_LOGI(TAG, "Using SPI peripheral");
-
-    // By default, SD card frequency is initialized to SDMMC_FREQ_DEFAULT (20MHz)
-    // For setting a specific frequency, use host.max_freq_khz (range 400kHz - 20MHz for SDSPI)
-    // Example: for fixed frequency of 10MHz, use host.max_freq_khz = 10000;
-    sdmmc_host_t host = SDSPI_HOST_DEFAULT();
-    host.max_freq_khz = 400;
-
-    spi_bus_config_t bus_cfg = {
-        .mosi_io_num = PIN_NUM_MOSI,
-        .miso_io_num = PIN_NUM_MISO,
-        .sclk_io_num = PIN_NUM_CLK,
+    static constexpr spi_bus_config_t bus_cfg {
+        .mosi_io_num = Pins::mosi,
+        .miso_io_num = Pins::miso,
+        .sclk_io_num = Pins::clk,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
-        .max_transfer_sz = 4000,
+        .data4_io_num = -1,
+        .data5_io_num = -1,
+        .data6_io_num = -1,
+        .data7_io_num = -1,
+        .max_transfer_sz = 4092,
+        .flags = SPICOMMON_BUSFLAG_MASTER,
+        .isr_cpu_id = ESP_INTR_CPU_AFFINITY_0,
+        .intr_flags = 0,
     };
-    ret = spi_bus_initialize(spi_host_device_t(host.slot), &bus_cfg, SDSPI_DEFAULT_DMA);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to initialize bus.");
-        return;
-    }
 
-    // This initializes the slot without card detect (CD) and write protect (WP) signals.
-    // Modify slot_config.gpio_cd and slot_config.gpio_wp if your board has these signals.
-    sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
-    slot_config.gpio_cs = gpio_num_t(PIN_NUM_CS);
-    slot_config.host_id = spi_host_device_t(host.slot);
+    // This corresponds to SDSPI_DEVICE_CONFIG_DEFAULT() just .host_id and .gpio_cs is modified
+    static constexpr sdspi_device_config_t slot_config {
+        .host_id   = spi_host_device_t(host.slot),
+        .gpio_cs   = Pins::cs,
+        .gpio_cd   = SDSPI_SLOT_NO_CD,
+        .gpio_wp   = SDSPI_SLOT_NO_WP,
+        .gpio_int  = SDSPI_SLOT_NO_INT,
+        .gpio_wp_polarity = SDSPI_IO_ACTIVE_LOW,
+    };
 
-    ESP_LOGI(TAG, "Mounting filesystem");
-    ret = esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config, &mount_config, &card);
+    sdspi_dev_handle_t handle;
 
-    if (ret != ESP_OK) {
-        if (ret == ESP_FAIL) {
-            ESP_LOGE(TAG, "Failed to mount filesystem. "
-                     "If you want the card to be formatted, set the CONFIG_EXAMPLE_FORMAT_IF_MOUNT_FAILED menuconfig option.");
-        } else {
-            ESP_LOGE(TAG, "Failed to initialize the card (%s). "
-                     "Make sure SD card lines have pull-up resistors in place.", esp_err_to_name(ret));
+    int init() {
+        if(Trielo::trielo<spi_bus_initialize>(Trielo::OkErrCode(ESP_OK), slot_config.host_id, &bus_cfg, SDSPI_DEFAULT_DMA)) {
+            return -1;
         }
-        return;
-    }
-    ESP_LOGI(TAG, "Filesystem mounted");
 
-    // Card has been initialized, print its properties
-    sdmmc_card_print_info(stdout, card);
+        if(Trielo::trielo<sdspi_host_init>(Trielo::OkErrCode(ESP_OK)) != ESP_OK) {
+            return -2;
+        }
 
-    // Use POSIX and C standard library functions to work with files.
+        if(Trielo::trielo<sdspi_host_init_device>(Trielo::OkErrCode(ESP_OK), &slot_config, &handle) != ESP_OK) {
+            return -3;
+        }
+        
+        if(Trielo::trielo<sdmmc_card_init>(Trielo::OkErrCode(ESP_OK), &host, &card) != ESP_OK) {
+            return -4;
+        }
 
-    // First create a file.
-    const char *file_hello = MOUNT_POINT"/hello.txt";
-    s_example_read_file(file_hello);
+        Trielo::trielo<sdmmc_card_print_info>(stdout, &card);
 
-    char data[EXAMPLE_MAX_CHAR_SIZE];
-    snprintf(data, EXAMPLE_MAX_CHAR_SIZE, "%s %s!\n", "Hello", card->cid.name);
-    ret = s_example_write_file(file_hello, data);
-    if (ret != ESP_OK) {
-        return;
-    }
+        if(Trielo::trielo<esp_vfs_littlefs_register>(Trielo::OkErrCode(ESP_OK), &littlefs_conf) != ESP_OK) {
+            return -5;
+        }
 
-    const char *file_foo = MOUNT_POINT"/foo.txt";
-
-    // Check if destination file exists before renaming
-    struct stat st;
-    if (stat(file_foo, &st) == 0) {
-        // Delete it if it exists
-        unlink(file_foo);
+        return 0;
     }
 
-    // Rename original file
-    ESP_LOGI(TAG, "Renaming file %s to %s", file_hello, file_foo);
-    if (rename(file_hello, file_foo) != 0) {
-        ESP_LOGE(TAG, "Rename failed");
-        return;
+    esp_err_t format() {
+        return Trielo::trielo<esp_littlefs_format_sdmmc>(Trielo::OkErrCode(ESP_OK), &card);
     }
 
-    ret = s_example_read_file(file_foo);
-    if (ret != ESP_OK) {
-        return;
+    int create_test_files() {
+        const std::filesystem::path test1 { std::filesystem::path(mount_point).append("test1") };
+        const std::filesystem::path test2 { std::filesystem::path(mount_point).append("test2") };
+        const std::filesystem::path test3 { std::filesystem::path(mount_point).append("test3") };
+        std::ofstream file1(test1);
+        int ret { -1 };
+        if(file1.is_open()) {
+            const char text[19] = "Lorem Ipsum is sim";
+            file1 << text;
+            file1.close();
+            ret = 2;
+        }
+        std::ofstream file2(test2);
+        if(file2.is_open()) {
+            const char text[] = "Lorem Ipsum is simply dummy text of the printing and typesetting industry.";
+            file2 << text;
+            file2.close();
+            ret = 1;
+        }
+        std::ofstream file3(test3);
+        if(file3.is_open()) {
+            const char text[] = "abba";
+            file3 << text;
+            file3.close();
+            ret = 0;
+        }
+        return ret;
     }
 
-    /*
-    // Format FATFS
-    ret = esp_vfs_fat_sdcard_format(mount_point, card);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to format FATFS (%s)", esp_err_to_name(ret));
-        return;
-    }
-    */
-
-    if (stat(file_foo, &st) == 0) {
-        ESP_LOGI(TAG, "file still exists");
-        return;
-    } else {
-        ESP_LOGI(TAG, "file doesnt exist, format done");
-    }
-
-    const char *file_nihao = MOUNT_POINT"/nihao.txt";
-    memset(data, 0, EXAMPLE_MAX_CHAR_SIZE);
-    snprintf(data, EXAMPLE_MAX_CHAR_SIZE, "%s %s!\n", "Nihao", card->cid.name);
-    ret = s_example_write_file(file_nihao, data);
-    if (ret != ESP_OK) {
-        return;
+    void print_test_files() {
+        const std::filesystem::path test1 { std::filesystem::path(mount_point).append("test1") };
+        const std::filesystem::path test2 { std::filesystem::path(mount_point).append("test2") };
+        const std::filesystem::path test3 { std::filesystem::path(mount_point).append("test3") };
+        std::ifstream file1(test1);
+        if(file1.is_open()) {
+            std::cout << test1 << ": \n";
+            std::cout << file1.rdbuf() << std::endl;
+        }
+        std::ifstream file2(test2);
+        if(file2.is_open()) {
+            std::cout << test2 << ": \n";
+            std::cout << file2.rdbuf() << std::endl;
+        }
+        std::ifstream file3(test3);
+        if(file3.is_open()) {
+            std::cout << test3 << ": \n";
+            std::cout << file3.rdbuf() << std::endl;
+        }
     }
 
-    //Open file for reading
-    ret = s_example_read_file(file_nihao);
-    if (ret != ESP_OK) {
-        return;
+    esp_err_t deinit() {
+        esp_err_t ret { Trielo::trielo<esp_vfs_littlefs_unregister_sdmmc>(Trielo::OkErrCode(ESP_OK), &card) };
+        if(ret != ESP_OK) {
+            return ret;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        ret = Trielo::trielo<sdspi_host_remove_device>(Trielo::OkErrCode(ESP_OK), handle);
+        if(ret != ESP_OK) {
+            return ret;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        ret = Trielo::trielo<sdspi_host_deinit>(Trielo::OkErrCode(ESP_OK));
+        if(ret != ESP_OK) {
+            return ret;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        return Trielo::trielo<spi_bus_free>(Trielo::OkErrCode(ESP_OK), slot_config.host_id);
     }
 
-    // All done, unmount partition and disable SPI peripheral
-    esp_vfs_fat_sdcard_unmount(mount_point, card);
-    ESP_LOGI(TAG, "Card unmounted");
+    int create_test_file(const size_t size_bytes, const std::string_view& name) {
+        static char buf[BUFSIZ];
+        const std::filesystem::path test_megabyte { std::filesystem::path(mount_point).append(name) };
 
-    //deinitialize the bus after all devices are removed
-    spi_bus_free(spi_host_device_t(host.slot));
+        FILE* file { std::fopen(test_megabyte.c_str(), "w") };
+        std::setbuf(file, buf);
+        if(file == nullptr) {
+            return -1;
+        }
+
+        char c { 'a' };
+        for(
+            size_t i = 1;
+            i <= size_bytes;
+            [&i, &c]() {
+                if(c == 'z') {
+                    c = 'a';
+                } else {
+                    c++;
+                }
+
+                i++;
+            }()
+        ) {
+            if(std::fputc(c, file) != c) {
+                return static_cast<int>(i);
+            }
+            if((i % BUFSIZ) == 0) {
+                std::fflush(file);
+                const int fd = fileno(file);
+                if (fd == -1) {
+                    perror("Error getting file descriptor");
+                    return 1;
+                }
+
+                // Syncing data to disk using fsync()
+                if(fsync(fd) == -1) {
+                    perror("Error syncing data to disk");
+                    fsync(fd);
+                    return 1;
+                }
+            }
+        }
+        std::fclose(file);
+        return 0;
+    }
+
+    int print_test_file(const std::string& name) {
+        const std::filesystem::path test_megabyte { std::filesystem::path(mount_point).append(name) };
+        std::cout << "print_test_file: " << test_megabyte << std::endl;
+
+        static constexpr size_t size_megabyte { 1 * 1024 * 1024 };
+        std::ifstream file(test_megabyte);
+        if(file.is_open() == false) {
+            return -1;
+        }
+        char c;
+        size_t i = 1;
+        while(file.read(&c, sizeof(c))) {
+            std::printf("%c", c);
+            i++;
+        }
+        std::printf("\n");
+        if(i < size_megabyte) {
+            return static_cast<int>(i);
+        }
+
+        return 0;
+    }
+
+    int check_test_file(const size_t size_bytes, const std::string_view& name) {
+        const std::filesystem::path test_megabyte { std::filesystem::path(mount_point).append(name) };
+
+        FILE* file { std::fopen(test_megabyte.c_str(), "r") };
+        if(file == nullptr) {
+            return -1;
+        }
+
+        size_t i = 1;
+        for(
+            char c { 'a' };
+            i <= size_bytes;
+            [&]() {
+                if(c == 'z') {
+                    c = 'a';
+                } else {
+                    c++;
+                }
+                i++;
+            }()
+        ) {
+            if(std::fgetc(file) != c) {
+                std::fclose(file);
+                return static_cast<int>(i + 1);
+            }
+        }
+
+        if(std::fclose(file) != 0) {
+            return -2;
+        }
+
+        return 0;
+    }
+
+    size_t integrity_test(const size_t max_bin_pow) {
+        for(size_t i = 1; i < (2 << max_bin_pow); i *= 2) {
+            const std::string name { std::string("jcb").append(std::to_string(i)) };
+            if(Trielo::trielo<create_test_file>(Trielo::OkErrCode(0), i, name) != 0) {
+                return i;
+            }
+            if(Trielo::trielo<check_test_file>(Trielo::OkErrCode(0), i, name) != 0) {
+                return i;
+            }
+        }
+        return 0;
+    }
 }

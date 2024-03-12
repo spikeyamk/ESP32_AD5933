@@ -79,6 +79,7 @@ namespace I2C {
 
     bool Bus::device_add(const uint16_t device_address) {
         if(scan_for_addr(device_address) == true) {
+            std::printf("%s%sscan Found device at address: 0x%02X\n", namespace_name, class_name, device_address);
             return device_add_wo_scan(device_address);
         }
         return false;

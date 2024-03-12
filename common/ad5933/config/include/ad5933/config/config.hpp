@@ -209,8 +209,12 @@ namespace AD5933 {
 		}
 
 		constexpr void set_sysclk_src(const Masks::Or::Ctrl::LB::SysClkSrc sysclk_src) {
+			const uint_startfreq_t start_freq { get_start_freq() };
+			const uint_incfreq_t inc_freq { get_inc_freq() };
 			const std::bitset<8> set_mask { static_cast<uint8_t>(sysclk_src) };
 			ctrl.LB = ((ctrl.LB & ~Masks::And::Ctrl::LB::SysClkSrc) | set_mask);
+			set_start_freq(start_freq);
+			set_inc_freq(inc_freq);
 		}
 
 		constexpr void set_start_freq(const uint_startfreq_t &in_start_freq) {
@@ -310,14 +314,14 @@ namespace AD5933 {
 					inc_freq = get_inc_freq(),
 					n = static_cast<T>(0.0f)
 				] () mutable {
-					return static_cast<float>(start_freq.unwrap() + ((n++) * inc_freq.unwrap()));
+					return static_cast<T>(start_freq.unwrap() + ((n++) * inc_freq.unwrap()));
 				}
 			);
 			return ret;
 		}
 
-		constexpr uint32_t get_freq_end() const {
-            return get_start_freq().unwrap() + (get_num_of_inc().unwrap() * get_inc_freq().unwrap());
+		constexpr uint_freq_t<1001> get_freq_end() const {
+            return uint_freq_t<1001> { get_start_freq().unwrap() + (get_num_of_inc().unwrap() * get_inc_freq().unwrap()) };
 		}
 	};
 }

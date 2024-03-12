@@ -1,8 +1,8 @@
 [submodule "misc/imgui_sdl2/lib/implot"]
-	path = gui/lib/extern/implot
+	path = control_panel/lib/extern/implot
 	url = https://github.com/epezent/implot
 [submodule "misc/imgui_sdl2/lib/SimpleBLE"]
-	path = gui/common/SimpleBLE
+	path = control_panel/common/SimpleBLE
 	url = https://github.com/OpenBluetoothToolbox/SimpleBLE
 [submodule "main/lib/external/trielo_wrapper/trielo"]
 	path = common/trielo_wrapper/trielo
@@ -14,14 +14,20 @@
 	path = common/trielo_wrapper/trielo
 	url = https://github.com/spikeyamk/trielo
 [submodule "gui/lib/SDL"]
-	path = gui/lib/extern/SDL3
+	path = control_panel/lib/extern/SDL3
 	url = https://github.com/libsdl-org/SDL.git
 [submodule "gui/lib/imgui"]
-	path = gui/lib/extern/imgui
+	path = control_panel/lib/extern/imgui
 	url = https://github.com/ocornut/imgui.git
 [submodule "gui/lib/extern/nativefiledialog-extended"]
-	path = gui/lib/extern/nativefiledialog-extended
+	path = control_panel/lib/extern/nativefiledialog-extended
 	url = https://github.com/btzy/nativefiledialog-extended.git
 [submodule "gui/lib/extern/json"]
-	path = gui/lib/extern/json
+	path = control_panel/lib/extern/json
 	url = https://github.com/nlohmann/json.git
+[submodule "gui/lib/extern/semver"]
+	path = control_panel/lib/extern/semver
+	url = https://github.com/mbits-libs/semver.git
+[submodule "gui/lib/extern/--force"]
+	path = control_panel/lib/extern/utfconv
+	url = https://github.com/spikeyamk/utfconv.git

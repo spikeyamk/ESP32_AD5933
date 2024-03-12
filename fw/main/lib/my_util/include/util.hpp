@@ -8,6 +8,7 @@
 #include <string>
 #include <array>
 #include <utility>
+#include <condition_variable>
 
 #include "led_strip.h"
 
@@ -22,40 +23,69 @@ namespace Util {
 	class Blinky {
 	private:
 		// static pointer which points to the instance of this class
-
 		static std::mutex mutex;
-		std::atomic<bool> blink_task_enable = false;
+		std::atomic<bool> blink_task_enable { false };
 		std::chrono::duration<int, std::milli> blink_time;
-		led_strip_handle_t led_strip_handle = nullptr;
-		std::optional<std::thread> thread_handle = std::nullopt;
+		const std::chrono::milliseconds burst_timeout { 100 };
+		led_strip_handle_t led_strip_handle { nullptr };
+		std::optional<std::thread> thread_handle { std::nullopt };
 
 		// Making private Default constructor
-		Blinky();
+		Blinky() = default;
 
 		// Deleting copy constructor
 		Blinky(const Blinky& obj) = delete;
 		// Deleting copy assignment operator
 		void operator=(const Blinky& obj) = delete;
 
-		static void blinky_cb(Blinky *self) {
+		static void blinky_cb(Blinky& self) {
 			bool led_state = false;
-			while(self->blink_task_enable == true || led_state == true) {
-				self->toggle_led(led_state);
-				/* Toggle the LED state */
-				led_state = !led_state;
-				std::this_thread::sleep_for(std::chrono::milliseconds(self->blink_time));
+			while(self.blink_task_enable.load() == true || led_state == true) {
+				if(self.mode == Mode::Single) {
+					self.toggle_led(led_state);
+					led_state = !led_state;
+				} else {
+					self.toggle_led(led_state);
+					led_state = !led_state;
+					std::this_thread::sleep_for(self.burst_timeout);
+					self.toggle_led(led_state);
+					led_state = !led_state;
+					std::this_thread::sleep_for(self.burst_timeout);
+
+					self.toggle_led(led_state);
+					led_state = !led_state;
+					std::this_thread::sleep_for(self.burst_timeout);
+					self.toggle_led(led_state);
+					led_state = !led_state;
+					std::this_thread::sleep_for(self.burst_timeout);
+
+					self.toggle_led(led_state);
+					led_state = !led_state;
+					std::this_thread::sleep_for(self.burst_timeout);
+					self.toggle_led(led_state);
+					led_state = !led_state;
+					std::this_thread::sleep_for(self.burst_timeout);
+				}
+				std::this_thread::sleep_for(std::chrono::milliseconds(self.blink_time));
 			}
 		}
-		friend void blinky_cb(Blinky *self);
+	public:
+		enum class Mode {
+			Single,
+			Burst,
+		};
+	private:
+		Mode mode { Mode::Single };
 	public:
 		static Blinky& get_instance() {
     		std::unique_lock lock(mutex);
         	static Blinky instance; // Static instance created once
 			return instance;
 		}
-		bool start(const std::chrono::duration<int, std::milli> &in_blink_time);
+		bool start(const Mode in_mode, const std::chrono::duration<int, std::milli> &in_blink_time);
 		bool stop();
 		void set_blink_time(const std::chrono::duration<int, std::milli> &in_blink_time);
+		void set_mode(const Mode in_mode);
 		bool is_running() const;
 	private:
 		void toggle_led(const bool led_state);
@@ -89,5 +119,53 @@ namespace Util {
 		return result;
 	}
 
-	void restart_button();
+	enum class Status {
+		BLE,
+		AutoSaveNoBLE = 0xaef
+	};
+
+	extern RTC_NOINIT_ATTR Status mode_status;
+
+	class Mode {
+	public:
+		static Mode& get_instance() {
+			static Mode instance {};
+			return instance;
+		}
+
+		Status read() {
+			Status recv;
+			assert(xQueueReceive(queue, static_cast<void*>(&recv), portMAX_DELAY) == pdTRUE);
+			return recv;
+		}
+
+		void send_from_isr(const Status status) {
+			const Status tmp { status };
+			BaseType_t garbage_variable_dont_care { pdFALSE };
+			xQueueSendFromISR(queue, &tmp, &garbage_variable_dont_care);
+		}
+	public:
+		// Deleting copy constructor
+		Mode(const Mode& obj) = delete;
+		// Deleting copy assignment operator
+		void operator=(const Mode& obj) = delete;
+	private:
+		Mode() = default;
+		QueueHandle_t queue {
+			[]() {
+				const auto util_mode_queue_ret { xQueueCreate(1, sizeof(Status)) };
+				assert(util_mode_queue_ret != NULL);
+				return util_mode_queue_ret;
+			}()
+		};
+	};
+	
+	extern const gpio_num_t button;
+
+	void init_wakeup_button(Util::Status status);
+	void init_enter_auto_save_no_ble_button();
+	void deinit_enter_auto_save_no_ble_button();
+	void init_exit_auto_save_no_ble_button();
+    void print_current_time();
+	std::array<char, 28> get_record_file_name_zero_terminated();
 }

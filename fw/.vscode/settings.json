@@ -1,7 +1,7 @@
 {
     "idf.adapterTargetName": "esp32c6",
     "idf.flashType": "UART",
-    "idf.port": "/dev/ttyACM0",
+    "idf.port": "/dev/ttyUSB0",
     "files.associations": {
         "*.tcc": "cpp",
         "chrono": "cpp",
@@ -73,6 +73,16 @@
         "cinttypes": "cpp",
         "typeindex": "cpp",
         "typeinfo": "cpp",
-        "variant": "cpp"
-    }
+        "variant": "cpp",
+        "regex": "cpp",
+        "filesystem": "cpp",
+        "ble_hs.h": "c",
+        "ble_hs_mbuf.h": "c",
+        "ble_hs_priv.h": "c"
+    },
+    "idf.openOcdConfigs": [
+        "board/esp32c6-ftdi.cfg"
+    ],
+    "idf.espIdfPath": "/home/spikeyamk/Documents/git-repos/esp-idf-v5.2.1",
+    "idf.toolsPath": "/home/spikeyamk/.local/share/esp-idf"
 }

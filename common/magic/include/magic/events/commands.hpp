@@ -6,9 +6,7 @@
 #include <variant>
 #include <bitset>
 
-#include <sys/cdefs.h>
-#include <sys/time.h>
-
+#include "magic/misc/gettimeofday.hpp"
 #include "magic/events/common.hpp"
 
 namespace Magic {
@@ -35,12 +33,18 @@ namespace Magic {
                 FileSize,
                 FileRemove,
                 FileDownload,
-                FileUpload,
+                FileFormat,
+                FileCreateTestFiles,
                 FileEnd,
 
                 /* Time Commands */
                 TimeUpdateTimeval,
                 TimeUpdateTimezone,
+
+                /* Auto Commands */
+                AutoSave,
+                AutoSend,
+                AutoEnd,
             };
 
             namespace Debug {
@@ -191,7 +195,7 @@ namespace Magic {
                         return List {};
                     }
                 };
-                struct FileSize {
+                struct Size {
                     static constexpr Header header { Header::FileSize };
                     T_MaxDataSlice path { 0 };
                     using T_RawData = T_MaxPacket;
@@ -200,10 +204,10 @@ namespace Magic {
                         std::copy(path.begin(), path.end(), ret.begin() + 1);
                         return ret;
                     }
-                    static inline constexpr FileSize from_raw_data(const T_RawData& raw_data) {
+                    static inline constexpr Size from_raw_data(const T_RawData& raw_data) {
                         decltype(path) tmp;
                         std::copy(raw_data.begin() + 1, raw_data.end(), tmp.begin());
-                        return FileSize { tmp };
+                        return Size { tmp };
                     }
                 };
                 struct Remove {
@@ -236,19 +240,28 @@ namespace Magic {
                         return Download { tmp };
                     }
                 };
-                struct Upload {
-                    static constexpr Header header { Header::FileUpload };
-                    T_MaxDataSlice path { 0 };
-                    using T_RawData = T_MaxPacket;
+
+                struct Format {
+                    static constexpr Header header { Header::FileFormat };
+                    using T_RawData = std::array<uint8_t, 1>;
                     inline constexpr T_RawData to_raw_data() const {
-                        T_RawData ret { static_cast<uint8_t>(header) };
-                        std::copy(path.begin(), path.end(), ret.begin() + 1);
-                        return ret;
+                        return T_RawData { static_cast<uint8_t>(header) };
                     }
-                    static inline constexpr Download from_raw_data(const T_RawData& raw_data) {
-                        decltype(path) tmp;
-                        std::copy(raw_data.begin() + 1, raw_data.end(), tmp.begin());
-                        return Download { tmp };
+                    static inline constexpr Format from_raw_data(const T_RawData& raw_data) {
+                        (void)raw_data;
+                        return Format {};
+                    }
+                };
+
+                struct CreateTestFiles {
+                    static constexpr Header header { Header::FileCreateTestFiles };
+                    using T_RawData = std::array<uint8_t, 1>;
+                    inline constexpr T_RawData to_raw_data() const {
+                        return T_RawData { static_cast<uint8_t>(header) };
+                    }
+                    static inline constexpr CreateTestFiles from_raw_data(const T_RawData& raw_data) {
+                        (void)raw_data;
+                        return CreateTestFiles {};
                     }
                 };
                 struct End {
@@ -267,35 +280,30 @@ namespace Magic {
             namespace Time {
                 struct UpdateTimeval {
                     static constexpr Header header { Header::TimeUpdateTimeval };
-                    using T_RawData = std::array<uint8_t, 1 + sizeof(timeval)>;
-                    timeval tv;
+                    using T_RawData = std::array<uint8_t, 1 + sizeof(mytimeval64_t)>;
+                    mytimeval64_t tv;
                     inline constexpr T_RawData to_raw_data() const {
-                        return T_RawData {
+                        T_RawData ret {
                             static_cast<uint8_t>(header),
-                            static_cast<uint8_t>((tv.tv_sec >> (0 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_sec >> (1 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_sec >> (2 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_sec >> (3 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_sec >> (4 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_sec >> (5 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_sec >> (6 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_sec >> (7 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_usec >> (0 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_usec >> (1 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_usec >> (2 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_usec >> (3 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_usec >> (4 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_usec >> (5 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_usec >> (6 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tv.tv_usec >> (7 * 8)) & 0xFF),
                         };
+
+                        std::generate(ret.begin() + 1, ret.begin() + sizeof(decltype(mytimeval64_t::tv_sec)), [index = 0, this]() mutable {
+                            return static_cast<uint8_t>((tv.tv_sec >> (index++ * 8)) & 0xFF);
+                        });
+
+                        std::generate(ret.begin() + sizeof(decltype(mytimeval64_t::tv_sec)), ret.end(), [index = 0, this]() mutable {
+                            return static_cast<uint8_t>((tv.tv_usec >> (index++ * 8)) & 0xFF);
+                        });
+
+                        return ret;
                     }
 
                     static inline constexpr UpdateTimeval from_raw_data(const T_RawData& raw_data) {
-                        const decltype(timeval::tv_sec)* tmp_sec = reinterpret_cast<const decltype(timeval::tv_sec)*>(raw_data.data() + 1);
-                        const decltype(timeval::tv_usec)* tmp_usec = reinterpret_cast<const decltype(timeval::tv_usec)*>(raw_data.data() + 1 + sizeof(decltype(timeval::tv_sec)));
-                        const timeval tmp_tv { *tmp_sec, *tmp_usec };
-                        return UpdateTimeval { tmp_tv };
+                        const decltype(mytimeval64_t::tv_sec)* tmp_sec = static_cast<const decltype(mytimeval64_t::tv_sec)*>(static_cast<const void*>(raw_data.data() + 1));
+                        const decltype(mytimeval64_t::tv_usec)* tmp_usec = static_cast<const decltype(mytimeval64_t::tv_usec)*>(static_cast<const void*>(raw_data.data() + 1 + sizeof(decltype(mytimeval64_t::tv_sec))));
+                        return UpdateTimeval {
+                            mytimeval64_t { *tmp_sec, *tmp_usec }
+                        };
                     }
                 };
 
@@ -304,29 +312,80 @@ namespace Magic {
                     using T_RawData = std::array<uint8_t, 1 + sizeof(timezone)>;
                     struct timezone tz { 0, 0 };
                     inline constexpr T_RawData to_raw_data() const {
-                        return T_RawData {
+                        T_RawData ret {
                             static_cast<uint8_t>(header),
-                            static_cast<uint8_t>((tz.tz_minuteswest >> (0 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tz.tz_minuteswest >> (1 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tz.tz_minuteswest >> (2 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tz.tz_minuteswest >> (3 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tz.tz_dsttime >> (0 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tz.tz_dsttime >> (1 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tz.tz_dsttime >> (2 * 8)) & 0xFF),
-                            static_cast<uint8_t>((tz.tz_dsttime >> (3 * 8)) & 0xFF),
                         };
+
+                        std::generate(ret.begin() + 1, ret.begin() + 1 + sizeof(decltype(timezone::tz_minuteswest)), [index = 0, this]() mutable {
+                            return static_cast<uint8_t>((tz.tz_minuteswest >> (index++ * 8)) & 0xFF);
+                        });
+
+                        std::generate(ret.begin() + 1 + sizeof(decltype(timezone::tz_minuteswest)), ret.end(), [index = 0, this]() mutable {
+                            return static_cast<uint8_t>((tz.tz_dsttime >> (index++ * 8)) & 0xFF);
+                        });
+
+                        return ret;
                     }
                     static inline constexpr UpdateTimezone from_raw_data(const T_RawData& raw_data) {
-                        const decltype(timezone::tz_minuteswest)* tmp_minutewest = reinterpret_cast<const decltype(timezone::tz_minuteswest)*>(raw_data.data() + 1);
-                        const decltype(timezone::tz_dsttime)* tmp_dsttime = reinterpret_cast<const decltype(timezone::tz_dsttime)*>(raw_data.data() + 1 + sizeof(decltype(timezone::tz_minuteswest)));
-                        return UpdateTimezone { *tmp_minutewest, *tmp_dsttime };
+                        const decltype(timezone::tz_minuteswest)* tmp_minutewest = static_cast<const decltype(timezone::tz_minuteswest)*>(static_cast<const void*>(raw_data.data() + 1));
+                        const decltype(timezone::tz_dsttime)* tmp_dsttime = static_cast<const decltype(timezone::tz_dsttime)*>(static_cast<const void*>(raw_data.data() + 1 + sizeof(decltype(timezone::tz_minuteswest))));
+                        return UpdateTimezone {
+                            *tmp_minutewest, *tmp_dsttime
+                        };
                     }
                 };
             }
-<<<<<<< HEAD
+            
+            namespace Auto {
+                struct Save {
+                    static constexpr Header header { Header::AutoSave };
+                    uint16_t tick_ms;
+                    using T_RawData = std::array<uint8_t, 1 + sizeof(tick_ms)>;
+                    inline constexpr T_RawData to_raw_data() const {
+                        return T_RawData {
+                            static_cast<uint8_t>(header),
+                            static_cast<uint8_t>((tick_ms >> (0 * 8)) & (0xFF)),
+                            static_cast<uint8_t>((tick_ms >> (1 * 8)) & (0xFF)),
+                        };
+                    }
+                    static inline constexpr Save from_raw_data(const T_RawData& raw_data) {
+                        return Save {
+                            .tick_ms = *static_cast<const uint16_t*>(static_cast<const void*>(raw_data.data() + 1))
+                        };
+                    }
+                };
 
-=======
->>>>>>> origin/gui
+                struct Send {
+                    static constexpr Header header { Header::AutoSend };
+                    uint16_t tick_ms;
+                    using T_RawData = std::array<uint8_t, 1 + sizeof(tick_ms)>;
+                    inline constexpr T_RawData to_raw_data() const {
+                        return T_RawData {
+                            static_cast<uint8_t>(header),
+                            static_cast<uint8_t>((tick_ms >> (0 * 8)) & (0xFF)),
+                            static_cast<uint8_t>((tick_ms >> (1 * 8)) & (0xFF)),
+                        };
+                    }
+                    static inline constexpr Send from_raw_data(const T_RawData& raw_data) {
+                        return Send {
+                            .tick_ms = *static_cast<const uint16_t*>(static_cast<const void*>(raw_data.data() + 1))
+                        };
+                    }
+                };
+
+                struct End {
+                    static constexpr Header header { Header::AutoEnd };
+                    using T_RawData = std::array<uint8_t, 1>;
+                    inline constexpr T_RawData to_raw_data() const {
+                        return T_RawData { static_cast<uint8_t>(header) };
+                    }
+                    static inline constexpr End from_raw_data(const T_RawData& raw_data) {
+                        (void) raw_data;
+                        return End {};
+                    }
+                };
+            }
+
             using Variant = std::variant<
                 /* Debug Commands */
                 Debug::Start,
@@ -345,19 +404,25 @@ namespace Magic {
                 File::Free,
                 File::ListCount,
                 File::List,
-                File::FileSize,
+                File::Size,
                 File::Remove,
                 File::Download,
-                File::Upload,
+                File::Format,
+                File::CreateTestFiles,
                 File::End,
 
                 /* Time Commands */
                 Time::UpdateTimeval,
-                Time::UpdateTimezone
+                Time::UpdateTimezone,
+
+                /* Auto Commands */
+                Auto::Save,
+                Auto::Send,
+                Auto::End
             >;
 
             struct Map {
-                static constexpr std::array<Variant, 19> map {
+                static constexpr std::array<Variant, 24> map {
                     /* Debug Commands */
                     Debug::Start{},
                     Debug::Dump{},
@@ -375,15 +440,21 @@ namespace Magic {
                     File::Free{},
                     File::ListCount{},
                     File::List{},
-                    File::FileSize{},
+                    File::Size{},
                     File::Remove{},
                     File::Download{},
-                    File::Upload{},
+                    File::Format{},
+                    File::CreateTestFiles{},
                     File::End{},
 
                     /* Time Commands */
                     Time::UpdateTimeval{},
                     Time::UpdateTimezone{},
+
+                    /* Auto Commands */
+                    Auto::Save{},
+                    Auto::Send{},
+                    Auto::End{},
                 };
             };
         }

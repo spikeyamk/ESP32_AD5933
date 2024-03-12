@@ -1,41 +1,47 @@
-#include <thread>
-#include <chrono>
-#include <memory>
-#include <atomic>
-#include <vector>
-#include <cstdint>
-#include <algorithm>
-#include <limits>
-#include <array>
-#include <future>
-#include <functional>
-#include <span>
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/FreeRTOSConfig.h"
-#include "freertos/task.h"
-#include "esp_log.h"
-#include "host/ble_gap.h"
-
-#include "trielo/trielo.hpp"
+#include <trielo/trielo.hpp>
 
 #include "util.hpp"
 #include "i2c/bus.hpp"
-
+#include "ble_server/server.hpp"
+#include "auto_save_no_ble.hpp"
 #include "sd_card.hpp"
+#include <esp_sleep.h>
+#include <esp_log.h>
+#include <driver/gpio.h>
+#include <esp_err.h>
 
-#include "ble/server/server.hpp"
-
-extern "C" void app_main() {
-	TRIELO_VOID(Util::restart_button());
-	spi_sd_card_test();
-	I2C::Bus i2c_bus {};
-	while(i2c_bus.device_add(AD5933::SLAVE_ADDRESS) == false) {
+inline void run() {
+	while(I2C::Bus::get_instance().device_add(AD5933::SLAVE_ADDRESS) == false) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
-
-	BLE::Server::inject(i2c_bus.active_device_handles.at(AD5933::SLAVE_ADDRESS));
-	while(1) {
-		std::this_thread::sleep_for(std::chrono::seconds(10));
+	if(Util::mode_status == Util::Status::AutoSaveNoBLE) {
+		Trielo::trielo<AutoSaveNoBLE::run>();
+	} else {
+		Util::Mode::get_instance();
+		BLE::Server::inject(I2C::Bus::get_instance().active_device_handles.at(AD5933::SLAVE_ADDRESS));
 	}
+}
+
+inline void test() {
+	if(Trielo::trielo<SD_Card::init>(Trielo::OkErrCode(0)) != ESP_OK) {
+		return;
+	}
+	if(Trielo::trielo<SD_Card::format>(Trielo::OkErrCode(0)) != ESP_OK) {
+		return;
+	}
+	const std::string_view name { "test" };
+	const auto start { std::chrono::high_resolution_clock::now() };
+	if(Trielo::trielo<SD_Card::create_test_file>(Trielo::OkErrCode(0), (2 << 15), name) != 0) {
+		return;
+	}
+	if(Trielo::trielo<SD_Card::check_test_file>(Trielo::OkErrCode(0), (2 << 15), name) != 0) {
+		return;
+	}
+	const auto finish { std::chrono::high_resolution_clock::now() };
+	std::cout << "std::chrono::duration_cast<std::chrono::milliseconds>(finish - start): " << std::chrono::duration_cast<std::chrono::milliseconds>(finish - start) << " ms" << std::endl;
+}
+
+
+extern "C" void app_main() {
+	run();
 }
