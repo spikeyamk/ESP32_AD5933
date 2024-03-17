@@ -106,7 +106,7 @@ namespace GUI {
                     window = Trielo::trielo_lambda<SDL_CreateWindow>(
                         Trielo::FailErrCode(static_cast<SDL_Window*>(nullptr)),
                         sdl_error_lambda,
-                        "AD5933",
+                        "ESP32_AD5933",
                         1280,
                         720,
                         window_flags

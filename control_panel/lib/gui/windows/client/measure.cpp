@@ -48,12 +48,14 @@ namespace GUI {
                 draw_input_elements();
                 ImGui::EndDisabled();
 
+                ImGui::Separator();
+
                 if(status == Status::MeasuringSingle || status == Status::MeasuringPeriodic) {
                     ImGui::BeginDisabled();
-                    ImGui::Button("Load");
+                    ImGui::Button("Load", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f));
                     ImGui::EndDisabled();
                 } else {
-                    if(ImGui::Button("Load")) {
+                    if(ImGui::Button("Load", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f))) {
                         if(load_from_disk()) {
                             status = Status::Loaded;
                         }
@@ -62,7 +64,7 @@ namespace GUI {
 
                 ImGui::BeginDisabled();
 
-                ImGui::Button("Single");
+                ImGui::Button("Single", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f));
                 if(status == Status::MeasuringSingle) {
                     ImGui::EndDisabled();
 
@@ -71,7 +73,7 @@ namespace GUI {
 
                     ImGui::BeginDisabled();
                 }
-                ImGui::Button("Periodic");
+                ImGui::Button("Periodic", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f));
                 if(status == Status::MeasuringPeriodic) {
                     ImGui::EndDisabled();
 
@@ -84,21 +86,24 @@ namespace GUI {
                 ImGui::EndDisabled();
 
                 if(periodically_sweeping) {
-                    if(ImGui::Button("Stop")) {
+                    if(ImGui::Button("Stop", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f))) {
                         stop();
                     }
                 }
             } else {
                 draw_input_elements();
-                if(ImGui::Button("Load")) {
+
+                ImGui::Separator();
+
+                if(ImGui::Button("Load", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f))) {
                     if(load_from_disk()) {
                         status = Status::Loaded;
                     }
                 }
-                if(ImGui::Button("Single")) {
+                if(ImGui::Button("Single", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f))) {
                     single();
                 }
-                if(ImGui::Button("Periodic")) {
+                if(ImGui::Button("Periodic", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f))) {
                     periodic();
                 }
             }

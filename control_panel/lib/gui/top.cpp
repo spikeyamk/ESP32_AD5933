@@ -7,6 +7,7 @@
 #include "gui/windows/console.hpp"
 #include "gui/windows/client/client.hpp"
 #include "gui/windows/ble_adapter.hpp"
+#include "legal/gpl2.hpp"
 #include "legal/boost.hpp"
 #include "legal/dear_imgui.hpp"
 #include "legal/implot.hpp"
@@ -101,9 +102,10 @@ namespace GUI {
                 const ImVec2 center = ImGui::GetMainViewport()->GetCenter();
                 ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
                 settings_clicked = false;
+                popup_enables.settings = true;
             }
 
-            if(ImGui::BeginPopupModal("Settings", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+            if(ImGui::BeginPopupModal("Settings", &popup_enables.settings, ImGuiWindowFlags_AlwaysAutoResize)) {
                 draw_settings();
                 ImGui::EndPopup();
             }
@@ -114,9 +116,10 @@ namespace GUI {
                 const ImVec2 center = ImGui::GetMainViewport()->GetCenter();
                 ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
                 about_clicked = false;
+                popup_enables.about = true;
             }
 
-            if(ImGui::BeginPopupModal("About", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+            if(ImGui::BeginPopupModal("About", &popup_enables.about, ImGuiWindowFlags_AlwaysAutoResize)) {
                 draw_about_page();
                 ImGui::EndPopup();
             }
@@ -127,9 +130,10 @@ namespace GUI {
                 const ImVec2 center = ImGui::GetMainViewport()->GetCenter();
                 ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
                 legal_clicked = false;
+                popup_enables.legal = true;
             }
 
-            if(ImGui::BeginPopupModal("Legal")) {
+            if(ImGui::BeginPopupModal("Legal", &popup_enables.legal, ImGuiWindowFlags_AlwaysAutoResize)) {
                 draw_legal();
                 ImGui::EndPopup();
             }
@@ -141,27 +145,41 @@ namespace GUI {
     }
 
     void Top::draw_about_page() {
-        ImGui::Text((const char*)
-            u8"Tento text zatiaľ slúži iba na overenie toho či fungujú alebo nefungujú mäkkčene a dĺžne" 
-        );
+        ImGui::Text("Version: 0.1.6");
 
-        static const std::string_view page_link { "Repo: [https://www.github.com/spikeyamk/ESP32_AD5933](https://www.github.com/spikeyamk/ESP32_AD5933)" };
-        ImGui::RenderMarkdown(page_link.data(), page_link.size());
-
-        if(ImGui::Button("OK")) {
-            ImGui::CloseCurrentPopup();
-        }
+        static const char github_link[] { "[Contribute](https://www.github.com/spikeyamk/ESP32_AD5933)" };
+        ImGui::RenderMarkdown(github_link, sizeof(github_link) / sizeof(github_link[0]));
     }
 
     void Top::draw_license(const char* name, const char* license) const {
         if(ImGui::TreeNode(name)) {
-            ImGui::Text(license);
+            ImGui::Text("%s", license);
             ImGui::TreePop();
         }
     }
 
     void Top::draw_legal() const {
-        draw_license("SimpleBLE", Legal::simpleble);
+        draw_license(
+            "SimpleBLE"
+            "          "
+            "          "
+            "          "
+            "          "
+            "          "
+            "          "
+            "          "
+            "          "
+            "          "
+            "          "
+            "          "
+            "          "
+            "          "
+            "          "
+            "          "
+            "          "
+            "          "
+            , Legal::simpleble
+        );
         draw_license("Dear ImGui", Legal::dear_imgui);
         draw_license("implot", Legal::implot);
         draw_license("json", Legal::json);
@@ -172,10 +190,7 @@ namespace GUI {
         draw_license("semver", Legal::semver);
         draw_license("utfconv", Legal::utfconv);
         draw_license("fmt", Legal::fmt);
-        draw_license("Ubuntu-Sans-Fonts", Legal::ubuntu_sans_fonts);
-        if(ImGui::Button("OK")) {
-            ImGui::CloseCurrentPopup();
-        }
+        draw_license("Ubuntu-Sans-fonts", Legal::ubuntu_sans_fonts);
     }
 
     void Top::draw_settings() {
@@ -200,13 +215,7 @@ namespace GUI {
         ImGui::Checkbox("24 Hour Clock", &ImPlot::GetStyle().Use24HourClock);
         ImGui::Separator();
 
-        if(ImGui::Button("OK", ImVec2(120, 0))) {
-            ImGui::CloseCurrentPopup();
-        }
-
-        ImGui::SameLine();
-
-        if(ImGui::Button("Save", ImVec2(120, 0))) {
+        if(ImGui::Button("OK", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
             save_settings();
             ImGui::CloseCurrentPopup();
         }

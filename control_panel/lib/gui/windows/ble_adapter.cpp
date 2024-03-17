@@ -61,7 +61,7 @@ namespace GUI {
             std::visit([&](auto&& active_state) {
                 using T_Decay = std::decay_t<decltype(active_state)>;
                 if constexpr (std::is_same_v<T_Decay, BLE_Client::StateMachines::Adapter::States::off>) {
-                    if(ImGui::Button("Retry")) {
+                    if(ImGui::Button("Retry", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f))) {
                         shm->cmd.send_adapter(BLE_Client::StateMachines::Adapter::Events::turn_on{});
                         shm->cmd.send_adapter(BLE_Client::StateMachines::Adapter::Events::start_discovery{});
                         validate_start_attempt();
@@ -83,7 +83,7 @@ namespace GUI {
                             return true;
                         }()
                     ) {
-                        if(ImGui::Button("Connect")) {
+                        if(ImGui::Button("Connect", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f))) {
                             connecting = true;
                             const BLE_Client::StateMachines::Connector::Events::connect connect_event { shm->discovery_devices->at(selected.value()).get_address() };
                             shm->cmd.send(connect_event);
@@ -130,7 +130,7 @@ namespace GUI {
 
             if(ImGui::BeginPopupModal("Error##0", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
                 ImGui::Text("Bluetooth is turned off.");
-                if(ImGui::Button("OK")) {
+                if(ImGui::Button("OK", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f))) {
                     ImGui::CloseCurrentPopup();
                 }
                 ImGui::EndPopup();
@@ -145,7 +145,7 @@ namespace GUI {
 
             if(ImGui::BeginPopupModal("Error##1", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
                 ImGui::Text("Connection attempt timed out");
-                if(ImGui::Button("OK")) {
+                if(ImGui::Button("OK", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f))) {
                     ImGui::CloseCurrentPopup();
                 }
                 ImGui::EndPopup();
@@ -189,7 +189,7 @@ namespace GUI {
 
         void BLE_Adapter::show_disabled_connect_button() const {
             ImGui::BeginDisabled();
-            ImGui::Button("Connect");
+            ImGui::Button("Connect", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f));
             ImGui::EndDisabled();
         }
 

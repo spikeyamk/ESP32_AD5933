@@ -134,7 +134,7 @@ namespace GUI {
 
             if(ImGui::BeginPopupModal("Error##2", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
                 ImGui::Text("%s Unexpectedly disconnected", address.c_str());
-                if(ImGui::Button("OK")) {
+                if(ImGui::Button("OK", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                     ImGui::CloseCurrentPopup();
                 }
                 ImGui::EndPopup();

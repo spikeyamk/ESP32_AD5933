@@ -134,6 +134,7 @@ add_executable(${CURRENT_PROJECT_NAME}
 	lib/json/conversion.cpp
 	lib/json/settings.cpp
 
+	lib/legal/gpl2.cpp
 	lib/legal/boost.cpp
 	lib/legal/dear_imgui.cpp
 	lib/legal/implot.cpp
