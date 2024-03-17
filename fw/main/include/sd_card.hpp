@@ -9,6 +9,8 @@ namespace SD_Card {
     extern sdmmc_card_t card;
     constexpr std::string_view mount_point { "/sdcard" };
     constexpr std::string_view mount_point_prefix { "/sdcard/" };
+    void power_on();
+    void power_off();
     int init();
     esp_err_t deinit();
     esp_err_t format();

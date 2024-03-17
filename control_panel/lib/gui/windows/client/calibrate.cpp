@@ -134,9 +134,6 @@ namespace GUI {
         }
 
         const std::optional<Lock> Calibrate::draw_inner() {
-            ImGui::Text("Sweep Parameters");
-            ImGui::Separator();
-
             if(status == Status::Calibrating)  {
                 ImGui::BeginDisabled();
                 draw_input_fields();
@@ -149,9 +146,9 @@ namespace GUI {
 
             if(status == Status::Calibrating) {
                 ImGui::BeginDisabled();
-                ImGui::Button("Calibrate");
+                ImGui::Button("Calibrate", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f));
                 ImGui::EndDisabled();
-            } else if(ImGui::Button("Calibrate")) {
+            } else if(ImGui::Button("Calibrate", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f))) {
                 calibrate();
             }
 
@@ -162,9 +159,9 @@ namespace GUI {
 
             if(status != Status::Calibrated) {
                 ImGui::BeginDisabled();
-                ImGui::Button("Save");
+                ImGui::Button("Save", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f));
                 ImGui::EndDisabled();
-            } else if(ImGui::Button("Save")) {
+            } else if(ImGui::Button("Save", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f))) {
                 save();
             }
 

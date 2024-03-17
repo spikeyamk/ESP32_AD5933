@@ -12,7 +12,6 @@ namespace GUI {
         int theme_combo { Boilerplate::respect_system_theme ? 0 : 1 };
         int scale_combo {  Boilerplate::respect_system_scale ? 0 : 3 };
 
-
         bool settings_clicked { false };
         bool about_clicked { false };
         bool legal_clicked { false };
@@ -30,9 +29,17 @@ namespace GUI {
             bool demo { false };
         };
         MenuBarEnables menu_bar_enables {};
+
         Top(const ns::SettingsFile& settings_file);
         ImGuiID draw(bool& done);
     private:
+        struct PopupEnables {
+            bool legal { true };
+            bool about { true };
+            bool settings { true };
+        };
+        PopupEnables popup_enables {};
+
         void draw_about_page();
         void draw_settings();
         void draw_legal() const;

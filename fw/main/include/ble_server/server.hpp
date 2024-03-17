@@ -41,7 +41,7 @@ namespace BLE {
     namespace Server {
         class Sender {
 		private:
-			SemaphoreHandle_t sem { xSemaphoreCreateCounting(10, 10) };
+			//SemaphoreHandle_t sem { xSemaphoreCreateCounting(10, 10) };
         public:
             std::mutex mutex;
             Sender() = default;

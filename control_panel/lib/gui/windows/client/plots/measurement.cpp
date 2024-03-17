@@ -152,7 +152,7 @@ namespace GUI {
                     ImPlot::EndPlot();
                 }
 
-                if(ImGui::Button("Save")) {
+                if(ImGui::Button("Save", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                     static constexpr char graph_file_name[] { "measurement_periodic_raw" };
                     ns::RawDataGraph3D_File<graph_file_name, ns::Graph3D_Names::zfreq_raw_data, ns::Freq, double, ns::ValueNames::unix_timestamp> graph3D_file;
                     const size_t wished_size { periodic_vectors.freq.size() };
@@ -208,7 +208,7 @@ namespace GUI {
                     ImPlot::EndPlot();
                 }
 
-                if(ImGui::Button("Save")) {
+                if(ImGui::Button("Save", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                     static constexpr char graph_file_name[] { "measurement_periodic_calculated" };
                     ns::CalculatedGraph3D_File<graph_file_name, ns::Graph3D_Names::zfreq_calculated, ns::Freq, double, ns::ValueNames::unix_timestamp> graph3D_file;
                     const size_t wished_size { periodic_vectors.freq.size() };
@@ -265,7 +265,7 @@ namespace GUI {
                     ImPlot::EndPlot();
                 }
 
-                if(ImGui::Button("Save")) {
+                if(ImGui::Button("Save", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                     static constexpr char graph_file_name[] { "measurement_periodic_corrected_gon" };
                     ns::CorrectedGonGraph3D_File<graph_file_name, ns::Graph3D_Names::zfreq_corrected_gon, ns::Freq, double, ns::ValueNames::unix_timestamp> graph3D_file;
                     const size_t wished_size { periodic_vectors.freq.size() };
@@ -322,7 +322,7 @@ namespace GUI {
                     ImPlot::EndPlot();
                 }
 
-                if(ImGui::Button("Save")) {
+                if(ImGui::Button("Save", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                     static constexpr char graph_file_name[] { "measurement_periodic_corrected_alg" };
                     ns::CorrectedAlgGraph3D_File<graph_file_name, ns::Graph3D_Names::zfreq_corrected_alg, ns::Freq, double, ns::ValueNames::unix_timestamp> graph3D_file;
                     const size_t wished_size { periodic_vectors.freq.size() };
@@ -441,7 +441,7 @@ namespace GUI {
                     ImPlot::EndPlot();
                 }
 
-                if(ImGui::Button("Save")) {
+                if(ImGui::Button("Save", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                     static constexpr char graph_name[] { "measurement_single_raw" };
                     ns::RawDataGraph2D_File<graph_name, float, ns::ValueNames::freq> graph_file {};
                     ns::load_graph2D_file(
@@ -477,7 +477,7 @@ namespace GUI {
                     ImPlot::EndPlot();
                 }
 
-                if(ImGui::Button("Save")) {
+                if(ImGui::Button("Save", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                     static constexpr char graph_name[] { "measurement_single_calculated" };
                     ns::CalculatedGraph2D_File<graph_name, float, ns::ValueNames::freq> graph_file {};
                     ns::load_graph2D_file(
@@ -513,7 +513,7 @@ namespace GUI {
                     ImPlot::EndPlot();
                 }
 
-                if(ImGui::Button("Save")) {
+                if(ImGui::Button("Save", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                     static constexpr char graph_name[] { "measurement_single_corrected_gon" };
                     ns::CorrectedGonGraph2D_File<graph_name, float, ns::ValueNames::freq> graph_file {};
                     ns::load_graph2D_file(
@@ -549,7 +549,7 @@ namespace GUI {
                     ImPlot::EndPlot();
                 }
 
-                if(ImGui::Button("Save")) {
+                if(ImGui::Button("Save", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                     static constexpr char graph_name[] { "measurement_single_corrected_alg" };
                     ns::CorrectedAlgGraph2D_File<graph_name, float, ns::ValueNames::freq> graph_file {};
                     ns::load_graph2D_file(

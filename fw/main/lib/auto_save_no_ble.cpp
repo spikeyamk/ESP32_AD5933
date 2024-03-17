@@ -1,4 +1,3 @@
-#include <array>
 #include <chrono>
 #include <fstream>
 #include <thread>
@@ -11,20 +10,12 @@
 #include "util.hpp"
 #include "sd_card.hpp"
 #include "magic/events/results.hpp"
-#include "ad5933/config/config.hpp"
-#include "ad5933/calibration/calibration.hpp"
 #include "ad5933/measurement/measurement.hpp"
 #include "ad5933/driver/driver.hpp"
 #include "ad5933/extension/extension.hpp"
+#include "default.hpp"
 
 namespace AutoSaveNoBLE {
-    static constexpr AD5933::Config default_config {};
-    static constexpr std::array<AD5933::Calibration<float>, 3> default_calibration {
-        AD5933::Calibration<float> { 9806023.0f, -1.2272441387176514f },
-        AD5933::Calibration<float> { 9813488.0f, -1.2278409004211426f },
-        AD5933::Calibration<float> { 9811605.0f, -1.2277723550796509f },
-    };
-
     void button_check(std::jthread& worker, bool& done, bool& deep_sleep_blocked) {
 		Util::Mode::get_instance();
 		Trielo::trielo<Util::init_exit_auto_save_no_ble_button>();
@@ -64,8 +55,13 @@ namespace AutoSaveNoBLE {
 
 		AD5933::Driver driver { I2C::Bus::get_instance().active_device_handles.at(AD5933::SLAVE_ADDRESS) };
 		AD5933::Extension extension { driver };
+
 		if(Trielo::trielo<SD_Card::init>(Trielo::OkErrCode(0)) != 0) {
-			return;
+			Trielo::trielo<SD_Card::deinit>(Trielo::OkErrCode(0));
+			std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
+			if(Trielo::trielo<SD_Card::init>(Trielo::OkErrCode(0)) != 0) {
+				return;
+			}
 		}
 
 		while(done == false) {
@@ -124,8 +120,8 @@ namespace AutoSaveNoBLE {
 				return;
 			}
 
-			driver.program_all_registers(default_config.to_raw_array());
-			for(size_t i = 0, max_file_size = 64 * 1024; i < max_file_size && done == false; i += 16) {
+			driver.program_all_registers(Default::config.to_raw_array());
+			for(size_t i = 0; i < Default::max_file_size && done == false; i += sizeof(Magic::Events::Results::Auto::Record::Entry)) {
 				extension.reset();
 				extension.set_command(AD5933::Masks::Or::Ctrl::HB::Command::StandbyMode);
 				if(deep_sleep_blocked) {
@@ -152,7 +148,7 @@ namespace AutoSaveNoBLE {
 						std::cout << "BLE::Actions::Auto::Save: " << time_log.data() << std::endl;
 
 						const AD5933::Data data { raw_data.value() };
-						const AD5933::Measurement measurement { data, default_calibration[2] };
+						const AD5933::Measurement measurement { data, Default::calibration.back() };
 						const Magic::Events::Results::Auto::Record::Entry entry {
 							measurement.get_magnitude(),
 							measurement.get_phase(),

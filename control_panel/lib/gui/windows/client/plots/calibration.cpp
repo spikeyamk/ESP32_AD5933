@@ -102,7 +102,7 @@ namespace GUI {
                     ImPlot::EndPlot();
                 }
 
-                if(ImGui::Button("Save")) {
+                if(ImGui::Button("Save", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                     static constexpr char graph_name[] { "calibration_raw" };
                     ns::RawDataGraph2D_File<graph_name, float, ns::ValueNames::freq> graph_file {};
                     ns::load_graph2D_file(
@@ -137,7 +137,7 @@ namespace GUI {
                     ImPlot::EndPlot();
                 }
 
-                if(ImGui::Button("Save")) {
+                if(ImGui::Button("Save", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                     static constexpr char graph_name[] { "calibration_calculated" };
                     ns::CalculatedGraph2D_File<graph_name, float, ns::ValueNames::freq> graph_file {};
                     ns::load_graph2D_file(
@@ -172,7 +172,7 @@ namespace GUI {
                     ImPlot::EndPlot();
                 }
 
-                if(ImGui::Button("Save")) {
+                if(ImGui::Button("Save", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                     static constexpr char graph_name[] { "calibration_calibration" };
                     ns::CalibrationGraph2D_File<graph_name, float, ns::ValueNames::freq> graph_file {};
                     ns::load_graph2D_file(

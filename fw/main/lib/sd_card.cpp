@@ -27,10 +27,11 @@
 
 namespace SD_Card {
     namespace Pins {
-        static constexpr gpio_num_t miso { GPIO_NUM_15 };
-        static constexpr gpio_num_t mosi { GPIO_NUM_23 };
-        static constexpr gpio_num_t clk  { GPIO_NUM_22 };
-        static constexpr gpio_num_t cs   { GPIO_NUM_21 };
+        static const gpio_num_t miso  { GPIO_NUM_15 };
+        static const gpio_num_t mosi  { GPIO_NUM_19 };
+        static const gpio_num_t clk   { GPIO_NUM_22 };
+        static const gpio_num_t cs    { GPIO_NUM_18 };
+        static const gpio_num_t power { GPIO_NUM_21 };
     }
 
     sdmmc_card_t card {};
@@ -50,7 +51,7 @@ namespace SD_Card {
     static constexpr sdmmc_host_t host {
         .flags = SDMMC_HOST_FLAG_SPI | SDMMC_HOST_FLAG_DEINIT_ARG,
         .slot = SDSPI_DEFAULT_HOST,
-        .max_freq_khz = 20'000,
+        .max_freq_khz = SDMMC_FREQ_DEFAULT,
         .io_voltage = 3.3f,
         .init = &sdspi_host_init,
         .set_bus_width = NULL,
@@ -78,7 +79,7 @@ namespace SD_Card {
         .data5_io_num = -1,
         .data6_io_num = -1,
         .data7_io_num = -1,
-        .max_transfer_sz = 4092,
+        .max_transfer_sz = 0,
         .flags = SPICOMMON_BUSFLAG_MASTER,
         .isr_cpu_id = ESP_INTR_CPU_AFFINITY_0,
         .intr_flags = 0,
@@ -96,8 +97,23 @@ namespace SD_Card {
 
     sdspi_dev_handle_t handle;
 
+    void power_on() {
+		Trielo::trielo<gpio_set_direction>(Trielo::OkErrCode(ESP_OK), Pins::power, GPIO_MODE_OUTPUT);
+		Trielo::trielo<gpio_set_pull_mode>(Trielo::OkErrCode(ESP_OK), Pins::power, GPIO_PULLUP_ONLY);
+        Trielo::trielo<gpio_set_level>(Trielo::OkErrCode(ESP_OK), Pins::power, 1);
+    }
+
+    void power_off() {
+		Trielo::trielo<gpio_set_direction>(Trielo::OkErrCode(ESP_OK), Pins::power, GPIO_MODE_OUTPUT);
+		Trielo::trielo<gpio_set_pull_mode>(Trielo::OkErrCode(ESP_OK), Pins::power, GPIO_PULLDOWN_ONLY);
+        Trielo::trielo<gpio_set_level>(Trielo::OkErrCode(ESP_OK), Pins::power, 0);
+    }
+
     int init() {
-        if(Trielo::trielo<spi_bus_initialize>(Trielo::OkErrCode(ESP_OK), slot_config.host_id, &bus_cfg, SDSPI_DEFAULT_DMA)) {
+        Trielo::trielo<power_on>();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
+
+        if(Trielo::trielo<spi_bus_initialize>(Trielo::OkErrCode(ESP_OK), slot_config.host_id, &bus_cfg, SDSPI_DEFAULT_DMA) != ESP_OK) {
             return -1;
         }
 
@@ -177,25 +193,32 @@ namespace SD_Card {
     }
 
     esp_err_t deinit() {
-        esp_err_t ret { Trielo::trielo<esp_vfs_littlefs_unregister_sdmmc>(Trielo::OkErrCode(ESP_OK), &card) };
-        if(ret != ESP_OK) {
-            return ret;
+        esp_err_t ret { ESP_OK };
+
+        if(Trielo::trielo<esp_vfs_littlefs_unregister_sdmmc>(Trielo::OkErrCode(ESP_OK), &card) != ESP_OK) {
+            ret = 1;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-        ret = Trielo::trielo<sdspi_host_remove_device>(Trielo::OkErrCode(ESP_OK), handle);
-        if(ret != ESP_OK) {
-            return ret;
+        if(Trielo::trielo<sdspi_host_remove_device>(Trielo::OkErrCode(ESP_OK), handle) != ESP_OK) {
+            ret = 2;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        
+        if(Trielo::trielo<sdspi_host_deinit>(Trielo::OkErrCode(ESP_OK)) != ESP_OK) {
+            ret = 3;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-        ret = Trielo::trielo<sdspi_host_deinit>(Trielo::OkErrCode(ESP_OK));
-        if(ret != ESP_OK) {
-            return ret;
+        if(Trielo::trielo<spi_bus_free>(Trielo::OkErrCode(ESP_OK), slot_config.host_id) != ESP_OK) {
+            ret = 4;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-        return Trielo::trielo<spi_bus_free>(Trielo::OkErrCode(ESP_OK), slot_config.host_id);
+        Trielo::trielo<power_off>();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
+
+        return ret;
     }
 
     int create_test_file(const size_t size_bytes, const std::string_view& name) {

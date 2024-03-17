@@ -36,7 +36,6 @@ namespace GUI {
                 Downloading,
                 Removing,
                 Formatting,
-                CreatingTestFiles,
 
                 Error,
             };
@@ -86,8 +85,8 @@ namespace GUI {
             };
             Bytes bytes {};
             float progress_bar_fraction { 0.0f };
-            uint16_t tick_ms_min { 0 };
-            uint16_t tick_ms { 0 };
+            uint16_t tick_ms_min { 100 };
+            uint16_t tick_ms { tick_ms_min };
             uint16_t tick_ms_max { std::numeric_limits<uint16_t>::max() };
         public:
             struct Point {
@@ -115,13 +114,11 @@ namespace GUI {
             void list();
             void remove();
             void download();
-            void create_test_files();
             void format();
         private:
             static void remove_cb(Auto& self);
             static void list_cb(std::stop_token st, Auto& self);
             static void download_cb(std::stop_token st, Auto& self);
-            static void create_test_files_cb(std::stop_token st, Auto& self);
             static void format_cb(std::stop_token st, Auto& self);
         };
     }

@@ -28,35 +28,34 @@ namespace GUI {
             if(status == Status::Off) {
                 ImGui::SliderScalar("Tick [ms]", ImGuiDataType_U16, &tick_ms, &tick_ms_min, &tick_ms_max, "%u");
 
-                if(ImGui::Button("Start Sending")) {
+                if(ImGui::Button("Send", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                     start_sending();
                 }
 
-                if(ImGui::Button("Start Saving")) {
+                if(ImGui::Button("Save", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                     start_saving();
                 }
 
                 ImGui::BeginDisabled();
-                ImGui::Button("Stop");
+                ImGui::Button("Stop", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f));
                 ImGui::EndDisabled();
 
-                if(ImGui::Button("List")) {
+                ImGui::Separator();
+                ImGui::Text("Total: %llu [Bytes]\nUsed: %llu [Bytes]", bytes.total, bytes.used);
+
+                if(ImGui::Button("List", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                     list();
                 }
 
-                if(ImGui::Button("Format")) {
+                if(ImGui::Button("Format", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                     popup_shows = PopupShows::Format;
-                }
-
-                if(ImGui::Button("Create Test Files")) {
-                    create_test_files();
                 }
             } else {
                 ImGui::BeginDisabled();
 
                 ImGui::SliderScalar("Tick [ms]", ImGuiDataType_U16, &tick_ms, &tick_ms_min, &tick_ms_max, "%u");
 
-                ImGui::Button("Start Sending");
+                ImGui::Button("Send", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f));
                 if(status == Status::Sending) {
                     ImGui::SameLine();
                     ImGui::EndDisabled();
@@ -65,7 +64,7 @@ namespace GUI {
                     ImGui::BeginDisabled();
                 }
 
-                ImGui::Button("Start Saving");
+                ImGui::Button("Save", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f));
                 if(status == Status::Saving) {
                     ImGui::SameLine();
                     ImGui::EndDisabled();
@@ -76,24 +75,26 @@ namespace GUI {
 
                 if(status == Status::Saving || status == Status::Sending) {
                     ImGui::EndDisabled();
-                    if(ImGui::Button("Stop")) {
+                    if(ImGui::Button("Stop", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                         stop();
                     }
                     ImGui::BeginDisabled();
                 } else {
-                    ImGui::Button("Stop");
+                    ImGui::Button("Stop", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f));
                 }
 
-                ImGui::Button("List");
+                ImGui::Separator();
+                ImGui::Text("Total: %llu [Bytes]\nUsed: %llu [Bytes]", bytes.total, bytes.used);
+
+                ImGui::Button("List", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f));
                 if(status == Status::Listing) {
                     ImGui::EndDisabled();
                     ImGui::SameLine();
-                    const float scale { GUI::Boilerplate::get_scale() };
-                    Spinner::Spinner("ListingSpinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                    ImGui::ProgressBar(progress_bar_fraction);
                     ImGui::BeginDisabled();
                 }
 
-                ImGui::Button("Format");
+                ImGui::Button("Format", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f));
                 if(status == Status::Formatting) {
                     ImGui::EndDisabled();
                     ImGui::SameLine();
@@ -102,45 +103,34 @@ namespace GUI {
                     ImGui::BeginDisabled();
                 }
 
-                ImGui::Button("Create Test Files");
-                if(status == Status::CreatingTestFiles) {
-                    const float scale { GUI::Boilerplate::get_scale() };
-                    ImGui::EndDisabled();
-                    ImGui::SameLine();
-                    Spinner::Spinner("CreatingSpinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
-                    ImGui::BeginDisabled();
-                }
-
                 ImGui::EndDisabled();
             }
 
-            ImGui::Text("Total: %llu [Bytes]", bytes.total);
-            ImGui::Text("Used: %llu [Bytes]", bytes.used);
-
             if(selected.has_value() && status == Status::Off) {
-                if(ImGui::Button("Download")) {
-                    download();
-                }
-                if(ImGui::Button("Remove")) {
+                if(ImGui::Button("Remove", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                     popup_shows = PopupShows::Remove;
+                }
+
+                if(ImGui::Button("Download", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
+                    download();
                 }
             } else {
                 ImGui::BeginDisabled();
 
-                ImGui::Button("Download");
-                if(status == Status::Downloading) {
-                    ImGui::EndDisabled();
-                    ImGui::SameLine();
-                    ImGui::ProgressBar(progress_bar_fraction);
-                    ImGui::BeginDisabled();
-                }
-
-                ImGui::Button("Remove");
+                ImGui::Button("Remove", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f));
                 if(status == Status::Removing) {
                     ImGui::EndDisabled();
                     ImGui::SameLine();
                     const float scale { GUI::Boilerplate::get_scale() };
                     Spinner::Spinner("RemovingSpinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                    ImGui::BeginDisabled();
+                }
+
+                ImGui::Button("Download", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f));
+                if(status == Status::Downloading) {
+                    ImGui::EndDisabled();
+                    ImGui::SameLine();
+                    ImGui::ProgressBar(progress_bar_fraction);
                     ImGui::BeginDisabled();
                 }
 
@@ -207,12 +197,12 @@ namespace GUI {
 
             if(ImGui::BeginPopupModal(std::string("Format##").append(std::to_string(index)).c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
                 ImGui::Text("Are you sure you want to proceed?");
-                if(ImGui::Button("OK")) {
+                if(ImGui::Button("OK", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                     ImGui::CloseCurrentPopup();
                     format();
                 }
                 ImGui::SameLine();
-                if(ImGui::Button("Cancel")) {
+                if(ImGui::Button("Cancel", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                     ImGui::CloseCurrentPopup();
                 }
                 ImGui::EndPopup();
@@ -220,12 +210,12 @@ namespace GUI {
 
             if(ImGui::BeginPopupModal(std::string("Remove##").append(std::to_string(index)).c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
                 ImGui::Text("Are you sure you want to proceed?");
-                if(ImGui::Button("OK")) {
+                if(ImGui::Button("OK", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                     ImGui::CloseCurrentPopup();
                     remove();
                 }
                 ImGui::SameLine();
-                if(ImGui::Button("Cancel")) {
+                if(ImGui::Button("Cancel", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                     ImGui::CloseCurrentPopup();
                 }
                 ImGui::EndPopup();
@@ -240,7 +230,7 @@ namespace GUI {
 
                 if(ImGui::BeginPopupModal(popup.value().name.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
                     ImGui::Text(popup.value().content.c_str());
-                    if(ImGui::Button("OK")) {
+                    if(ImGui::Button("OK", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                         ImGui::CloseCurrentPopup();
                         popup = std::nullopt;
                     }
@@ -387,6 +377,7 @@ namespace GUI {
     namespace Windows {
         void Auto::list() {
             selected = std::nullopt;
+            progress_bar_fraction = 0.0f;
             std::jthread t1(list_cb, std::ref(*this));
             t1.detach();
             stop_source = t1.get_stop_source();
@@ -452,13 +443,6 @@ namespace GUI {
         void Auto::download() {
             progress_bar_fraction = 0.0f;
             std::jthread t1(download_cb, std::ref(*this));
-            t1.detach();
-            stop_source = t1.get_stop_source();
-        }
-
-        void Auto::create_test_files() {
-            selected = std::nullopt;
-            std::jthread t1(create_test_files_cb, std::ref(*this));
             t1.detach();
             stop_source = t1.get_stop_source();
         }
@@ -558,6 +542,8 @@ namespace GUI {
                 self.status = Status::Off;
             }
 
+            const float progress_bar_step { (1.0f / static_cast<float>(list_count.num_of_files)) / 2.0f };
+
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::List{} });
             std::vector<Magic::Events::Results::File::List> listed_paths;
             listed_paths.reserve(list_count.num_of_files);
@@ -594,6 +580,8 @@ namespace GUI {
                        listed_paths.push_back(event);
                     }
                 }, list_payload.value());
+
+                self.progress_bar_fraction += progress_bar_step;
             }
 
             std::vector<Magic::Events::Results::File::Size> listed_sizes;
@@ -633,6 +621,8 @@ namespace GUI {
                         listed_sizes.push_back(event);
                     }
                 }, size_payload.value());
+
+                self.progress_bar_fraction += progress_bar_step;
             }
 
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::End{} });
@@ -660,7 +650,7 @@ namespace GUI {
                         return;
                     }
 
-                    const auto download_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(60'000)) };
+                    const auto download_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(64'000)) };
                     if(download_payload.has_value() == false) {
                         std::cout << "ERROR: GUI::Windows::RecordManager::download_cb: failed to retreive download_payload: timeout\n";
                         self.status = Status::Error;
@@ -748,72 +738,11 @@ namespace GUI {
             }
         }
 
-        void Auto::create_test_files_cb(std::stop_token st, Auto& self) {
-            self.status = Status::CreatingTestFiles;
-            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Start{} });
-            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::CreateTestFiles{} });
-            const auto create_test_files_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(10 * 60'000)) };
-
-            if(create_test_files_payload.has_value() == false) {
-                std::cout << "GUI::Windows::RecordManager::create_test_files_cb: timeout\n";
-                self.status = Status::Error;
-                const std::optional<Popup> tmp_popup {
-                    {
-                        std::string("Timeout##").append(std::to_string(self.index)),
-                        "GUI::Windows::RecordManager::create_test_files_cb: timeout"
-                    }
-                };
-                self.popup = tmp_popup;
-                return;
-            }
-
-            if(variant_tester<Magic::Events::Results::File::CreateTestFiles>(create_test_files_payload.value()) == false) {
-                std::cout << "GUI::Windows::RecordManager::create_test_files_cb: create_test_files_payload: bad variant type\n";
-                self.status = Status::Error;
-                const std::optional<Popup> tmp_popup {
-                    {
-                        std::string("Bad variant type##").append(std::to_string(self.index)),
-                        "GUI::Windows::RecordManager::create_test_files_cb: create_test_files_payload: bad variant type"
-                    }
-                };
-                self.popup = tmp_popup;
-                return;
-            }
-
-            if(
-                [&]() {
-                    bool ret { false };
-                    std::visit([&](auto&& event) {
-                        if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Events::Results::File::CreateTestFiles>) {
-                            ret = event.status;
-                        }
-                    }, create_test_files_payload.value());
-                    return ret;
-                }() == false
-            ) {
-                std::cout << "GUI::Windows::RecordManager::create_test_files_cb: create_test_files_payload.value().status == false\n";
-                self.status = Status::Error;
-                const std::optional<Popup> tmp_popup {
-                    {
-                        std::string("Create Test Files##").append(std::to_string(self.index)),
-                        "GUI::Windows::RecordManager::create_test_files_cb: create_test_files_payload.value().status == false"
-                    }
-                };
-                self.popup = tmp_popup;
-                return;
-            }
-
-            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::End{} });
-
-            self.status = Status::Off;
-            self.list();
-        }
-
         void Auto::format_cb(std::stop_token st, Auto& self) {
             self.status = Status::Formatting;
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Start{} });
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Format{} });
-            const auto format_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(60'000)) };
+            const auto format_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(64'000)) };
 
             if(format_payload.has_value() == false) {
                 std::cout << "GUI::Windows::RecordManager::format_cb: timeout\n";

@@ -20,16 +20,19 @@
 #include "magic/events/commands.hpp"
 #include "magic/packets/outcoming.hpp"
 #include "sd_card.hpp"
-#include "ad5933/config/config.hpp"
 #include "ad5933/data/data.hpp"
-#include "ad5933/calibration/calibration.hpp"
 #include "ad5933/measurement/measurement.hpp"
+#include "default.hpp"
 
 namespace BLE {
 	namespace Actions {
 		void turn_on() {
 			TRIELO_EQ(Util::Blinky::get_instance().start(Util::Blinky::Mode::Single, std::chrono::milliseconds(50)), true);
-			Trielo::trielo<SD_Card::init>(Trielo::OkErrCode(0));
+			if(Trielo::trielo<SD_Card::init>(Trielo::OkErrCode(0)) != 0) {
+				Trielo::trielo<SD_Card::deinit>(Trielo::OkErrCode(0));
+				std::this_thread::sleep_for(std::chrono::milliseconds(10'000));
+				Trielo::trielo<SD_Card::init>(Trielo::OkErrCode(0));
+			}
 			Server::run();
 		};
 
@@ -343,13 +346,6 @@ namespace BLE {
 		}
 
 		namespace Auto {
-			static constexpr AD5933::Config default_config {};
-			static constexpr std::array<AD5933::Calibration<float>, 3> default_calibration {
-				AD5933::Calibration<float> { 9806023.0f, -1.2272441387176514f },
-				AD5933::Calibration<float> { 9813488.0f, -1.2278409004211426f },
-				AD5933::Calibration<float> { 9811605.0f, -1.2277723550796509f },
-			};
-			
 			void start_saving(const Magic::Events::Commands::Auto::Save& event, std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933) {
 				std::jthread t1([sender, &ad5933, sleep_ms = std::chrono::milliseconds(1 + event.tick_ms)](StopSources& stop_sources) {
 					static char buf[BUFSIZ];
@@ -414,8 +410,8 @@ namespace BLE {
 							return;
 						}
 
-						ad5933.driver.program_all_registers(default_config.to_raw_array());
-						for(size_t i = 0, max_file_size = 64 * 1024; stop_sources.save == true && i < max_file_size; i += 16) {
+						ad5933.driver.program_all_registers(Default::config.to_raw_array());
+						for(size_t i = 0; stop_sources.save == true && i < Default::max_file_size; i += sizeof(Magic::Events::Results::Auto::Record::Entry)) {
 							ad5933.reset();
 							ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::StandbyMode);
 							std::this_thread::sleep_for(sleep_ms);
@@ -434,7 +430,7 @@ namespace BLE {
 									std::cout << "BLE::Actions::Auto::Save: " << time_log.data() << std::endl;
 
 									const AD5933::Data data { raw_data.value() };
-									const AD5933::Measurement measurement { data, default_calibration[2] };
+									const AD5933::Measurement measurement { data, Default::calibration.back() };
 									const Magic::Events::Results::Auto::Record::Entry entry {
 										measurement.get_magnitude(),
 										measurement.get_phase(),
@@ -470,7 +466,7 @@ namespace BLE {
 				std::jthread t1([sender, &ad5933, sleep_ms = std::chrono::milliseconds(1 + event.tick_ms)](StopSources& stop_sources) {
 					std::cout << "BLE::Server::Actions::Auto::start_sending sleep_ms: " << sleep_ms << std::endl;
 					stop_sources.send = true;
-					ad5933.driver.program_all_registers(default_config.to_raw_array());
+					ad5933.driver.program_all_registers(Default::config.to_raw_array());
 					while(stop_sources.send == true) {
 						ad5933.reset();
 						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::StandbyMode);
@@ -484,7 +480,7 @@ namespace BLE {
 							const auto raw_data { ad5933.read_impe_data() };
 							if(raw_data.has_value() && ad5933.has_status_condition(AD5933::Masks::Or::Status::FreqSweepComplete)) {
 								const AD5933::Data data { raw_data.value() };
-								const AD5933::Measurement measurement { data, default_calibration[2] };
+								const AD5933::Measurement measurement { data, Default::calibration.back() };
 								const Magic::Events::Results::Auto::Point point {
 									.status = static_cast<uint8_t>(Magic::Events::Results::Auto::Point::Status::Valid),
 									.impedance = measurement.get_magnitude(),

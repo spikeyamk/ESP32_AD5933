@@ -48,12 +48,12 @@ namespace GUI {
 
         if(ImGui::BeginPopupModal("Quit")) {
             ImGui::Text("Some connections are still open.\nAre you sure you want to quit?");
-            if(ImGui::Button("OK")) {
+            if(ImGui::Button("OK", ImVec2(64.0f * Boilerplate::get_scale(), 0.0f))) {
                 ImGui::CloseCurrentPopup();
                 done = true;
             }
             ImGui::SameLine();
-            if(ImGui::Button("Cancel")) {
+            if(ImGui::Button("Cancel", ImVec2(64.0f * Boilerplate::get_scale(), 0.0f))) {
                 ImGui::CloseCurrentPopup();
             }
             ImGui::EndPopup();
