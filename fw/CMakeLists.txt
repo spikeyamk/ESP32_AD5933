@@ -10,4 +10,4 @@ set(EXTRA_COMPONENT_DIRS
 )
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(cpp_rtti)
+project(esp32_ad5933_fw)

@@ -1,9 +1,8 @@
 #pragma once
 
 namespace Magic {
-    namespace Packets {
-        namespace Tests {
-            int event_variant_map();
-        }
+    namespace Tests {
+        int commands_with_serde();
+        int results_with_serde();
     }
 }

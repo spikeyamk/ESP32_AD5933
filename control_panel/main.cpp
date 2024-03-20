@@ -3,6 +3,8 @@
 #include "ble_client/shm/parent/parent.hpp"
 #include "ble_client/child_main.hpp"
 
+#include "magic/events/results.hpp"
+
 int main(int argc, char* argv[]) {
     static const boost::filesystem::path self_path {
         []() {
@@ -25,8 +27,9 @@ int main(int argc, char* argv[]) {
         }()
     };
 
-    static constexpr std::string_view ble_client_magic_key { "okOvDRmWjEUErr3grKvWKpHw2Z0c8L5p6rjl5KT4HAoRGenjFFdPxegc43vCt8BR9ZdWJIPiaMaTYwhr6TMu4od0gHO3r1f7qTQ8pmaQtEm12SqT3IikKLdAsAI46N9E" };
-    if(argc > 1 && argv[1] == ble_client_magic_key) {
+    static constexpr std::string_view magic_key { "okOvDRmWjEUErr3grKvWKpHw2Z0c8L5p6rjl5KT4HAoRGenjFFdPxegc43vCt8BR9ZdWJIPiaMaTYwhr6TMu4od0gHO3r1f7qTQ8pmaQtEm12SqT3IikKLdAsAI46N9E" };
+    static constexpr std::string_view magic_key_env_name { "ESP32_AD5933_BLE_CLIENT_MAGIC" };
+    if(boost::this_process::environment().get(magic_key_env_name.data()) == magic_key) {
         return BLE_Client::child_main();
     }
 
@@ -48,7 +51,7 @@ int main(int argc, char* argv[]) {
 
     boost::process::child ble_client;
     try {
-        ble_client = std::move(boost::process::child { self_path, ble_client_magic_key.data() });
+        ble_client = std::move(boost::process::child { self_path, boost::process::env[magic_key_env_name.data()] = magic_key.data() });
     } catch(const boost::interprocess::interprocess_exception& e) {
         std::cout << "ERROR: GUI: Failed to open ble_client child process: exception: " << e.what() << std::endl;
         return EXIT_FAILURE;

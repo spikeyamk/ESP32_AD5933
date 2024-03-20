@@ -21,6 +21,11 @@ else()
 		list(APPEND MAGIC_SRCS lib/misc/gettimeofday.cpp)
 	endif()
 
+	if(NOT TARGET serde)
+		set(SERDE_DIR ${CMAKE_CURRENT_LIST_DIR}/../serde_wrapper/serde)
+		add_subdirectory(${SERDE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/serde)
+	endif()
+
 	add_library(magic STATIC
 		${MAGIC_SRCS}
 	)
@@ -29,12 +34,17 @@ else()
 		${CMAKE_CURRENT_LIST_DIR}/include
 	)
 
+    target_link_libraries(magic PUBLIC
+		serde
+	)
+
 	option(MAGIC_TEST "Enable Magic Tests" OFF)
 
 	if(MAGIC_TEST)
 		function(add_test_case TEST_NAME TEST_SOURCE)
 			add_executable(${TEST_NAME} ${TEST_SRCS} tests/${TEST_SOURCE})
 			target_include_directories(${TEST_NAME} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
+			target_link_libraries(${TEST_NAME} PRIVATE magic)
 			add_test(NAME MagicPackets::Tests::${TEST_NAME}
 					COMMAND ${TEST_NAME})
 		endfunction()
@@ -43,6 +53,7 @@ else()
 		set(TEST_SRCS 
 			${MAGIC_SRCS}
 		)
-		add_test_case(event_variant_map event_variant_map.cpp)
+		add_test_case(commands_with_serde commands_with_serde.cpp)
+		add_test_case(results_with_serde results_with_serde.cpp)
 	endif()
 endif()
