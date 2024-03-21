@@ -1,7 +1,8 @@
 if(ESP_PLATFORM)
-	idf_component_register(SRCS
-		tests/tests.cpp
-		INCLUDE_DIRS "include")
+	idf_component_register(
+		INCLUDE_DIRS "include"
+		REQUIRES serde_wrapper
+	)
 else()
 	cmake_minimum_required(VERSION 3.13)
 	project(magic_packets C CXX ASM)

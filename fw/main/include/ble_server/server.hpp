@@ -20,6 +20,7 @@
 #include "ad5933/masks/masks.hpp"
 #include "magic/events/commands.hpp"
 #include "magic/packets/outcoming.hpp"
+#include "magic/commands/commands.hpp"
 
 namespace BLE {
     namespace Server {
@@ -227,7 +228,7 @@ namespace BLE {
 		       	//state<States::sleeping>    + event<Events::wakeup>      		 / function{Actions::wakeup}      		   = state<States::advertise>,
 
 				state<States::connected>   + event<Events::disconnect>   		 / function{Actions::disconnect}   		   	            = state<States::advertise>,
-				state<States::connected>   + event<Magic::Events::Commands::Debug::Start>										        = state<States::debug>,
+				state<States::connected>   + event<Magic::Commands::Debug::Start>										        = state<States::debug>,
 				state<States::connected>   + event<Magic::Events::Commands::Sweep::Configure> / function{Actions::FreqSweep::configure} = state<States::FreqSweep::configuring>,
 				state<States::connected>   + event<Magic::Events::Commands::File::Start>									            = state<States::file>,
 				state<States::connected>   + event<Magic::Events::Commands::Auto::Save>	/ function{Actions::Auto::start_saving}         = state<States::Auto::save>,

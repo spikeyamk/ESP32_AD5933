@@ -9,6 +9,7 @@
 #include <array>
 #include <utility>
 #include <condition_variable>
+#include <variant>
 
 #include "led_strip.h"
 
@@ -167,5 +168,35 @@ namespace Util {
 	void deinit_enter_auto_save_no_ble_button();
 	void init_exit_auto_save_no_ble_button();
     void print_current_time();
+
+	template<size_t N>
+	void print_as_hex(const std::array<uint8_t, N>& array) {
+		std::printf("%s:\n", typeid(array).name());
+		std::for_each(array.begin(), array.end(), [index = static_cast<size_t>(0)](const uint8_t e) mutable {
+			if(index % 8 == 0) {
+				if(index == 0) {
+					std::printf("\t");
+				} else {
+					std::printf("\n\t");
+				}
+			}
+
+			std::printf("0x%02X, ", e);
+			index++;
+		});
+		std::printf("\n");
+	}
+
 	std::array<char, 28> get_record_file_name_zero_terminated();
+
+	template<typename T, typename ... Args>
+	constexpr bool test_variant(const std::variant<Args...>& variant) {
+		bool ret { false };
+		std::visit([&ret](auto&& e) {
+			if constexpr(std::is_same_v<std::decay_t<decltype(e)>, T>) {
+				ret = true;
+			}
+		}, variant);
+		return ret;
+	}
 }

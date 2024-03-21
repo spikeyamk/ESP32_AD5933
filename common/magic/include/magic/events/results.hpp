@@ -7,7 +7,7 @@
 #include <chrono>
 
 #include "magic/misc/gettimeofday.hpp"
-#include "magic/events/common.hpp"
+#include "magic/common.hpp"
 
 namespace Magic {
     namespace Events {

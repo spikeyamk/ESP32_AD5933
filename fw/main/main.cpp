@@ -5,10 +5,9 @@
 #include "ble_server/server.hpp"
 #include "auto_save_no_ble.hpp"
 #include "sd_card.hpp"
-#include <esp_sleep.h>
-#include <esp_log.h>
-#include <driver/gpio.h>
-#include <esp_err.h>
+
+#include "magic/commands/serializer.hpp"
+#include "magic/commands/deserializer.hpp"
 
 inline void run() {
 	while(I2C::Bus::get_instance().device_add(AD5933::SLAVE_ADDRESS) == false) {
@@ -40,7 +39,6 @@ inline void test() {
 	const auto finish { std::chrono::high_resolution_clock::now() };
 	std::cout << "std::chrono::duration_cast<std::chrono::milliseconds>(finish - start): " << std::chrono::duration_cast<std::chrono::milliseconds>(finish - start) << " ms" << std::endl;
 }
-
 
 extern "C" void app_main() {
 	run();

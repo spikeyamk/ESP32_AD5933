@@ -5,7 +5,7 @@
 #include <variant>
 #include <algorithm>
 
-#include "magic/events/common.hpp"
+#include "magic/common.hpp"
 
 namespace Magic {
     template<typename T_Variant, typename T_Map>

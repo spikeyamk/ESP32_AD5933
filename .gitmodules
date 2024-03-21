@@ -4,9 +4,6 @@
 [submodule "misc/imgui_sdl2/lib/SimpleBLE"]
 	path = control_panel/common/SimpleBLE
 	url = https://github.com/OpenBluetoothToolbox/SimpleBLE
-[submodule "main/lib/external/trielo_wrapper/trielo"]
-	path = common/trielo_wrapper/trielo
-	url = https://github.com/spikeyamk/trielo.git
 [submodule "main/lib/ble/server/lib/sml_wrapper/sml"]
 	path = common/sml_wrapper/sml
 	url = https://github.com/boost-ext/sml.git
@@ -31,3 +28,6 @@
 [submodule "gui/lib/extern/--force"]
 	path = control_panel/lib/extern/utfconv
 	url = https://github.com/spikeyamk/utfconv.git
+[submodule "common/serde_wrapper/serde"]
+	path = common/serde_wrapper/serde
+	url = https://github.com/spikeyamk/serde.git
