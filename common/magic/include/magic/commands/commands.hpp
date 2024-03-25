@@ -32,7 +32,9 @@ namespace Magic {
             struct Free {};
             struct ListCount {};
             struct List {};
-            struct Size {};
+            struct Size {
+                T_MaxDataSlice path { 0 };
+            };
             struct Remove {
                 T_MaxDataSlice path { 0 };
             };
@@ -46,7 +48,7 @@ namespace Magic {
 
         namespace Time {
             using UpdateTimeval = mytimeval64_t;
-            using UpdateTimezone = timezone;
+            using UpdateTimezone = struct timezone;
         }
 
         namespace Auto {

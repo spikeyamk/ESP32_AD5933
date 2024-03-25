@@ -15,7 +15,7 @@ namespace Magic {
                 static int inner_run() {
                     const HeadArg obj {};
                     const auto ser { Serializer::run(obj) };
-                    const auto de { Deserializer::run<HeadArg>(ser) };
+                    const auto de { Deserializer::template run<HeadArg>(ser) };
 
                     if(boost::pfr::eq(obj, de) == false) {
                         return -1 * static_cast<int>(sizeof...(TailArgs) + 1);

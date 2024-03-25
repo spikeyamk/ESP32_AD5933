@@ -12,6 +12,7 @@
 #include <variant>
 
 #include "led_strip.h"
+#include <driver/gpio.h>
 
 #include "ad5933/driver/driver.hpp"
 
@@ -28,8 +29,10 @@ namespace Util {
 		std::atomic<bool> blink_task_enable { false };
 		std::chrono::duration<int, std::milli> blink_time;
 		const std::chrono::milliseconds burst_timeout { 100 };
-		led_strip_handle_t led_strip_handle { nullptr };
 		std::optional<std::thread> thread_handle { std::nullopt };
+	public:
+		static constexpr gpio_num_t pin { GPIO_NUM_19 };
+	private:
 
 		// Making private Default constructor
 		Blinky() = default;
@@ -67,6 +70,7 @@ namespace Util {
 					led_state = !led_state;
 					std::this_thread::sleep_for(self.burst_timeout);
 				}
+
 				std::this_thread::sleep_for(std::chrono::milliseconds(self.blink_time));
 			}
 		}

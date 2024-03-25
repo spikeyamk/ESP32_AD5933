@@ -7,7 +7,7 @@
 #include <chrono>
 #include <string_view>
 
-#include "magic/packets/outcoming.hpp"
+#include "magic/commands/serializer.hpp"
 
 #include "ble_client/state_machines/connection/connection.hpp"
 
@@ -40,9 +40,7 @@ namespace BLE_Client {
                 bool write_body_composition_feature_successful(const BLE_Client::StateMachines::Connection::Events::write_body_composition_feature& event, std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm) {
                     try{
                         std::visit([esp32_ad5933](auto&& event) {
-                            using T_Decay = std::decay_t<decltype(event)>;
-                            const Magic::OutComingPacket<T_Decay> data_outcoming_packet { event };
-                            esp32_ad5933->write_body_composition_feature(data_outcoming_packet.get_raw_data());
+                            esp32_ad5933->write_body_composition_feature(Magic::Commands::Serializer::run(event));
                         }, event.event_variant);
                         return true;
                     } catch(const std::exception& e) {

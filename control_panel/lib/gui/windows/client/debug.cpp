@@ -6,8 +6,8 @@
 #include <fmt/color.h>
 #include "imgui_internal.h"
 
-#include "magic/events/commands.hpp"
-#include "magic/events/results.hpp"
+#include "magic/commands/commands.hpp"
+#include "magic/results/results.hpp"
 #include "misc/variant_tester.hpp"
 #include "ad5933/masks/masks.hpp"
 
@@ -201,8 +201,8 @@ namespace GUI {
         }
 
         bool Debug::dump() {
-            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Events::Commands::Debug::Start{} });
-            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Events::Commands::Debug::Dump{} });
+            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Commands::Debug::Start{} });
+            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Commands::Debug::Dump{} });
             const auto rx_payload { shm->active_devices[index].information->read_for(boost::posix_time::milliseconds(1'000)) };
 
             if(rx_payload.has_value() == false) {
@@ -210,19 +210,19 @@ namespace GUI {
                 return false;
             }
 
-            if(variant_tester<Magic::Events::Results::Debug::Dump>(rx_payload.value()) == false) {
+            if(variant_tester<Magic::Results::Debug::Dump>(rx_payload.value()) == false) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: GUI::Windows::Debug::dump: rx_payload: wrong variant type\n");
                 return false;
             }
 
             try {
                 std::visit([&](auto&& event) {
-                    if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Events::Results::Debug::Dump>) {
+                    if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Results::Debug::Dump>) {
                         debug_captures.update_captures(std::string(event.registers_data.begin(), event.registers_data.end()));
                     }
                 }, rx_payload.value());
 
-                shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Events::Commands::Debug::End{} });
+                shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Commands::Debug::End{} });
                 return true;
             } catch(const std::exception& e) {
     		    std::cout << "ERROR: GUI::Windows::Debug::dump: exception: " << e.what() << std::endl;
@@ -231,30 +231,30 @@ namespace GUI {
         }
 
         bool Debug::program_and_dump() {
-            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Events::Commands::Debug::Start{} });
+            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Commands::Debug::Start{} });
             shm->cmd.send(
                 BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     index,
-                    Magic::Events::Commands::Debug::Program{
+                    Magic::Commands::Debug::Program{
                         debug_captures.config.to_raw_array()
                     }
                 }
             );
-            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Events::Commands::Debug::End{} });
+            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Commands::Debug::End{} });
             return dump();
         }
 
         bool Debug::command_and_dump(const AD5933::Masks::Or::Ctrl::HB::Command command) {
-            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Events::Commands::Debug::Start{} });
+            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Commands::Debug::Start{} });
             shm->cmd.send(
                 BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     index,
-                    Magic::Events::Commands::Debug::CtrlHB{
+                    Magic::Commands::Debug::CtrlHB{
                         static_cast<uint8_t>(command)
                     }
                 }
             );
-            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Events::Commands::Debug::End{} });
+            shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Commands::Debug::End{} });
             return dump();
         }
     }

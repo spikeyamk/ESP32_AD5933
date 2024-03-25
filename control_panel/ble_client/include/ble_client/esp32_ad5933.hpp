@@ -15,7 +15,7 @@
 #include <stop_token>
 
 #include "ble_client/shm/child/child.hpp"
-#include "magic/events/common.hpp"
+#include "magic/common.hpp"
 
 namespace BLE_Client {
     class ESP32_AD5933 {

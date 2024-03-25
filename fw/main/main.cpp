@@ -6,9 +6,6 @@
 #include "auto_save_no_ble.hpp"
 #include "sd_card.hpp"
 
-#include "magic/commands/serializer.hpp"
-#include "magic/commands/deserializer.hpp"
-
 inline void run() {
 	while(I2C::Bus::get_instance().device_add(AD5933::SLAVE_ADDRESS) == false) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));

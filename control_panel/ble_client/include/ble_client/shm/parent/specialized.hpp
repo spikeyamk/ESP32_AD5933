@@ -1,12 +1,12 @@
 #pragma once
 
+#include <variant>
+
 #include "ble_client/shm/common/common.hpp"
 #include "ble_client/shm/common/channel_types/base.hpp"
 #include "ble_client/shm/common/channel_types/deque.hpp"
 #include "ble_client/state_machines/events_variant.hpp"
-#include "magic/events/results.hpp"
-
-#include "ble_client/shm/parent/specialized.hpp"
+#include "magic/results/results.hpp"
 
 namespace BLE_Client {
     namespace SHM {
@@ -19,9 +19,9 @@ namespace BLE_Client {
             void send_adapter(const BLE_Client::StateMachines::Adapter::Events::T_Variant& event);
         };
 
-        class NotifyChannelRX : public T_ScopedAttachChannel<Deque<Magic::Events::Results::Variant>>, public RX_DequeChannel<Magic::Events::Results::Variant> {
-            using RelationBase = T_ScopedAttachChannel<Deque<Magic::Events::Results::Variant>>;
-            using DirectionBase = RX_DequeChannel<Magic::Events::Results::Variant>;
+        class NotifyChannelRX : public T_ScopedAttachChannel<Deque<Magic::Results::Pack::apply_to<std::variant>>>, public RX_DequeChannel<Magic::Results::Pack::apply_to<std::variant>> {
+            using RelationBase = T_ScopedAttachChannel<Deque<Magic::Results::Pack::apply_to<std::variant>>>;
+            using DirectionBase = RX_DequeChannel<Magic::Results::Pack::apply_to<std::variant>>;
         public:
             NotifyChannelRX(const std::string_view& name, boost::interprocess::managed_shared_memory& segment);
         };

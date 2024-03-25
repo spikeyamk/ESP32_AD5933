@@ -4,7 +4,7 @@ if(ESP_PLATFORM)
 		REQUIRES serde_wrapper
 	)
 else()
-	cmake_minimum_required(VERSION 3.13)
+	cmake_minimum_required(VERSION 3.28)
 	project(magic_packets C CXX ASM)
 	set(CMAKE_C_STANDARD 11)
 	set(CMAKE_CXX_STANDARD 23)

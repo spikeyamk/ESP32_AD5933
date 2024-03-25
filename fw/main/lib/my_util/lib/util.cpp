@@ -48,11 +48,10 @@ namespace Util {
 
 	bool Blinky::stop() {
    		std::unique_lock lock(mutex);
-		if(thread_handle.has_value() && thread_handle.value().joinable() && led_strip_handle != nullptr) {
+		if(thread_handle.has_value() && thread_handle.value().joinable()) {
 			blink_task_enable.store(false);
 			thread_handle.value().join();
 			thread_handle = std::nullopt;
-			led_strip_del(led_strip_handle);
 			return true;
 		} else {
 			return false;
@@ -75,42 +74,15 @@ namespace Util {
 	}
 
 	void Blinky::toggle_led(const bool led_state) {
-		/* If the addressable LED is enabled */
 		if(led_state == false) {
-			/* Set the LED pixel using RGB from 0 (0%) to 255 (100%) for each color */
-			led_strip_set_pixel(led_strip_handle, 0, 0, 10, 0);
-			/* Refresh the strip to send data */
-			led_strip_refresh(led_strip_handle);
+			gpio_set_direction(pin, GPIO_MODE_OUTPUT);
 		} else {
-			/* Set all LED off to clear all pixels */
-			led_strip_clear(led_strip_handle);
+			gpio_reset_pin(pin);
 		}
 	}
 
 	void Blinky::configure_led() {
-		/* LED strip initialization with the GPIO and pixels number*/
-		led_strip_config_t strip_config = {
-			.strip_gpio_num = 8,
-			.max_leds = 1, // at least one LED on board
-			.led_pixel_format = LED_PIXEL_FORMAT_GRB,
-			.led_model = LED_MODEL_WS2812,
-			.flags {
-				.invert_out = 0
-			}
-		};
 
-		led_strip_rmt_config_t rmt_config = {
-			.clk_src = RMT_CLK_SRC_DEFAULT,
-			.resolution_hz = 10 * 1000 * 1000, // 10MHz
-			.mem_block_symbols = 0,
-			.flags {
-				.with_dma = false
-			}
-		};
-
-		led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip_handle);
-		// Set all LED off to clear all pixels
-		led_strip_clear(led_strip_handle);
 	}
 }
 
@@ -297,11 +269,6 @@ namespace Util {
 		return ss.str();
 	}
 
-	static void IRAM_ATTR wakeup_cb(void* arg) {
-		mode_status = Status::BLE;	
-		esp_restart();
-	}
-
 	static void IRAM_ATTR enter_auto_save_no_ble_cb(void* arg) {
 		Mode::get_instance().send_from_isr(Status::AutoSaveNoBLE);
 	}
@@ -310,19 +277,19 @@ namespace Util {
 		Mode::get_instance().send_from_isr(Status::BLE);
 	}
 
-	const gpio_num_t button { GPIO_NUM_4 };
+	const gpio_num_t button { GPIO_NUM_3 };
 
 	void init_button() {
 		Trielo::trielo<gpio_set_direction>(Trielo::OkErrCode(ESP_OK), button, GPIO_MODE_INPUT);
-		Trielo::trielo<gpio_set_pull_mode>(Trielo::OkErrCode(ESP_OK), button, GPIO_PULLDOWN_ONLY);
-		Trielo::trielo<gpio_set_intr_type>(Trielo::OkErrCode(ESP_OK), button, GPIO_INTR_POSEDGE);
+		Trielo::trielo<gpio_set_pull_mode>(Trielo::OkErrCode(ESP_OK), button, GPIO_PULLUP_ONLY);
+		Trielo::trielo<gpio_set_intr_type>(Trielo::OkErrCode(ESP_OK), button, GPIO_INTR_NEGEDGE);
 		Trielo::trielo<gpio_install_isr_service>(Trielo::OkErrCode(ESP_OK), 0);
 	}
 
 	void init_wakeup_button(Util::Status status) {
-		const gpio_num_t wakeup_button { GPIO_NUM_4 };
-		gpio_set_direction(wakeup_button, GPIO_MODE_INPUT);
-		ESP_ERROR_CHECK(esp_deep_sleep_enable_gpio_wakeup(BIT(wakeup_button), ESP_GPIO_WAKEUP_GPIO_HIGH));
+		gpio_set_direction(button, GPIO_MODE_INPUT);
+		Trielo::trielo<gpio_set_pull_mode>(Trielo::OkErrCode(ESP_OK), button, GPIO_PULLUP_ONLY);
+		ESP_ERROR_CHECK(esp_deep_sleep_enable_gpio_wakeup(BIT(button), ESP_GPIO_WAKEUP_GPIO_LOW));
 		esp_deep_sleep_start();
 		mode_status = status;
 		esp_restart();

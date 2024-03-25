@@ -208,7 +208,7 @@ namespace GUI {
             self.shm->cmd.send(
                 BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     self.index,
-                    Magic::Events::Commands::Sweep::Configure{
+                    Magic::Commands::Sweep::Configure{
                         self.config.to_raw_array()
                     }
                 }
@@ -241,7 +241,7 @@ namespace GUI {
             self.shm->cmd.send(
                 BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     self.index,
-                    Magic::Events::Commands::Sweep::Run{}
+                    Magic::Commands::Sweep::Run{}
                 }
             );
 
@@ -266,7 +266,7 @@ namespace GUI {
                 bool is_valid_data = false;
                 std::visit([&is_valid_data, &tmp_raw_calibration, &tmp_calibration, impedance](auto&& event) {
                     using T_Decay = std::decay_t<decltype(event)>;
-                    if constexpr(std::is_same_v<T_Decay, Magic::Events::Results::Sweep::ValidData>) {
+                    if constexpr(std::is_same_v<T_Decay, Magic::Results::Sweep::ValidData>) {
                         std::array<uint8_t, 4> raw_array;
                         std::copy(event.real_imag_registers_data.begin(), event.real_imag_registers_data.end(), raw_array.begin());
 
@@ -295,28 +295,28 @@ namespace GUI {
             self.shm->cmd.send(
                 BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     self.index,
-                    Magic::Events::Commands::Sweep::End{}
+                    Magic::Commands::Sweep::End{}
                 }
             );
 
             self.shm->cmd.send(
                 BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     self.index,
-                    Magic::Events::Commands::Debug::Start{}
+                    Magic::Commands::Debug::Start{}
                 }
             );
 
             self.shm->cmd.send(
                 BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     self.index,
-                    Magic::Events::Commands::Debug::CtrlHB{ static_cast<uint8_t>(AD5933::Masks::Or::Ctrl::HB::Command::PowerDownMode) }
+                    Magic::Commands::Debug::CtrlHB{ static_cast<uint8_t>(AD5933::Masks::Or::Ctrl::HB::Command::PowerDownMode) }
                 }
             );
 
             self.shm->cmd.send(
                 BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     self.index,
-                    Magic::Events::Commands::Debug::End{}
+                    Magic::Commands::Debug::End{}
                 }
             );
 

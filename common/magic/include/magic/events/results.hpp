@@ -422,7 +422,6 @@ namespace Magic {
                     Auto::Timeval{},
                     Auto::Point{},
                 };
-                static constexpr size_t afdasfadfads { sizeof(std::array<Variant, 12>) };
             };
         }
     }

@@ -27,11 +27,11 @@
 
 namespace SD_Card {
     namespace Pins {
-        static const gpio_num_t miso  { GPIO_NUM_15 };
-        static const gpio_num_t mosi  { GPIO_NUM_19 };
-        static const gpio_num_t clk   { GPIO_NUM_22 };
-        static const gpio_num_t cs    { GPIO_NUM_18 };
-        static const gpio_num_t power { GPIO_NUM_21 };
+        static const gpio_num_t miso  { GPIO_NUM_1  };
+        static const gpio_num_t mosi  { GPIO_NUM_10 };
+        static const gpio_num_t clk   { GPIO_NUM_8  };
+        static const gpio_num_t cs    { GPIO_NUM_11 };
+        static const gpio_num_t nsden { GPIO_NUM_4  };
     }
 
     sdmmc_card_t card {};
@@ -98,15 +98,12 @@ namespace SD_Card {
     sdspi_dev_handle_t handle;
 
     void power_on() {
-		Trielo::trielo<gpio_set_direction>(Trielo::OkErrCode(ESP_OK), Pins::power, GPIO_MODE_OUTPUT);
-		Trielo::trielo<gpio_set_pull_mode>(Trielo::OkErrCode(ESP_OK), Pins::power, GPIO_PULLUP_ONLY);
-        Trielo::trielo<gpio_set_level>(Trielo::OkErrCode(ESP_OK), Pins::power, 1);
+		Trielo::trielo<gpio_reset_pin>(Trielo::OkErrCode(ESP_OK), Pins::nsden);
     }
 
     void power_off() {
-		Trielo::trielo<gpio_set_direction>(Trielo::OkErrCode(ESP_OK), Pins::power, GPIO_MODE_OUTPUT);
-		Trielo::trielo<gpio_set_pull_mode>(Trielo::OkErrCode(ESP_OK), Pins::power, GPIO_PULLDOWN_ONLY);
-        Trielo::trielo<gpio_set_level>(Trielo::OkErrCode(ESP_OK), Pins::power, 0);
+		Trielo::trielo<gpio_reset_pin>(Trielo::OkErrCode(ESP_OK), Pins::nsden);
+		Trielo::trielo<gpio_set_direction>(Trielo::OkErrCode(ESP_OK), Pins::nsden, GPIO_MODE_OUTPUT);
     }
 
     int init() {

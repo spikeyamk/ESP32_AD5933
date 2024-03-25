@@ -1,7 +1,9 @@
 #include <trielo/trielo.hpp>
 
 #include "magic/packets/incoming.hpp"
-#include "magic/events/results.hpp"
+#include "magic/commands/serializer.hpp"
+#include "magic/results/deserializer.hpp"
+
 #include "ble_client/esp32_ad5933.hpp"
 
 namespace BLE_Client {
@@ -51,20 +53,13 @@ namespace BLE_Client {
     }
 
     void ESP32_AD5933::update_time() {
-        Magic::Events::Commands::Time::UpdateTimeval timeval_command;
-        Magic::Events::Commands::Time::UpdateTimezone timezone_command;
-        gettimeofday(&timeval_command.tv, &timezone_command.tz);
-        const auto timeval_command_serialized { timeval_command.to_raw_data() };
+        Magic::Commands::Time::UpdateTimeval update_timeval;
+        gettimeofday(&update_timeval, nullptr);
+        const auto update_timeval_ser { Magic::Commands::Serializer::run(update_timeval) };
         peripheral.write_request(
             service.uuid(),
             service.time_update_control_point.uuid(),
-            std::string(timeval_command_serialized.begin(), timeval_command_serialized.end())
-        );
-        const auto timezone_command_serialized { timezone_command.to_raw_data() };
-        peripheral.write_request(
-            service.uuid(),
-            service.time_update_control_point.uuid(),
-            std::string(timezone_command_serialized.begin(), timezone_command_serialized.end())
+            std::string(update_timeval_ser.begin(), update_timeval_ser.end())
         );
     }
 
@@ -76,10 +71,9 @@ namespace BLE_Client {
             [&](SimpleBLE::ByteArray captured_payload) {
                 Magic::T_MaxPacket raw_bytes;
                 std::copy(captured_payload.begin(), captured_payload.end(), raw_bytes.begin());
-                const Magic::InComingPacket<Magic::Events::Results::Variant, Magic::Events::Results::Map> incoming_packet { raw_bytes };
-                const auto result_event_variant_opt { incoming_packet.to_event_variant() };
-                if(result_event_variant_opt.has_value()) {
-                    channels.body_composition_measurement->send(result_event_variant_opt.value());
+                const auto decoded { Magic::Results::Deserializer::decode(raw_bytes.begin(), raw_bytes.begin() + captured_payload.size()) };
+                if(decoded.has_value()) {
+                    channels.body_composition_measurement->send(decoded.value());
                 }
             }
         );
@@ -90,10 +84,9 @@ namespace BLE_Client {
             [&](SimpleBLE::ByteArray captured_payload) {
                 Magic::T_MaxPacket raw_bytes;
                 std::copy(captured_payload.begin(), captured_payload.end(), raw_bytes.begin());
-                const Magic::InComingPacket<Magic::Events::Results::Variant, Magic::Events::Results::Map> incoming_packet { raw_bytes };
-                const auto result_event_variant_opt { incoming_packet.to_event_variant() };
-                if(result_event_variant_opt.has_value()) {
-                    channels.hid_information->send(result_event_variant_opt.value());
+                const auto decoded { Magic::Results::Deserializer::decode(raw_bytes.begin(), raw_bytes.begin() + captured_payload.size()) };
+                if(decoded.has_value()) {
+                    channels.hid_information->send(decoded.value());
                 }
             }
         );

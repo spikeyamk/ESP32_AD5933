@@ -10,7 +10,7 @@
 #include "imgui.h"
 
 #include "ble_client/shm/parent/parent.hpp"
-#include "magic/events/results.hpp"
+#include "magic/results/results.hpp"
 #include "gui/windows/client/lock.hpp"
 
 namespace GUI {
@@ -74,8 +74,8 @@ namespace GUI {
             std::optional<Popup> popup { std::nullopt };
         private:
             struct ListTable {
-                std::vector<Magic::Events::Results::File::List> paths;
-                std::vector<Magic::Events::Results::File::Size> sizes;
+                std::vector<Magic::Results::File::List> paths;
+                std::vector<Magic::Results::File::Size> sizes;
             };
             ListTable list_table {};
             std::optional<size_t> selected { std::nullopt };
@@ -91,7 +91,7 @@ namespace GUI {
         public:
             struct Point {
                 double time;
-                Magic::Events::Results::Auto::Point auto_meas;
+                Magic::Results::Auto::Point auto_meas;
             };
             std::queue<Point> send_points;
             std::queue<Point> save_points;

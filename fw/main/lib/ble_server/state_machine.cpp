@@ -41,7 +41,7 @@ namespace BLE {
 				Util::Mode::get_instance();
 				Util::init_enter_auto_save_no_ble_button();
 
-				for(size_t i = 0, timeout_ms = 5'000; i <= timeout_ms && gpio_get_level(Util::button) == 1; i++) {
+				for(size_t i = 0, timeout_ms = 5'000; i <= timeout_ms && gpio_get_level(Util::button) == 0; i++) {
 					std::this_thread::sleep_for(std::chrono::milliseconds(1));
 					if(i == timeout_ms) {
 						Util::mode_status = Util::Status::BLE;
@@ -52,7 +52,7 @@ namespace BLE {
 
 				while(1) {
 					auto status { Util::Mode::get_instance().read() };
-					for(size_t i = 0, timeout_ms = 5'000; i <= timeout_ms && gpio_get_level(Util::button) == 1; i++) {
+					for(size_t i = 0, timeout_ms = 5'000; i <= timeout_ms && gpio_get_level(Util::button) == 0; i++) {
 						if(i == timeout_ms) {
 							Util::Blinky::get_instance().stop();
 							Trielo::trielo<SD_Card::deinit>();
@@ -106,13 +106,12 @@ namespace BLE {
 				std::unique_lock lock(sender->mutex);
 				const auto ret { ad5933.driver.dump_all_registers() };
 				if(ret.has_value()) {
-					const Magic::Events::Results::Debug::Dump dump_event { ret.value() };
-					const Magic::OutComingPacket<Magic::Events::Results::Debug::Dump> dump_packet { dump_event };
-					sender->notify_hid_information(dump_packet);
+					const Magic::Results::Debug::Dump dump_event { ret.value() };
+					sender->notify_hid_information(dump_event);
 				}
 			}
 
-			void program(AD5933::Extension &ad5933, const Magic::Events::Commands::Debug::Program& program_event) {
+			void program(AD5933::Extension &ad5933, const Magic::Commands::Debug::Program& program_event) {
 				std::for_each(program_event.registers_data.end(), program_event.registers_data.end(), [index = 0](const auto e) mutable {
 					if(index % 8 == 0){
 						std::printf("\n");
@@ -125,14 +124,14 @@ namespace BLE {
 				ad5933.driver.block_write_to_register<12, AD5933::RegAddrs::RW::ControlHB>(program_event.registers_data);
 			}
 
-			void command(AD5933::Extension &ad5933, const Magic::Events::Commands::Debug::CtrlHB &ctrl_HB_event) {
+			void command(AD5933::Extension &ad5933, const Magic::Commands::Debug::CtrlHB &ctrl_HB_event) {
 				ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command(ctrl_HB_event.register_data));
 			}
 		}
 
 		namespace FreqSweep {
 			//static void configure(bool &processing, AD5933::Extension &ad5933, const Events::FreqSweep::configure &configure_event, boost::sml::back::process<Events::FreqSweep::Private::configure_complete> process_event) {
-			void configure(std::atomic<bool> &processing, AD5933::Extension &ad5933, const Magic::Events::Commands::Sweep::Configure &configure_event) {
+			void configure(std::atomic<bool> &processing, AD5933::Extension &ad5933, const Magic::Commands::Sweep::Configure &configure_event) {
 				processing = true;
 				std::for_each(configure_event.registers_data.end(), configure_event.registers_data.end(), [index = 0](const auto e) mutable {
 					if(index % 8 == 0){
@@ -162,9 +161,8 @@ namespace BLE {
 						}
 						const auto data { ad5933.read_impe_data() };
 						if(data.has_value()) {
-							const Magic::Events::Results::Sweep::ValidData valid_data_event { data.value() };
-							const Magic::OutComingPacket<Magic::Events::Results::Sweep::ValidData> valid_data_packet { valid_data_event };
-							sender->notify_hid_information(valid_data_packet);
+							const Magic::Results::Sweep::ValidData valid_data_event { data.value() };
+							sender->notify_hid_information(valid_data_event);
 						}
 						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::IncFreq);
 					} while(ad5933.has_status_condition(AD5933::Masks::Or::Status::FreqSweepComplete) == false && stop_sources.run);
@@ -185,9 +183,8 @@ namespace BLE {
 				size_t used_bytes { 0 };
 				if(Trielo::trielo<esp_littlefs_sdmmc_info>(Trielo::OkErrCode(ESP_OK), &SD_Card::card, &total_bytes, &used_bytes) == ESP_OK) {
 					std::cout << "BLE::Actions::File::free: \n\ttotal_bytes: " << total_bytes << "\n\tused_bytes: " << used_bytes << std::endl;
-					const Magic::Events::Results::File::Free file_free_event { .used_bytes = used_bytes, .total_bytes = total_bytes };
-					const Magic::OutComingPacket<Magic::Events::Results::File::Free> file_free_packet { file_free_event };
-					sender->notify_hid_information(file_free_packet);
+					const Magic::Results::File::Free file_free_event { .used_bytes = used_bytes, .total_bytes = total_bytes };
+					sender->notify_hid_information(file_free_event);
 				}
 			}
 
@@ -213,9 +210,8 @@ namespace BLE {
 				std::thread([](std::shared_ptr<Server::Sender> sender) {
 					const uint64_t num_of_files = get_num_of_files();
 					std::cout << "BLE::Actions::File::list_count: \n\tnum_of_files: " << num_of_files << std::endl;
-					const Magic::Events::Results::File::ListCount list_count_event { .num_of_files = num_of_files };
-					const Magic::OutComingPacket<Magic::Events::Results::File::ListCount> list_count_packet { list_count_event };
-					sender->notify_hid_information(list_count_packet);
+					const Magic::Results::File::ListCount list_count_event { .num_of_files = num_of_files };
+					sender->notify_hid_information(list_count_event);
 
 				}, sender).detach();
 			}
@@ -233,15 +229,14 @@ namespace BLE {
 							const std::string_view filepath (entry->d_name, sizeof(Magic::T_MaxDataSlice));
 							Magic::T_MaxDataSlice tmp_path;
 							std::copy(filepath.begin(), filepath.end(), tmp_path.begin());
-							const Magic::Events::Results::File::List list_event { .path = tmp_path };
-							const Magic::OutComingPacket<Magic::Events::Results::File::List> list_packet { list_event };
-							sender->notify_hid_information(list_packet);
+							const Magic::Results::File::List list_event { .path = tmp_path };
+							sender->notify_hid_information(list_event);
 						}
 					}
 				}, sender).detach();
 			}
 
-			std::optional<uint64_t> get_num_of_bytes(const Magic::Events::Commands::File::Size& event) {
+			std::optional<uint64_t> get_num_of_bytes(const Magic::Commands::File::Size& event) {
 				struct stat st;
 				std::array<char, SD_Card::mount_point_prefix.size() + Magic::MTU> path { 0 };
 				std::copy(SD_Card::mount_point_prefix.begin(), SD_Card::mount_point_prefix.end(), path.begin());
@@ -252,29 +247,27 @@ namespace BLE {
 				return static_cast<uint64_t>(st.st_size);
 			}
 
-			void size(const Magic::Events::Commands::File::Size& event, std::shared_ptr<Server::Sender> &sender) {
+			void size(const Magic::Commands::File::Size& event, std::shared_ptr<Server::Sender> &sender) {
 				const auto num_of_bytes { get_num_of_bytes(event) };
 				if(num_of_bytes.has_value() == false) {
 					return;
 				}
-				const Magic::Events::Results::File::Size size_event {
+				const Magic::Results::File::Size size_event {
 					.num_of_bytes = num_of_bytes.value()
 				};
-				const Magic::OutComingPacket<Magic::Events::Results::File::Size> size_packet { size_event };
-				sender->notify_hid_information(size_packet);
+				sender->notify_hid_information(size_event);
 			}
 
-			void remove(const Magic::Events::Commands::File::Remove& event, std::shared_ptr<Server::Sender> &sender) {
+			void remove(const Magic::Commands::File::Remove& event, std::shared_ptr<Server::Sender> &sender) {
 				std::array<char, SD_Card::mount_point_prefix.size() + Magic::MTU> path { 0 };
 				std::copy(SD_Card::mount_point_prefix.begin(), SD_Card::mount_point_prefix.end(), path.begin());
 				std::copy(event.path.begin(), event.path.end(), path.begin() + SD_Card::mount_point_prefix.size());
-				const Magic::Events::Results::File::Remove remove_event { .status = Trielo::trielo<unlink>(Trielo::OkErrCode(0), path.data()) == 0 };
-				const Magic::OutComingPacket<Magic::Events::Results::File::Remove> remove_packet { remove_event };
-				sender->notify_hid_information(remove_packet);
+				const Magic::Results::File::Remove remove_event { .status = Trielo::trielo<unlink>(Trielo::OkErrCode(0), path.data()) == 0 };
+				sender->notify_hid_information(remove_event);
 			}
 
-			void download(const Magic::Events::Commands::File::Download& event, std::shared_ptr<Server::Sender> &sender, StopSources& stop_sources) {
-				std::thread([](const Magic::Events::Commands::File::Download event, std::shared_ptr<Server::Sender> sender, StopSources& stop_sources) {
+			void download(const Magic::Commands::File::Download& event, std::shared_ptr<Server::Sender> &sender, StopSources& stop_sources) {
+				std::thread([](const Magic::Commands::File::Download event, std::shared_ptr<Server::Sender> sender, StopSources& stop_sources) {
 					stop_sources.download = true;
 					std::array<char, SD_Card::mount_point_prefix.size() + Magic::MTU> path { 0 };
 					std::copy(SD_Card::mount_point_prefix.begin(), SD_Card::mount_point_prefix.end(), path.begin());
@@ -289,9 +282,8 @@ namespace BLE {
 					Magic::T_MaxDataSlice tmp_slice { 0 };
 					const auto start { std::chrono::high_resolution_clock::now() };
 					while(stop_sources.download && std::fread(tmp_slice.data(), 1, tmp_slice.size(), file) != 0) {
-						const Magic::Events::Results::File::Download download_event { .slice = tmp_slice };
-						const Magic::OutComingPacket<Magic::Events::Results::File::Download> download_packet { download_event };
-						while(sender->notify_hid_information(download_packet) == false) {
+						const Magic::Results::File::Download download_event { .slice = tmp_slice };
+						while(sender->notify_hid_information(download_event) == false) {
 							std::this_thread::sleep_for(std::chrono::milliseconds(1));
 						}
 					}
@@ -299,19 +291,16 @@ namespace BLE {
 					std::fclose(file);
 					const auto finish { std::chrono::high_resolution_clock::now() };
 					std::cout << "BLE::Actions::download: finish - start: " << std::chrono::duration_cast<std::chrono::seconds>(finish - start) << std::endl;
-					std::cout << "BLE::Actions::download: estimated speed: " << get_num_of_bytes(Magic::Events::Commands::File::Size{ event.path }).value_or(0) / std::chrono::duration_cast<std::chrono::seconds>(finish - start).count() << " bytes/s\n";
+					std::cout << "BLE::Actions::download: estimated speed: " << get_num_of_bytes(Magic::Commands::File::Size{ event.path }).value_or(0) / std::chrono::duration_cast<std::chrono::seconds>(finish - start).count() << " bytes/s\n";
 				}, event, sender, std::ref(stop_sources)).detach();
 			}
 
 			void format(std::shared_ptr<Server::Sender> &sender) {
 				std::thread([](std::shared_ptr<Server::Sender> sender) {
-					const Magic::Events::Results::File::Format format_event {
+					const Magic::Results::File::Format format_event {
 						.status = Trielo::trielo<SD_Card::format>(Trielo::OkErrCode(0)) == 0,
 					};
-					const Magic::OutComingPacket<Magic::Events::Results::File::Format> format_packet {
-						format_event
-					};
-					sender->notify_hid_information(format_packet);
+					sender->notify_hid_information(format_event);
 				}, sender).detach();
 			}
 
@@ -327,15 +316,11 @@ namespace BLE {
 					//Trielo::trielo<SD_Card::create_test_file>(Trielo::OkErrCode(0), 64 * 1024, "64kB");
 					//Trielo::trielo<SD_Card::create_test_file>(Trielo::OkErrCode(0), 128 * 1024, "128kB");
 
-					const Magic::Events::Results::File::CreateTestFiles create_test_files_event {
+					const Magic::Results::File::CreateTestFiles create_test_files_event {
 						.status = ret == 0
 					};
 
-					const Magic::OutComingPacket<Magic::Events::Results::File::CreateTestFiles> create_test_files_packet {
-						create_test_files_event
-					};
-
-					sender->notify_hid_information(create_test_files_packet);
+					sender->notify_hid_information(create_test_files_event);
 				}, sender).detach();
 			}
 
@@ -346,7 +331,7 @@ namespace BLE {
 		}
 
 		namespace Auto {
-			void start_saving(const Magic::Events::Commands::Auto::Save& event, std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933) {
+			void start_saving(const Magic::Commands::Auto::Save& event, std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933) {
 				std::jthread t1([sender, &ad5933, sleep_ms = std::chrono::milliseconds(1 + event.tick_ms)](StopSources& stop_sources) {
 					static char buf[BUFSIZ];
 					std::cout << "BLE::Server::Actions::Auto::start_saving sleep_ms: " << sleep_ms << std::endl;
@@ -462,7 +447,7 @@ namespace BLE {
 				t1.detach();
 			}
 
-			void start_sending(const Magic::Events::Commands::Auto::Send& event, std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933) {
+			void start_sending(const Magic::Commands::Auto::Send& event, std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933) {
 				std::jthread t1([sender, &ad5933, sleep_ms = std::chrono::milliseconds(1 + event.tick_ms)](StopSources& stop_sources) {
 					std::cout << "BLE::Server::Actions::Auto::start_sending sleep_ms: " << sleep_ms << std::endl;
 					stop_sources.send = true;
@@ -481,13 +466,13 @@ namespace BLE {
 							if(raw_data.has_value() && ad5933.has_status_condition(AD5933::Masks::Or::Status::FreqSweepComplete)) {
 								const AD5933::Data data { raw_data.value() };
 								const AD5933::Measurement measurement { data, Default::calibration.back() };
-								const Magic::Events::Results::Auto::Point point {
-									.status = static_cast<uint8_t>(Magic::Events::Results::Auto::Point::Status::Valid),
+								const Magic::Results::Auto::Point point {
+									.status = Magic::Results::Auto::Point::Status::Valid,
+									.config = Magic::Results::Auto::Point::Config::Default,
 									.impedance = measurement.get_magnitude(),
 									.phase = measurement.get_phase(),
 								};
-								const Magic::T_OutComingPacket<Magic::Events::Results::Auto::Point, 11> point_packet { point };
-								if(sender->notify_body_composition_measurement(point_packet) == false) {
+								if(sender->notify_body_composition_measurement(point) == false) {
 									ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::PowerDownMode);
 									return;
 								}

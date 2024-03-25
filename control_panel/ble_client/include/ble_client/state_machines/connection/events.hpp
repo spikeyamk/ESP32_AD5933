@@ -5,8 +5,8 @@
 #include <array>
 #include <cstdint>
 
-#include "magic/events/common.hpp"
-#include "magic/events/commands.hpp"
+#include "magic/common.hpp"
+#include "magic/commands/commands.hpp"
 
 namespace BLE_Client {
     namespace StateMachines {
@@ -17,7 +17,7 @@ namespace BLE_Client {
                 };
                 struct write_body_composition_feature{
                     size_t index;
-                    Magic::Events::Commands::Variant event_variant;
+                    Magic::Commands::Pack::apply_to<std::variant> event_variant;
                 };
                 using T_Variant = std::variant<disconnect, write_body_composition_feature>;
             }

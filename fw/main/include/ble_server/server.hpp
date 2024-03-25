@@ -14,13 +14,12 @@
 
 #include <boost/sml.hpp>
 #include <freertos/semphr.h>
-#include "driver/i2c_master.h"
+#include <driver/i2c_master.h>
 
 #include "ad5933/extension/extension.hpp"
 #include "ad5933/masks/masks.hpp"
-#include "magic/events/commands.hpp"
-#include "magic/packets/outcoming.hpp"
-#include "magic/commands/commands.hpp"
+#include "magic/commands/deserializer.hpp"
+#include "magic/results/serializer.hpp"
 
 namespace BLE {
     namespace Server {
@@ -49,14 +48,14 @@ namespace BLE {
 
 			template<typename T_OutComingPacket>
 			inline bool notify_hid_information(const T_OutComingPacket& event) {
-				auto tmp_array { event.get_raw_data() };
+				auto tmp_array { Magic::Results::Serializer::run(event) };
 				//xSemaphoreTake(sem, portMAX_DELAY);
 				return BLE::Server::notify_hid_information(std::span(tmp_array.begin(), tmp_array.end()));
             }
 
 			template<typename T_OutComingPacket>
 			inline bool notify_body_composition_measurement(const T_OutComingPacket& event) {
-				auto tmp_array { event.get_raw_data() };
+				auto tmp_array { Magic::Results::Serializer::run(event) };
 				//xSemaphoreTake(sem, portMAX_DELAY);
 				return BLE::Server::notify_body_composition_measurement(std::span(tmp_array.begin(), tmp_array.end()));
             }
@@ -136,13 +135,13 @@ namespace BLE {
 			void start();
 			void end();
 			void dump(std::shared_ptr<Server::Sender> &sender, AD5933::Extension &ad5933);
-			void program(AD5933::Extension &ad5933, const Magic::Events::Commands::Debug::Program& program_event);
-			void command(AD5933::Extension &ad5933, const Magic::Events::Commands::Debug::CtrlHB &ctrl_HB_event);
+			void program(AD5933::Extension &ad5933, const Magic::Commands::Debug::Program& program_event);
+			void command(AD5933::Extension &ad5933, const Magic::Commands::Debug::CtrlHB &ctrl_HB_event);
 		}
 
 		namespace FreqSweep {
 			//static void configure(bool &processing, AD5933::Extension &ad5933, const Events::FreqSweep::configure &configure_event, boost::sml::back::process<Events::FreqSweep::Private::configure_complete> process_event) {
-			void configure(std::atomic<bool> &processing, AD5933::Extension &ad5933, const Magic::Events::Commands::Sweep::Configure &configure_event);
+			void configure(std::atomic<bool> &processing, AD5933::Extension &ad5933, const Magic::Commands::Sweep::Configure &configure_event);
 			//static void run(Sender &sender, AD5933::Extension &ad5933, boost::sml::back::process<Events::FreqSweep::Private::sweep_complete> process_event) {
 			void run(std::atomic<bool> &processing, std::shared_ptr<Server::Sender> &sender, AD5933::Extension &ad5933, StopSources& stop_sources);
 			void end(std::shared_ptr<Server::Sender> &sender, StopSources& stop_sources);
@@ -152,17 +151,17 @@ namespace BLE {
 			void free(std::shared_ptr<Server::Sender>& sender);
 			void list_count(std::shared_ptr<Server::Sender>& sender);
 			void list(std::shared_ptr<Server::Sender>& sender);
-			void size(const Magic::Events::Commands::File::Size& event, std::shared_ptr<Server::Sender>& sender);
-			void remove(const Magic::Events::Commands::File::Remove& event, std::shared_ptr<Server::Sender> &sender);
-			void download(const Magic::Events::Commands::File::Download& event, std::shared_ptr<Server::Sender> &sender, StopSources& stop_sources);
+			void size(const Magic::Commands::File::Size& event, std::shared_ptr<Server::Sender>& sender);
+			void remove(const Magic::Commands::File::Remove& event, std::shared_ptr<Server::Sender> &sender);
+			void download(const Magic::Commands::File::Download& event, std::shared_ptr<Server::Sender> &sender, StopSources& stop_sources);
 			void format(std::shared_ptr<Server::Sender> &sender);
 			void create_test_files(std::shared_ptr<Server::Sender> &sender);
 			void end(std::shared_ptr<Server::Sender> &sender, StopSources& stop_sources);
 		}
 
 		namespace Auto {
-			void start_saving(const Magic::Events::Commands::Auto::Save& event, std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933);
-			void start_sending(const Magic::Events::Commands::Auto::Send& event, std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933);
+			void start_saving(const Magic::Commands::Auto::Save& event, std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933);
+			void start_sending(const Magic::Commands::Auto::Send& event, std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources, AD5933::Extension &ad5933);
 			void stop_saving(std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources);
 			void stop_sending(std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources);
 		}
@@ -227,50 +226,50 @@ namespace BLE {
 
 		       	//state<States::sleeping>    + event<Events::wakeup>      		 / function{Actions::wakeup}      		   = state<States::advertise>,
 
-				state<States::connected>   + event<Events::disconnect>   		 / function{Actions::disconnect}   		   	            = state<States::advertise>,
-				state<States::connected>   + event<Magic::Commands::Debug::Start>										        = state<States::debug>,
-				state<States::connected>   + event<Magic::Events::Commands::Sweep::Configure> / function{Actions::FreqSweep::configure} = state<States::FreqSweep::configuring>,
-				state<States::connected>   + event<Magic::Events::Commands::File::Start>									            = state<States::file>,
-				state<States::connected>   + event<Magic::Events::Commands::Auto::Save>	/ function{Actions::Auto::start_saving}         = state<States::Auto::save>,
-				state<States::connected>   + event<Magic::Events::Commands::Auto::Send>	/ function{Actions::Auto::start_sending}        = state<States::Auto::send>,
+				state<States::connected>   + event<Events::disconnect>   		 / function{Actions::disconnect}   		   	     = state<States::advertise>,
+				state<States::connected>   + event<Magic::Commands::Debug::Start>										         = state<States::debug>,
+				state<States::connected>   + event<Magic::Commands::Sweep::Configure> / function{Actions::FreqSweep::configure}  = state<States::FreqSweep::configuring>,
+				state<States::connected>   + event<Magic::Commands::File::Start>									             = state<States::file>,
+				state<States::connected>   + event<Magic::Commands::Auto::Save>	/ function{Actions::Auto::start_saving}  = state<States::Auto::save>,
+				state<States::connected>   + event<Magic::Commands::Auto::Send>	/ function{Actions::Auto::start_sending} = state<States::Auto::send>,
 
-				state<States::debug> + event<Events::disconnect>                      / function{Actions::disconnect}     = state<States::advertise>,
-				state<States::debug> + event<Magic::Events::Commands::Debug::End> 										  = state<States::connected>,
-				state<States::debug> + event<Magic::Events::Commands::Debug::Dump>    / function{Actions::Debug::dump}    = state<States::debug>,
-				state<States::debug> + event<Magic::Events::Commands::Debug::Program> / function{Actions::Debug::program} = state<States::debug>,
-				state<States::debug> + event<Magic::Events::Commands::Debug::CtrlHB>  / function{Actions::Debug::command} = state<States::debug>,
+				state<States::debug> + event<Events::disconnect>              / function{Actions::disconnect}     = state<States::advertise>,
+				state<States::debug> + event<Magic::Commands::Debug::End> 										  = state<States::connected>,
+				state<States::debug> + event<Magic::Commands::Debug::Dump>    / function{Actions::Debug::dump}    = state<States::debug>,
+				state<States::debug> + event<Magic::Commands::Debug::Program> / function{Actions::Debug::program} = state<States::debug>,
+				state<States::debug> + event<Magic::Commands::Debug::CtrlHB>  / function{Actions::Debug::command} = state<States::debug>,
 
 				state<States::FreqSweep::configuring> + event<Events::disconnect>     									 / function{Actions::disconnect}     = state<States::advertise>,
-				state<States::FreqSweep::configuring> + event<Magic::Events::Commands::Sweep::End> 						 / function{Actions::FreqSweep::end} = state<States::connected>,
-				state<States::FreqSweep::configuring> + event<Magic::Events::Commands::Sweep::Run> [function{Guards::processing}]     / function{Actions::FreqSweep::run} = state<States::FreqSweep::running>,
-				state<States::FreqSweep::configuring> + event<Magic::Events::Commands::Sweep::Run> [function{Guards::neg_processing}] / function{Actions::unexpected}     = state<States::error>,
+				state<States::FreqSweep::configuring> + event<Magic::Commands::Sweep::End> 						 / function{Actions::FreqSweep::end} = state<States::connected>,
+				state<States::FreqSweep::configuring> + event<Magic::Commands::Sweep::Run> [function{Guards::processing}]     / function{Actions::FreqSweep::run} = state<States::FreqSweep::running>,
+				state<States::FreqSweep::configuring> + event<Magic::Commands::Sweep::Run> [function{Guards::neg_processing}] / function{Actions::unexpected}     = state<States::error>,
 
 				state<States::FreqSweep::running> + event<Events::disconnect>     									       / function{Actions::disconnect}           				 = state<States::advertise>,
-				state<States::FreqSweep::running> + event<Magic::Events::Commands::Sweep::End> 							   / function{Actions::FreqSweep::end}       				 = state<States::connected>,
-				state<States::FreqSweep::running> + event<Magic::Events::Commands::Sweep::Run>       [function{Guards::processing}] 	   / function{Actions::FreqSweep::run}       = state<States::FreqSweep::running>,
-				state<States::FreqSweep::running> + event<Magic::Events::Commands::Sweep::Configure> [function{Guards::processing}] 	   / function{Actions::FreqSweep::configure} = state<States::FreqSweep::configuring>,
-				state<States::FreqSweep::running> + event<Magic::Events::Commands::Sweep::Configure> [function{Guards::neg_processing}] / function{Actions::unexpected} 			 = state<States::error>,
-				state<States::FreqSweep::running> + event<Magic::Events::Commands::Sweep::Run>       [function{Guards::neg_processing}] / function{Actions::unexpected} 			 = state<States::error>,
+				state<States::FreqSweep::running> + event<Magic::Commands::Sweep::End> 							   / function{Actions::FreqSweep::end}       				 = state<States::connected>,
+				state<States::FreqSweep::running> + event<Magic::Commands::Sweep::Run>       [function{Guards::processing}] 	   / function{Actions::FreqSweep::run}       = state<States::FreqSweep::running>,
+				state<States::FreqSweep::running> + event<Magic::Commands::Sweep::Configure> [function{Guards::processing}] 	   / function{Actions::FreqSweep::configure} = state<States::FreqSweep::configuring>,
+				state<States::FreqSweep::running> + event<Magic::Commands::Sweep::Configure> [function{Guards::neg_processing}] / function{Actions::unexpected} 			 = state<States::error>,
+				state<States::FreqSweep::running> + event<Magic::Commands::Sweep::Run>       [function{Guards::neg_processing}] / function{Actions::unexpected} 			 = state<States::error>,
 
 				// for file commands
 				state<States::file> + event<Events::disconnect> / function{Actions::disconnect} = state<States::advertise>,
-				state<States::file> + event<Magic::Events::Commands::File::End> / function{Actions::File::end} = state<States::connected>,
-				state<States::file> + event<Magic::Events::Commands::File::Free> / function{Actions::File::free} = state<States::file>,
-				state<States::file> + event<Magic::Events::Commands::File::ListCount> / function{Actions::File::list_count} = state<States::file>,
-				state<States::file> + event<Magic::Events::Commands::File::List> / function{Actions::File::list} = state<States::file>,
-				state<States::file> + event<Magic::Events::Commands::File::Size> / function{Actions::File::size} = state<States::file>,
-				state<States::file> + event<Magic::Events::Commands::File::Remove> / function{Actions::File::remove} = state<States::file>,
-				state<States::file> + event<Magic::Events::Commands::File::Download> / function{Actions::File::download} = state<States::file>,
-				state<States::file> + event<Magic::Events::Commands::File::CreateTestFiles> / function{Actions::File::create_test_files} = state<States::file>,
-				state<States::file> + event<Magic::Events::Commands::File::Format> / function{Actions::File::format} = state<States::file>,
+				state<States::file> + event<Magic::Commands::File::End> / function{Actions::File::end} = state<States::connected>,
+				state<States::file> + event<Magic::Commands::File::Free> / function{Actions::File::free} = state<States::file>,
+				state<States::file> + event<Magic::Commands::File::ListCount> / function{Actions::File::list_count} = state<States::file>,
+				state<States::file> + event<Magic::Commands::File::List> / function{Actions::File::list} = state<States::file>,
+				state<States::file> + event<Magic::Commands::File::Size> / function{Actions::File::size} = state<States::file>,
+				state<States::file> + event<Magic::Commands::File::Remove> / function{Actions::File::remove} = state<States::file>,
+				state<States::file> + event<Magic::Commands::File::Download> / function{Actions::File::download} = state<States::file>,
+				state<States::file> + event<Magic::Commands::File::CreateTestFiles> / function{Actions::File::create_test_files} = state<States::file>,
+				state<States::file> + event<Magic::Commands::File::Format> / function{Actions::File::format} = state<States::file>,
 
 				// for auto save commands
 				state<States::Auto::save> + event<Events::disconnect> / function{Actions::Auto::stop_saving} = state<States::advertise>,
-				state<States::Auto::save> + event<Magic::Events::Commands::Auto::End> / function{Actions::Auto::stop_saving} = state<States::connected>,
+				state<States::Auto::save> + event<Magic::Commands::Auto::End> / function{Actions::Auto::stop_saving} = state<States::connected>,
 
 				// for auto send commands
 				state<States::Auto::send> + event<Events::disconnect> / function{Actions::Auto::stop_sending} = state<States::advertise>,
-				state<States::Auto::send> + event<Magic::Events::Commands::Auto::End> / function{Actions::Auto::stop_sending} = state<States::connected>
+				state<States::Auto::send> + event<Magic::Commands::Auto::End> / function{Actions::Auto::stop_sending} = state<States::connected>
 			);
 			return ret;
 		}

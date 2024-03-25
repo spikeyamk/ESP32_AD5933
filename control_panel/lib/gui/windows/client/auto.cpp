@@ -288,7 +288,7 @@ namespace GUI {
             shm->cmd.send(
                 BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     index,
-                    Magic::Events::Commands::Auto::Save{ .tick_ms = tick_ms }
+                    Magic::Commands::Auto::Save{ .tick_ms = tick_ms }
                 }
             );
         }
@@ -303,7 +303,7 @@ namespace GUI {
             shm->cmd.send(
                 BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     index,
-                    Magic::Events::Commands::Auto::End{}
+                    Magic::Commands::Auto::End{}
                 }
             );
 
@@ -319,7 +319,7 @@ namespace GUI {
             self.shm->cmd.send(
                 BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     self.index,
-                    Magic::Events::Commands::Auto::Send{ .tick_ms = self.tick_ms }
+                    Magic::Commands::Auto::Send{ .tick_ms = self.tick_ms }
                 }
             );
             while(st.stop_requested() == false) {
@@ -337,7 +337,7 @@ namespace GUI {
                     return;
                 }
 
-                if(variant_tester<Magic::Events::Results::Auto::Point>(rx_payload.value()) == false) {
+                if(variant_tester<Magic::Results::Auto::Point>(rx_payload.value()) == false) {
                     std::cout << "ERROR: GUI::Windows::Auto::start_sending_cb: rx_payload: bad variant type\n";
                     self.status = Status::Error;
                     const std::optional<Popup> tmp_popup {
@@ -351,7 +351,7 @@ namespace GUI {
                 }
 
                 std::visit([&self](auto&& event) {
-                    if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Events::Results::Auto::Point>) {
+                    if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Results::Auto::Point>) {
                         mytimeval64_t tv;
                         gettimeofday(&tv, nullptr);
                         const double seconds = static_cast<double>(tv.tv_sec);
@@ -367,7 +367,7 @@ namespace GUI {
             self.shm->cmd.send(
                 BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     self.index,
-                    Magic::Events::Commands::Auto::End{}
+                    Magic::Commands::Auto::End{}
                 }
             );
             self.status = Status::Off;
@@ -389,9 +389,10 @@ namespace GUI {
         }
 
         void Auto::remove_cb(Auto& self) {
-            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Start{} });
-            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Remove::from_raw_data(self.list_table.paths[self.selected.value()].to_raw_data()) });
-            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::End{} });
+            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::Start{} });
+            const Magic::Commands::File::Remove remove_event { .path = self.list_table.paths[self.selected.value()].path };
+            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, remove_event });
+            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::End{} });
 
             const auto remove_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(5'000)) };
 
@@ -408,7 +409,7 @@ namespace GUI {
                 return;
             }
 
-            if(variant_tester<Magic::Events::Results::File::Remove>(remove_payload.value()) == false) {
+            if(variant_tester<Magic::Results::File::Remove>(remove_payload.value()) == false) {
                 std::cout << "GUI::Windows::Auto::remove_cb: remove_payload wrong variant type\n";
                 self.status = Status::Error;
                 return;
@@ -418,7 +419,7 @@ namespace GUI {
                 [&remove_payload]() {
                     bool ret = false;
                     std::visit([&remove_payload, &ret](auto&& event) {
-                        if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Events::Results::File::Remove>) {
+                        if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Results::File::Remove>) {
                             ret = event.status;
                         }
                     }, remove_payload.value());
@@ -456,9 +457,9 @@ namespace GUI {
 
         void Auto::list_cb(std::stop_token st, Auto& self) {
             self.status = Status::Listing;
-            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Start{} });
+            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::Start{} });
 
-            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Free{} });
+            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::Free{} });
             const auto free_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(5'000)) };
             if(free_payload.has_value() == false) {
                 std::cout << "ERROR: GUI::Windows::RecordManager::list_cb: failed to retreive free: timeout\n";
@@ -473,7 +474,7 @@ namespace GUI {
                 return;
             }
 
-            if(variant_tester<Magic::Events::Results::File::Free>(free_payload.value()) == false) {
+            if(variant_tester<Magic::Results::File::Free>(free_payload.value()) == false) {
                 std::cout << "ERROR: GUI::Windows::RecordManager::list_cb: failed to retreive free: wrong variant type\n";
                 self.status = Status::Error;
                 const std::optional<Popup> tmp_popup {
@@ -487,13 +488,13 @@ namespace GUI {
             }
 
             std::visit([&self](auto&& event) {
-                if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Events::Results::File::Free>) {
+                if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Results::File::Free>) {
                     self.bytes.used = event.used_bytes;
                     self.bytes.total = event.total_bytes;
                 }
             }, free_payload.value());
 
-            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::ListCount{} });
+            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::ListCount{} });
             const auto list_count_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(5'000)) };
 
             if(list_count_payload.has_value() == false) { 
@@ -509,7 +510,7 @@ namespace GUI {
                 return;
             }
             
-            if(variant_tester<Magic::Events::Results::File::ListCount>(list_count_payload.value()) == false) {
+            if(variant_tester<Magic::Results::File::ListCount>(list_count_payload.value()) == false) {
                 self.status = Status::Error;
                 std::cout << "ERROR: GUI::Windows::RecordManager::list_cb: failed to retreive list_count: bad variant type\n";
                 const std::optional<Popup> tmp_popup {
@@ -522,15 +523,15 @@ namespace GUI {
                 return;
             }
 
-            Magic::Events::Results::File::ListCount list_count { .num_of_files = 0 };
+            Magic::Results::File::ListCount list_count { .num_of_files = 0 };
             std::visit([&list_count](auto&& event) {
-                if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Events::Results::File::ListCount>) {
+                if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Results::File::ListCount>) {
                     list_count = event;
                 }
             }, list_count_payload.value());
 
             if(list_count.num_of_files == 0) {
-                self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::End{} });
+                self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::End{} });
                 std::cout << "ERROR: GUI::Windows::RecordManager::list_cb: failed to retreive list_count: list_cout empty\n";
                 const std::optional<Popup> tmp_popup {
                     {
@@ -544,8 +545,8 @@ namespace GUI {
 
             const float progress_bar_step { (1.0f / static_cast<float>(list_count.num_of_files)) / 2.0f };
 
-            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::List{} });
-            std::vector<Magic::Events::Results::File::List> listed_paths;
+            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::List{} });
+            std::vector<Magic::Results::File::List> listed_paths;
             listed_paths.reserve(list_count.num_of_files);
             while(listed_paths.size() != list_count.num_of_files) {
                 const auto list_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(5'000)) };
@@ -562,7 +563,7 @@ namespace GUI {
                     return;
                 }
 
-                if(variant_tester<Magic::Events::Results::File::List>(list_payload.value()) == false) {
+                if(variant_tester<Magic::Results::File::List>(list_payload.value()) == false) {
                     std::cout << "ERROR: GUI::Windows::RecordManager::list_cb: failed to retreive list_path: bad variant type\n";
                     self.status = Status::Error;
                     const std::optional<Popup> tmp_popup {
@@ -576,7 +577,7 @@ namespace GUI {
                 }
 
                 std::visit([&listed_paths](auto&& event) {
-                    if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Events::Results::File::List>) {
+                    if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Results::File::List>) {
                        listed_paths.push_back(event);
                     }
                 }, list_payload.value());
@@ -584,10 +585,11 @@ namespace GUI {
                 self.progress_bar_fraction += progress_bar_step;
             }
 
-            std::vector<Magic::Events::Results::File::Size> listed_sizes;
+            std::vector<Magic::Results::File::Size> listed_sizes;
             listed_sizes.reserve(list_count.num_of_files);
             for(const auto& path: listed_paths) {
-                self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Size::from_raw_data(path.to_raw_data()) });
+                const Magic::Commands::File::Size size_event { .path = path.path };
+                self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, size_event });
                 const auto size_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(5'000)) };
 
                 if(size_payload.has_value() == false) {
@@ -603,7 +605,7 @@ namespace GUI {
                     return;
                 }
 
-                if(variant_tester<Magic::Events::Results::File::Size>(size_payload.value()) == false) {
+                if(variant_tester<Magic::Results::File::Size>(size_payload.value()) == false) {
                     std::cout << "ERROR: GUI::Windows::RecordManager::list_cb: failed to retreive list_size: bad variant type\n";
                     self.status = Status::Error;
                     const std::optional<Popup> tmp_popup {
@@ -617,7 +619,7 @@ namespace GUI {
                 }
 
                 std::visit([&listed_sizes](auto&& event) {
-                    if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Events::Results::File::Size>) {
+                    if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Results::File::Size>) {
                         listed_sizes.push_back(event);
                     }
                 }, size_payload.value());
@@ -625,7 +627,7 @@ namespace GUI {
                 self.progress_bar_fraction += progress_bar_step;
             }
 
-            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::End{} });
+            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::End{} });
 
             self.list_table.paths = listed_paths;
             self.list_table.sizes = listed_sizes;
@@ -636,9 +638,10 @@ namespace GUI {
         void Auto::download_cb(std::stop_token st, Auto& self) {
             try {
                 self.status = Status::Downloading;
-                self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Start{} });
-                self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Download::from_raw_data(self.list_table.paths[self.selected.value()].to_raw_data()) });
-                std::vector<Magic::Events::Results::File::Download> download_slices;
+                self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::Start{} });
+                const Magic::Commands::File::Download download_event { .path = self.list_table.paths[self.selected.value()].path };
+                self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, download_event });
+                std::vector<Magic::Results::File::Download> download_slices;
                 const size_t wished_slices_size = static_cast<size_t>(std::ceil(static_cast<float>(self.list_table.sizes[self.selected.value()].num_of_bytes) / static_cast<float>(sizeof(Magic::T_MaxDataSlice))));
                 const float progress_bar_step = 1.0f / static_cast<float>(wished_slices_size);
                 const uint64_t wished_file_size = self.list_table.sizes[self.selected.value()].num_of_bytes;
@@ -664,7 +667,7 @@ namespace GUI {
                         return;
                     }
 
-                    if(variant_tester<Magic::Events::Results::File::Download>(download_payload.value()) == false) {
+                    if(variant_tester<Magic::Results::File::Download>(download_payload.value()) == false) {
                         std::cout << "ERROR: GUI::Windows::RecordManager::download_cb: failed to retreive download_payload: wrong variant type\n";
                         self.status = Status::Error;
                         const std::optional<Popup> tmp_popup {
@@ -678,7 +681,7 @@ namespace GUI {
                     }
 
                     std::visit([&download_slices](auto&& event) {
-                        if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Events::Results::File::Download>) {
+                        if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Results::File::Download>) {
                             download_slices.push_back(event);
                         }
                     }, download_payload.value());
@@ -702,13 +705,13 @@ namespace GUI {
                     std::queue<Point> tmp_points;
                     for(
                         auto it = file_content.begin();
-                        it < file_content.end() && it + sizeof(Magic::Events::Results::Auto::Record::Entry) < file_content.end();
-                        it += sizeof(Magic::Events::Results::Auto::Record::Entry)
+                        it < file_content.end() && it + sizeof(Magic::Results::Auto::Record::Entry) < file_content.end();
+                        it += sizeof(Magic::Results::Auto::Record::Entry)
                     ) {
-                        std::array<uint8_t, sizeof(Magic::Events::Results::Auto::Record::Entry)> entry_serialized { 0 };
-                        std::copy(it, it + sizeof(Magic::Events::Results::Auto::Record::Entry), entry_serialized.begin());
+                        std::array<uint8_t, sizeof(Magic::Results::Auto::Record::Entry)> entry_serialized { 0 };
+                        std::copy(it, it + sizeof(Magic::Results::Auto::Record::Entry), entry_serialized.begin());
 
-                        const auto entry { Magic::Events::Results::Auto::Record::Entry::from_raw_data(entry_serialized) };
+                        const auto entry { Magic::Results::Auto::Record::Entry::from_raw_data(entry_serialized) };
 
                         tmp_points.push(
                             {
@@ -723,7 +726,7 @@ namespace GUI {
                     self.save_points = tmp_points;
                 }
 
-                self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::End{} });
+                self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::End{} });
                 self.status = Status::Off;
            } catch(const std::exception& e) {
                 std::cout << "ERROR: GUI::Windows::RecordManager::download_cb: exception: " << e.what() << std::endl;
@@ -740,8 +743,8 @@ namespace GUI {
 
         void Auto::format_cb(std::stop_token st, Auto& self) {
             self.status = Status::Formatting;
-            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Start{} });
-            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::Format{} });
+            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::Start{} });
+            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::Format{} });
             const auto format_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(64'000)) };
 
             if(format_payload.has_value() == false) {
@@ -757,7 +760,7 @@ namespace GUI {
                 return;
             }
 
-            if(variant_tester<Magic::Events::Results::File::Format>(format_payload.value()) == false) {
+            if(variant_tester<Magic::Results::File::Format>(format_payload.value()) == false) {
                 std::cout << "GUI::Windows::RecordManager::format_cb: format_payload: bad variant type\n";
                 self.status = Status::Error;
                 const std::optional<Popup> tmp_popup {
@@ -774,7 +777,7 @@ namespace GUI {
                 [&]() {
                     bool ret { false };
                     std::visit([&](auto&& event) {
-                        if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Events::Results::File::Format>) {
+                        if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Results::File::Format>) {
                             ret = event.status;
                         }
                     }, format_payload.value());
@@ -793,7 +796,7 @@ namespace GUI {
                 return;
             }
 
-            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Events::Commands::File::End{} });
+            self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::End{} });
             self.status = Status::Off;
             self.list();
         }

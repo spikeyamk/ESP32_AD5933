@@ -180,16 +180,17 @@ namespace BLE {
         ) {
             std::printf("BLE::Server::body_composition_feature_characteristic_access_cb\n");
             switch(ctxt->op) {
-            case BLE_GATT_ACCESS_OP_WRITE_CHR: //!! In case user accessed this characterstic to write, bellow lines will executed.
+            case BLE_GATT_ACCESS_OP_WRITE_CHR:
                 Magic::T_MaxPacket tmp_characteristic_received_value { 0 };
-                const int rc = gatt_svr_chr_write(ctxt->om, 1, tmp_characteristic_received_value.size(), tmp_characteristic_received_value.data(), NULL); //!! Function "gatt_svr_chr_write" will fire.
+                uint16_t out_copy_len;
+                const int rc = gatt_svr_chr_write(ctxt->om, 1, tmp_characteristic_received_value.size(), tmp_characteristic_received_value.data(), &out_copy_len);
                 print_received_packet(tmp_characteristic_received_value);
-                const Magic::InComingPacket<Magic::Events::Commands::Variant, Magic::Events::Commands::Map> incoming_packet { tmp_characteristic_received_value };
-                auto event_variant { incoming_packet.to_event_variant() };
-                if(event_variant.has_value()) {
+
+                const auto decoded { Magic::Commands::Deserializer::decode(tmp_characteristic_received_value.begin(), tmp_characteristic_received_value.begin() + out_copy_len) };
+                if(decoded.has_value()) {
                     std::visit([](auto &&arg) {
                         dummy_state_machine.process_event(arg);
-                    }, incoming_packet.to_event_variant().value());
+                    }, decoded.value());
                 }
                 return rc;
             }
@@ -204,25 +205,26 @@ namespace BLE {
         ) {
             std::printf("BLE::Server::time_update_control_point_characteristic_access_cb\n");
             switch(ctxt->op) {
-            case BLE_GATT_ACCESS_OP_WRITE_CHR: //!! In case user accessed this characterstic to write, bellow lines will executed.
+            case BLE_GATT_ACCESS_OP_WRITE_CHR:
                 Magic::T_MaxPacket tmp_characteristic_received_value { 0 };
-                const int rc = gatt_svr_chr_write(ctxt->om, 1, tmp_characteristic_received_value.size(), tmp_characteristic_received_value.data(), NULL); //!! Function "gatt_svr_chr_write" will fire.
+                uint16_t out_copy_len;
+                const int rc = gatt_svr_chr_write(ctxt->om, 1, tmp_characteristic_received_value.size(), tmp_characteristic_received_value.data(), &out_copy_len);
                 print_received_packet(tmp_characteristic_received_value);
-                Magic::InComingPacket<Magic::Events::Commands::Variant, Magic::Events::Commands::Map> incoming_packet { tmp_characteristic_received_value };
-                auto event_variant { incoming_packet.to_event_variant() };
-                if(event_variant.has_value()) {
+
+                const auto decoded { Magic::Commands::Deserializer::decode(tmp_characteristic_received_value.begin(), tmp_characteristic_received_value.begin() + out_copy_len) };
+                if(decoded.has_value()) {
                     std::visit([](auto &&arg) {
                         using T_Decay = std::decay_t<decltype(arg)>;
-                       if constexpr (std::is_same_v<T_Decay, Magic::Events::Commands::Time::UpdateTimeval>) {
-                            settimeofday(&arg.tv, nullptr);
+                       if constexpr (std::is_same_v<T_Decay, Magic::Commands::Time::UpdateTimeval>) {
+                            settimeofday(&arg, nullptr);
                             std::printf("BLE_Server::time_update_control_point_characteristic_access_cb: Updated timeval\n");
                             Util::print_current_time();
-                        } else if constexpr (std::is_same_v<T_Decay, Magic::Events::Commands::Time::UpdateTimezone>) {
-                            settimeofday(nullptr, &arg.tz);
+                        } else if constexpr (std::is_same_v<T_Decay, Magic::Commands::Time::UpdateTimezone>) {
+                            settimeofday(nullptr, &arg);
                             std::printf("BLE_Server::time_update_control_point_characteristic_access_cb: Updated timezone\n");
                             Util::print_current_time();
                         }
-                    }, incoming_packet.to_event_variant().value());
+                    }, decoded.value());
                 }
                 return rc;
             }

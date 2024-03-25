@@ -40,6 +40,7 @@ set(JSON_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/json)
 set(NATIVE_FILE_DIALOG_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/nativefiledialog-extended)
 set(SEMVER_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/semver)
 set(UTFCONV_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/utfconv)
+set(UTFCONV_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/utfconv)
 
 if(WIN32)
 	set(BOOST_ROOT "C:/Users/janco/source/boost_1_84_0")
@@ -175,6 +176,7 @@ target_link_libraries(${CURRENT_PROJECT_NAME} PRIVATE
 	nlohmann_json 
 	ble_client
 	utfconv
+	serde 
 )
 
 if(WIN32)

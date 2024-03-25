@@ -21,7 +21,7 @@ namespace AutoSaveNoBLE {
 		Trielo::trielo<Util::init_exit_auto_save_no_ble_button>();
 
 		deep_sleep_blocked = true;
-		for(size_t i = 0, timeout_ms = 5'000; i <= timeout_ms && gpio_get_level(Util::button) == 1; i++) {
+		for(size_t i = 0, timeout_ms = 5'000; i <= timeout_ms && gpio_get_level(Util::button) == 0; i++) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			if(i == timeout_ms) {
 				done = true;
@@ -36,7 +36,7 @@ namespace AutoSaveNoBLE {
 			deep_sleep_blocked = false;
 			auto status { Util::Mode::get_instance().read() };
 			deep_sleep_blocked = true;
-			for(size_t i = 0, timeout_ms = 5'000; i <= timeout_ms && gpio_get_level(Util::button) == 1; i++) {
+			for(size_t i = 0, timeout_ms = 5'000; i <= timeout_ms && gpio_get_level(Util::button) == 0; i++) {
 				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				if(i == timeout_ms) {
 					done = true;
