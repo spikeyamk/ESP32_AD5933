@@ -9,11 +9,11 @@
 
 #include "util.hpp"
 #include "sd_card.hpp"
-#include "magic/events/results.hpp"
 #include "ad5933/measurement/measurement.hpp"
 #include "ad5933/driver/driver.hpp"
 #include "ad5933/extension/extension.hpp"
 #include "default.hpp"
+#include "magic/results/results.hpp"
 
 namespace AutoSaveNoBLE {
     void button_check(std::jthread& worker, bool& done, bool& deep_sleep_blocked) {
@@ -72,7 +72,7 @@ namespace AutoSaveNoBLE {
 				return;
 			}
 
-			if(bytes_free < sizeof(Magic::Events::Results::Auto::Timeval::T_RawData) + sizeof(Magic::Events::Results::Auto::Point::T_RawData)) {
+			if(bytes_free < Serde::get_serialized_size<Magic::Results::Auto::Timeval>() + Serde::get_serialized_size<Magic::Results::Auto::Point>()) {
 				// We should never get here, this is bad
 				std::cout << "ERROR: BLE::Actions::Auto::start_saving: filesystem ain't got no space in it: bytes_free: " << bytes_free << std::endl;
 				return;
@@ -121,7 +121,7 @@ namespace AutoSaveNoBLE {
 			}
 
 			driver.program_all_registers(Default::config.to_raw_array());
-			for(size_t i = 0; i < Default::max_file_size && done == false; i += sizeof(Magic::Events::Results::Auto::Record::Entry)) {
+			for(size_t i = 0; i < Default::max_file_size && done == false; i += sizeof(Magic::Results::Auto::Record::Entry)) {
 				extension.reset();
 				extension.set_command(AD5933::Masks::Or::Ctrl::HB::Command::StandbyMode);
 				if(deep_sleep_blocked) {
@@ -149,7 +149,7 @@ namespace AutoSaveNoBLE {
 
 						const AD5933::Data data { raw_data.value() };
 						const AD5933::Measurement measurement { data, Default::calibration.back() };
-						const Magic::Events::Results::Auto::Record::Entry entry {
+						const Magic::Results::Auto::Record::Entry entry {
 							measurement.get_magnitude(),
 							measurement.get_phase(),
 						};

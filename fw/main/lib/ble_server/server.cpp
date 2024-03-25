@@ -19,7 +19,6 @@
 #include <trielo/trielo.hpp>
 #include <esp_log.h>
 
-#include "magic/packets/incoming.hpp"
 #include "util.hpp"
 #include "ad5933/driver/driver.hpp"
 #include "ad5933/extension/extension.hpp"

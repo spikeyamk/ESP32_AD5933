@@ -16,9 +16,6 @@
 #include "ble_server/server.hpp"
 #include "esp_system.h"
 #include "util.hpp"
-#include "magic/events/results.hpp"
-#include "magic/events/commands.hpp"
-#include "magic/packets/outcoming.hpp"
 #include "sd_card.hpp"
 #include "ad5933/data/data.hpp"
 #include "ad5933/measurement/measurement.hpp"
@@ -345,7 +342,7 @@ namespace BLE {
 							return;
 						}
 
-						if(bytes_free < sizeof(Magic::Events::Results::Auto::Timeval::T_RawData) + sizeof(Magic::Events::Results::Auto::Point::T_RawData)) {
+						if(bytes_free < Serde::get_serialized_size<Magic::Results::Auto::Timeval>() + Serde::get_serialized_size<Magic::Results::Auto::Point>()) {
 							// We should never get here, this is bad
 							std::cout << "ERROR: BLE::Actions::Auto::start_saving: filesystem ain't got no space in it: bytes_free: " << bytes_free << std::endl;
 							return;
@@ -396,7 +393,7 @@ namespace BLE {
 						}
 
 						ad5933.driver.program_all_registers(Default::config.to_raw_array());
-						for(size_t i = 0; stop_sources.save == true && i < Default::max_file_size; i += sizeof(Magic::Events::Results::Auto::Record::Entry)) {
+						for(size_t i = 0; stop_sources.save == true && i < Default::max_file_size; i += sizeof(Magic::Results::Auto::Record::Entry::T_RawData)) {
 							ad5933.reset();
 							ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::StandbyMode);
 							std::this_thread::sleep_for(sleep_ms);
@@ -416,7 +413,7 @@ namespace BLE {
 
 									const AD5933::Data data { raw_data.value() };
 									const AD5933::Measurement measurement { data, Default::calibration.back() };
-									const Magic::Events::Results::Auto::Record::Entry entry {
+									const Magic::Results::Auto::Record::Entry entry {
 										measurement.get_magnitude(),
 										measurement.get_phase(),
 									};

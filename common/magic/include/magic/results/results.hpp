@@ -5,6 +5,7 @@
 #include <serde/common.hpp>
 
 #include "magic/common.hpp"
+#include "magic/misc/gettimeofday.hpp"
 
 namespace Magic {
     namespace Results {
@@ -91,8 +92,6 @@ namespace Magic {
                     0x6f, 0x78, 0x10, 0xae, 0x3c, 0x98, 0x56, 0x70,
                     0xfb, 0x0e, 0x00, 0x2b, 0x5b, 0x16, 0x93, 0x50,
                 };
-
-
 
                 struct Entry {
                     double unix_timestamp;

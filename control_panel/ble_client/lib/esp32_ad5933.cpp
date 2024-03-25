@@ -1,6 +1,5 @@
 #include <trielo/trielo.hpp>
 
-#include "magic/packets/incoming.hpp"
 #include "magic/commands/serializer.hpp"
 #include "magic/results/deserializer.hpp"
 
