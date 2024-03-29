@@ -13,6 +13,7 @@ if(NOT Boost_FOUND)
 	endif()
 	set(Boost_USE_STATIC_LIBS    ON)
 	set(Boost_USE_MULTITHREADED  ON)
+
 	find_package(Boost COMPONENTS date_time filesystem)
 endif()
 
@@ -99,6 +100,11 @@ if(BLE_CLIENT_TEST)
 		add_subdirectory(${AD5933_CONFIG_DIR} ${CMAKE_BINARY_DIR}/ad5933_config)
 	endif()
 
+	if(NOT TARGET AD5933_data)
+		set(AD5933_DATA_DIR ${CMAKE_CURRENT_LIST_DIR}/../../common/ad5933/data)
+		add_subdirectory(${AD5933_DATA_DIR} ${CMAKE_BINARY_DIR}/ad5933_data)
+	endif()
+
 	function(add_test_case TEST_NAME TEST_SOURCE)
 		add_executable(${TEST_NAME} ${TEST_SRCS} tests/${TEST_SOURCE})
 		target_include_directories(${TEST_NAME} PRIVATE ${TEST_INCLUDE_DIRS})
@@ -124,20 +130,25 @@ if(BLE_CLIENT_TEST)
 		${BLE_CLIENT_INCLUDE_DIRS}
 	)
 	set(TEST_LINK_LIBS
-		${PROJECT_NAME}
+		${Boost_LIBRARIES}
+		magic
 		AD5933_config
+		AD5933_data
+		${PROJECT_NAME}
 	)
-	add_test_case(ble_client_connect_sync_scan connect/sync_scan.cpp)
-	#add_test_case(ble_client_connect_async_scan connect/async_scan.cpp)
-	#add_test_case(ble_client_connect_interprocess_sync_scan connect/interprocess_sync_scan.cpp)
-	#add_test_case(ble_client_connect_interprocess_async_scan connect/interprocess_async_scan.cpp)
-	#add_test_case(ble_client_debug_dump debug/dump.cpp)
-	#add_test_case(ble_client_debug_program_and_dump debug/program_and_dump.cpp)
-	#add_test_case(ble_client_debug_interprocess_dump debug/interprocess_dump.cpp)
-	#add_test_case(ble_client_file_free file/free.cpp)
-	#add_test_case(ble_client_file_list_count file/list_count.cpp)
-	#add_test_case(ble_client_file_list file/list.cpp)
-	#add_test_case(ble_client_file_size file/size.cpp)
-	#add_test_case(ble_client_file_remove file/remove.cpp)
-	#add_test_case(ble_client_file_download file/download.cpp)
+	#add_test_case(ble_client_thread_connect_sync_scan thread/connect/sync_scan.cpp)
+	#add_test_case(ble_client_thread_connect_async_scan thread/connect/async_scan.cpp)
+
+	#add_test_case(ble_client_thread_debug_dump thread/debug/dump.cpp)
+	#add_test_case(ble_client_thread_debug_program_and_dump thread/debug/program_and_dump.cpp)
+
+	#add_test_case(ble_client_thread_auto_send thread/auto/send.cpp)
+	add_test_case(ble_client_thread_freq_sweep_periodic thread/freq_sweep/periodic.cpp)
+
+	#add_test_case(ble_client_thread_file_free thread/file/free.cpp)
+	#add_test_case(ble_client_thread_file_list_count thread/file/list_count.cpp)
+	#add_test_case(ble_client_thread_file_list thread/file/list.cpp)
+	#add_test_case(ble_client_thread_file_size thread/file/size.cpp)
+	#add_test_case(ble_client_thread_file_remove thread/file/remove.cpp)
+	#add_test_case(ble_client_thread_file_download thread/file/download.cpp)
 endif()
