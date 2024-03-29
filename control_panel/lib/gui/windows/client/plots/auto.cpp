@@ -95,6 +95,7 @@ namespace GUI {
                     ImPlot::PlotLine("IMPEDANCE [Ohm]", send_vectors.time.data(), send_vectors.impedance.data(), std::min(send_vectors.time.size(), send_vectors.impedance.size()));
                     ImPlot::EndPlot();
                 }
+
                 if(ImPlot::BeginPlot("Auto Send Measurement Calculated Phase")) {
                     if(firsts.send.corrected_gon) {
                         ImPlot::SetupAxes("Time", "PHASE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
@@ -131,6 +132,7 @@ namespace GUI {
                     ImPlot::PlotLine("RESISTANCE [Ohm]", send_vectors.time.data(), send_vectors.resistance.data(), std::min(send_vectors.time.size(), send_vectors.resistance.size()));
                     ImPlot::EndPlot();
                 }
+
                 if(ImPlot::BeginPlot("Auto Send Measurement Reactance Data")) {
                     if(firsts.send.corrected_alg) {
                         ImPlot::SetupAxes("Time", "REACTANCE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
@@ -174,6 +176,7 @@ namespace GUI {
                     ImPlot::PlotLine("IMPEDANCE [Ohm]", save_vectors.time.data(), save_vectors.impedance.data(), std::min(save_vectors.time.size(), save_vectors.impedance.size()));
                     ImPlot::EndPlot();
                 }
+
                 if(ImPlot::BeginPlot("Auto Save Measurement Calculated Phase")) {
                     if(firsts.save.corrected_gon) {
                         ImPlot::SetupAxes("Time", "PHASE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
@@ -210,6 +213,7 @@ namespace GUI {
                     ImPlot::PlotLine("RESISTANCE [Ohm]", save_vectors.time.data(), save_vectors.resistance.data(), std::min(save_vectors.time.size(), save_vectors.resistance.size()));
                     ImPlot::EndPlot();
                 }
+
                 if(ImPlot::BeginPlot("Auto Save Measurement Reactance Data")) {
                     if(firsts.save.corrected_alg) {
                         ImPlot::SetupAxes("Time", "REACTANCE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);

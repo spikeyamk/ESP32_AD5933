@@ -32,7 +32,9 @@ int main(int argc, char* argv[]) {
         if(boost::this_process::environment().get(std::string(magic_key_env_name).c_str()) == magic_key) {
             return BLE_Client::child_main();
         }
-    } catch(...) {}
+    } catch(const std::exception& e) {
+        std::cout << "ERROR: Control Panel: GUI: Parent process failed to read the environment variable: " << e.what() << std::endl;
+    }
 
     std::atexit([]() { std::cout << "Control Panel: GUI: Parent process finished\n"; });
 

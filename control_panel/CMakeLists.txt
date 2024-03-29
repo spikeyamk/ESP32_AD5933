@@ -1,15 +1,13 @@
 cmake_minimum_required(VERSION 3.28)
-set(CURRENT_PROJECT_NAME "esp32_ad5933_control_panel")
-project(${CURRENT_PROJECT_NAME} C CXX)
+project("esp32_ad5933_control_panel" C CXX)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-	add_compile_options(-Wall -Wextra -Wpedantic)
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	# Makes UTF-8 work
+	# Could not get it to work with target definitions has to be global
 	add_compile_options("/utf-8")
 	set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
 endif()
@@ -43,9 +41,6 @@ set(UTFCONV_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/utfconv)
 set(UTFCONV_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/utfconv)
 
 if(WIN32)
-	set(BOOST_ROOT "C:/Users/janco/source/boost_1_84_0")
-	set(BOOST_INCLUDEDIR "C:/Users/janco/source/boost_1_84_0/boost")
-	set(BOOST_LIBRARYDIR "C:/Users/janco/source/boost_1_84_0/lib64-msvc-14.3")
 	set(Boost_NO_SYSTEM_PATHS    ON)
 	set(Boost_USE_STATIC_RUNTIME ON)
 endif()
@@ -90,14 +85,15 @@ add_subdirectory(${AD5933_TEMPERATURE_DIR} ${CMAKE_BINARY_DIR}/AD5933_temperatur
 add_subdirectory(${AD5933_DEBUG_DATA_DIR} ${CMAKE_BINARY_DIR}/AD5933_debug_data)
 add_subdirectory(${JSON_DIR})
 add_subdirectory(${NATIVE_FILE_DIALOG_DIR})
-# This ugly hack with external semver library lets us use the mbits libraries without needing to install
 add_subdirectory(${SEMVER_DIR})
+
 # This just creates an alias that the CMakeLists.txt inside the ${UTFCONV_DIR} is looking for
+# Getting rid of this dependency is of high priority
 add_library(mbits::semver ALIAS semver)
 add_subdirectory(${UTFCONV_DIR})
 add_subdirectory(${BLE_CLIENT_DIR})
 
-add_executable(${CURRENT_PROJECT_NAME}
+add_executable(${PROJECT_NAME}
 	main.cpp
 	ble_client/lib/shm/common/clean.cpp
 	"ble_client/lib/shm/common/names.cpp"
@@ -152,7 +148,18 @@ add_executable(${CURRENT_PROJECT_NAME}
 	${IMPLOT_SRCS}
 )
 
-target_include_directories(${CURRENT_PROJECT_NAME} PRIVATE
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU|Clang")
+	target_compile_options(${PROJECT_NAME} -Wall -Wextra -Wpedantic)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+	# Makes UTF-8 work. Could not get it to work with target definitions has to be global
+	add_compile_options("/utf-8")
+	# Set the Visual C++ runtime to be statically linked
+	set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
+	# This macro _WIN32_WINNT is for some reason needed for using boost libraries because they can't detect the Windows version themselves?
+	target_compile_definitions(${PROJECT_NAME} PRIVATE _WIN32_WINNT=0x0A00)
+endif()
+
+target_include_directories(${PROJECT_NAME} PRIVATE
 	${CMAKE_CURRENT_LIST_DIR}/include
 	${CMAKE_CURRENT_LIST_DIR}/ble_client/include
 	${IMGUI_DIR}
@@ -160,7 +167,7 @@ target_include_directories(${CURRENT_PROJECT_NAME} PRIVATE
     ${Boost_INCLUDE_DIRS}
 )
 
-target_link_libraries(${CURRENT_PROJECT_NAME} PRIVATE
+target_link_libraries(${PROJECT_NAME} PRIVATE
 	trielo
 	simpleble::simpleble
 	magic
@@ -178,9 +185,5 @@ target_link_libraries(${CURRENT_PROJECT_NAME} PRIVATE
 	utfconv
 	serde 
 )
-
-if(WIN32)
-	target_compile_definitions(${CURRENT_PROJECT_NAME} PRIVATE _WIN32_WINNT=0x0A00)
-endif()
 
 add_executable(dummy misc/dummy.cpp)

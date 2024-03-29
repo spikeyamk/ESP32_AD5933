@@ -37,16 +37,16 @@ namespace GUI {
                 }
 
                 if(ImGui::BeginTabBar("Calibration_PlotsBar")) {
-                    if(ImGui::BeginTabItem("RAW_DATA")) {
-                        draw_raw_data();
+                    if(ImGui::BeginTabItem("CALIBRATION_DATA")) {
+                        draw_calibration_data();
                         ImGui::EndTabItem(); 
                     }
                     if(ImGui::BeginTabItem("CALCULATED_DATA")) {
                         draw_calculated_data();
                         ImGui::EndTabItem(); 
                     }
-                    if(ImGui::BeginTabItem("CALIBRATION_DATA")) {
-                        draw_calibration_data();
+                    if(ImGui::BeginTabItem("RAW_DATA")) {
+                        draw_raw_data();
                         ImGui::EndTabItem(); 
                     }
                     ImGui::EndTabBar();

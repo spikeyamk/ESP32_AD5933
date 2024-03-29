@@ -1,0 +1,10 @@
+#1. Try and fix Measure Periodic
+#2. If above too broken create Magic::Commands::FreqSweep::Single and Magic::Commands::FreqSweep::Periodic
+3. Put Save button on top
+4. GUI::Windows::{Client|Measure|Auto} communicate to GUI::Windows::Plots thread-safe
+5. Measure Periodic will be using indefinite Spinner
+6. use SimpleBLE safe API
+7. Rewrite and fix trielo
+8. Make ble_client build simpleble and link it requires the point above 
+9. Make UbuntuSans-Regular.ttf be created at configure time by CMake and pulled from the Ubuntu repos
+10. Fix broken update timeval over BLE

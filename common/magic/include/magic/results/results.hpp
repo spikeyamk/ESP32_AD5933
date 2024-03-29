@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <algorithm>
 
 #include <serde/common.hpp>
 

@@ -222,7 +222,7 @@ namespace GUI {
             const std::vector<AD5933::Calibration<float>> tmp_calibration(cal_start_it, cal_end_it + 1);
 
             self.shm->cmd.send(
-                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature {
                     self.index,
                     Magic::Commands::Sweep::Configure{
                         self.configs.measurement.to_raw_array()
@@ -234,18 +234,20 @@ namespace GUI {
             assert(wished_size <= self.calibration_vectors.calibration.size());
             const float progress_bar_step = 1.0f / static_cast<float>(wished_size);
             const float timeout_ms {
-                (1.0f / static_cast<float>(self.configs.measurement.get_start_freq().unwrap())) 
-                * [&]() {
-                    const float ret { static_cast<float>(self.configs.measurement.get_settling_time_cycles_number().unwrap()) };
-                    if(ret == 0) {
-                        return 1.0f;
-                    } else {
-                        return ret;
-                    }
-                }()
-                * AD5933::Masks::Or::SettlingTimeCyclesHB::get_multiplier_float(self.configs.measurement.get_settling_time_cycles_multiplier())
-                * 1'000'000.0f
-                * 100.0f
+                500.0f
+                + (
+                    (1.0f / static_cast<float>(self.configs.measurement.get_start_freq().unwrap())) 
+                    * [&]() {
+                        const float ret { static_cast<float>(self.configs.measurement.get_settling_time_cycles_number().unwrap()) };
+                        if(ret == 0) {
+                            return 1.0f;
+                        } else {
+                            return ret;
+                        }
+                    }()
+                    * AD5933::Masks::Or::SettlingTimeCyclesHB::get_multiplier_float(self.configs.measurement.get_settling_time_cycles_multiplier())
+                    * 1'000'000.0f
+                )
             };
 
             const auto boost_timeout_ms { boost::posix_time::milliseconds(static_cast<size_t>(timeout_ms)) };
@@ -302,6 +304,7 @@ namespace GUI {
                     }
                     self.progress_bar_fraction += progress_bar_step;
                 } while(tmp_measurement.size() != wished_size);
+
 
                 self.single_vectors.raw_measurement = tmp_raw_measurement;
                 self.single_vectors.measurement = tmp_measurement;
@@ -372,36 +375,38 @@ namespace GUI {
 
             const std::vector<AD5933::Calibration<float>> tmp_calibration(cal_start_it, cal_end_it + 1);
 
-            self.shm->cmd.send(
-                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
-                    self.index,
-                    Magic::Commands::Sweep::Configure{
-                        self.configs.measurement.to_raw_array()
-                    }
+            const BLE_Client::StateMachines::Connection::Events::write_body_composition_feature configure_event {
+                self.index,
+                Magic::Commands::Sweep::Configure{
+                    self.configs.measurement.to_raw_array()
                 }
-            );
+            };
+            self.shm->cmd.send(configure_event);
 
             const uint16_t wished_size = self.configs.measurement.get_num_of_inc().unwrap() + 1;
             assert(wished_size <= self.calibration_vectors.calibration.size());
             const float progress_bar_step = 1.0f / static_cast<float>(wished_size);
             const float timeout_ms {
-                (1.0f / static_cast<float>(self.configs.measurement.get_start_freq().unwrap())) 
-                * [&]() {
-                    const float ret { static_cast<float>(self.configs.measurement.get_settling_time_cycles_number().unwrap()) };
-                    if(ret == 0) {
-                        return 1.0f;
-                    } else {
-                        return ret;
-                    }
-                }()
-                * AD5933::Masks::Or::SettlingTimeCyclesHB::get_multiplier_float(self.configs.measurement.get_settling_time_cycles_multiplier())
-                * 1'000'000.0f
-                * 100.0f
+                500.0f + (
+                    (1.0f / static_cast<float>(self.configs.measurement.get_start_freq().unwrap())) 
+                    * [&]() {
+                        const float ret { static_cast<float>(self.configs.measurement.get_settling_time_cycles_number().unwrap()) };
+                        if(ret == 0) {
+                            return 1.0f;
+                        } else {
+                            return ret;
+                        }
+                    }()
+                    * AD5933::Masks::Or::SettlingTimeCyclesHB::get_multiplier_float(self.configs.measurement.get_settling_time_cycles_multiplier())
+                    * 1'000'000.0f
+                )
             };
 
             const auto boost_timeout_ms { boost::posix_time::milliseconds(static_cast<size_t>(timeout_ms)) };
 
             bool first_iteration { true };
+            uint8_t timeout_counter { 0 };
+            const uint8_t timeout_stopper { 10 };
             do {
                 self.progress_bar_fraction = 0.0f;
                 std::vector<AD5933::Data> tmp_raw_measurement;
@@ -418,19 +423,24 @@ namespace GUI {
                 do {
                     const auto rx_payload { self.shm->active_devices[self.index].information->read_for(boost_timeout_ms) };
                     if(rx_payload.has_value() == false) {
-                        self.status = Status::Failed;
-                        std::cout << "ERROR: GUI::Windows::Measure::single_cb: sweep: timeout\n";
-                        return;
+                        std::cout << "ERROR: GUI::Windows::Measure::periodic_cb: sweep: timeout: timeout_counter: " << timeout_counter << std::endl;
+                        if(timeout_counter < timeout_stopper) {
+                            timeout_counter++;
+                            break;
+                        } else {
+                            self.status = Status::Failed;
+                            return;
+                        }
                     }
 
                     if(st.stop_requested()) {
                         self.status = Status::Failed;
-                        std::cout << "INFO: GUI::Windows::Measure::single_cb: stopping measurement\n";
+                        std::cout << "INFO: GUI::Windows::Measure::periodic_cb: stopping measurement\n";
                         return;
                     }
 
                     bool is_valid_data = false;
-                    std::visit([&is_valid_data, &tmp_raw_measurement, &tmp_measurement, &tmp_calibration](auto&& event) {
+                    std::visit([&is_valid_data, &tmp_raw_measurement, &tmp_measurement, &tmp_calibration, &timeout_counter](auto&& event) {
                         using T_Decay = std::decay_t<decltype(event)>;
                         if constexpr(std::is_same_v<T_Decay, Magic::Results::Sweep::ValidData>) {
                             std::array<uint8_t, 4> raw_array;
@@ -443,16 +453,21 @@ namespace GUI {
                             tmp_measurement.push_back(tmp_meas);
 
                             is_valid_data = true;
+                            timeout_counter = 0;
                         }
                     }, rx_payload.value());
 
                     if(is_valid_data == false) {
                         self.status = Status::Failed;
-                        std::cout << "ERROR: GUI::Windows::Measure::single_cb: measure received wrong event result packet\n";
+                        std::cout << "ERROR: GUI::Windows::Measure::periodic_cb: measure received wrong event result packet\n";
                         return;
                     }
                     self.progress_bar_fraction += progress_bar_step;
                 } while(tmp_measurement.size() != wished_size);
+
+                if(timeout_counter != 0) {
+                    continue;
+                }
                 
                 mytimeval64_t tv;
                 gettimeofday(&tv, nullptr);

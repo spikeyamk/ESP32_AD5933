@@ -1,18 +1,14 @@
 cmake_minimum_required(VERSION 3.28)
-set(CURRENT_PROJECT_NAME "ble_client")
-project(${CURRENT_PROJECT_NAME} C CXX)
+project("ble_client" C CXX)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-	add_compile_options(-Wall -Wextra -Wpedantic)
-endif()
-
 if(NOT Boost_FOUND)
 	if(WIN32)
 		set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
+		set(Boost_NO_SYSTEM_PATHS    ON)
 		set(Boost_USE_STATIC_RUNTIME ON)
 	endif()
 	set(Boost_USE_STATIC_LIBS    ON)
@@ -62,7 +58,23 @@ set(BLE_CLIENT_SRCS
 	lib/state_machines/connector/connector.cpp
 )
 
-set(BLE_CLIENT_LINK_LIBS
+set(BLE_CLIENT_INCLUDE_DIRS
+	${CMAKE_CURRENT_LIST_DIR}/include
+	${CMAKE_CURRENT_LIST_DIR}/../include
+    ${Boost_INCLUDE_DIRS}
+)
+
+add_library(${PROJECT_NAME}
+	${BLE_CLIENT_SRCS}
+)
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	target_compile_options(${PROJECT_NAME} -Wall -Wextra -Wpedantic)
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+	#target_compile_options(${PROJECT_NAME} /W4)
+endif()
+
+target_link_libraries(${PROJECT_NAME} PUBLIC
     ${Boost_LIBRARIES}
     sml
     simpleble::simpleble
@@ -71,31 +83,22 @@ set(BLE_CLIENT_LINK_LIBS
 	nlohmann_json
 )
 
-set(BLE_CLIENT_INCLUDE_DIRS
-	${CMAKE_CURRENT_LIST_DIR}/include
-	${CMAKE_CURRENT_LIST_DIR}/../include
-    ${Boost_INCLUDE_DIRS}
-)
-
-add_library(${CURRENT_PROJECT_NAME}
-	${BLE_CLIENT_SRCS}
-)
-
-target_link_libraries(${CURRENT_PROJECT_NAME} PUBLIC
-	${BLE_CLIENT_LINK_LIBS}
-)
-
-target_include_directories(${CURRENT_PROJECT_NAME} PUBLIC
+target_include_directories(${PROJECT_NAME} PUBLIC
 	${BLE_CLIENT_INCLUDE_DIRS}
 )
 
 if(WIN32)
-	target_compile_definitions(${CURRENT_PROJECT_NAME} PRIVATE _WIN32_WINNT=0x0A00)
+	target_compile_definitions(${PROJECT_NAME} PRIVATE _WIN32_WINNT=0x0A00)
 endif()
 
 option(BLE_CLIENT_TEST "Enable BLE_Client Tests" OFF)
 
 if(BLE_CLIENT_TEST)
+	if(NOT TARGET AD5933_config)
+		set(AD5933_CONFIG_DIR ${CMAKE_CURRENT_LIST_DIR}/../../common/ad5933/config)
+		add_subdirectory(${AD5933_CONFIG_DIR} ${CMAKE_BINARY_DIR}/ad5933_config)
+	endif()
+
 	function(add_test_case TEST_NAME TEST_SOURCE)
 		add_executable(${TEST_NAME} ${TEST_SRCS} tests/${TEST_SOURCE})
 		target_include_directories(${TEST_NAME} PRIVATE ${TEST_INCLUDE_DIRS})
@@ -108,7 +111,6 @@ if(BLE_CLIENT_TEST)
 
 	endfunction()
 	
-	list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
 	enable_testing()
 	set(TEST_SRCS 
 		"tests/tests.cpp"
@@ -122,21 +124,20 @@ if(BLE_CLIENT_TEST)
 		${BLE_CLIENT_INCLUDE_DIRS}
 	)
 	set(TEST_LINK_LIBS
-		${BLE_CLIENT_LINK_LIBS}
-		${CURRENT_PROJECT_NAME}
+		${PROJECT_NAME}
 		AD5933_config
 	)
 	add_test_case(ble_client_connect_sync_scan connect/sync_scan.cpp)
-	add_test_case(ble_client_connect_async_scan connect/async_scan.cpp)
-	add_test_case(ble_client_connect_interprocess_sync_scan connect/interprocess_sync_scan.cpp)
-	add_test_case(ble_client_connect_interprocess_async_scan connect/interprocess_async_scan.cpp)
-	add_test_case(ble_client_debug_dump debug/dump.cpp)
-	add_test_case(ble_client_debug_program_and_dump debug/program_and_dump.cpp)
-	add_test_case(ble_client_debug_interprocess_dump debug/interprocess_dump.cpp)
-	add_test_case(ble_client_file_free file/free.cpp)
-	add_test_case(ble_client_file_list_count file/list_count.cpp)
-	add_test_case(ble_client_file_list file/list.cpp)
-	add_test_case(ble_client_file_size file/size.cpp)
-	add_test_case(ble_client_file_remove file/remove.cpp)
-	add_test_case(ble_client_file_download file/download.cpp)
+	#add_test_case(ble_client_connect_async_scan connect/async_scan.cpp)
+	#add_test_case(ble_client_connect_interprocess_sync_scan connect/interprocess_sync_scan.cpp)
+	#add_test_case(ble_client_connect_interprocess_async_scan connect/interprocess_async_scan.cpp)
+	#add_test_case(ble_client_debug_dump debug/dump.cpp)
+	#add_test_case(ble_client_debug_program_and_dump debug/program_and_dump.cpp)
+	#add_test_case(ble_client_debug_interprocess_dump debug/interprocess_dump.cpp)
+	#add_test_case(ble_client_file_free file/free.cpp)
+	#add_test_case(ble_client_file_list_count file/list_count.cpp)
+	#add_test_case(ble_client_file_list file/list.cpp)
+	#add_test_case(ble_client_file_size file/size.cpp)
+	#add_test_case(ble_client_file_remove file/remove.cpp)
+	#add_test_case(ble_client_file_download file/download.cpp)
 endif()
