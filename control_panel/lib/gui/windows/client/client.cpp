@@ -91,14 +91,20 @@ namespace GUI {
                         calibration_plots_window.draw(enables.calibration_plots, ImGui::GetID(static_cast<void*>(nullptr)));
                     }
                     if(enables.auto_plots) {
-                        const auto send_point { auto_window.send_points->try_read() };
-                        if(send_point.has_value()) {
-                            auto_plots_window.update_send_vectors(send_point.value());
+                        while(auto_window.send_points->size() != 0) {
+                            const auto send_point { auto_window.send_points->try_read() };
+                            if(send_point.has_value()) {
+                                auto_plots_window.update_send_vectors(send_point.value());
+                            }
                         }
-                        const auto save_point { auto_window.save_points->try_read() };
-                        if(save_point.has_value()) {
-                            auto_plots_window.update_save_vectors(save_point.value());
+
+                        while(auto_window.save_points->size() != 0) {
+                            const auto save_point { auto_window.save_points->try_read() };
+                            if(save_point.has_value()) {
+                                auto_plots_window.update_save_vectors(save_point.value());
+                            }
                         }
+
                         auto_plots_window.draw(enables.auto_plots, ImGui::GetID(static_cast<void*>(nullptr)));
                     }
                     if(enables.debug) {
