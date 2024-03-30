@@ -26,7 +26,8 @@ namespace GUI {
             bool calibration_plots { true };
             bool auto_plots { true };
             bool console { false };
-            bool demo { false };
+            bool imgui_demo { false };
+            bool implot_demo { false };
         };
         MenuBarEnables menu_bar_enables {};
 

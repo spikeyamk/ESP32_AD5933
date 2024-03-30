@@ -205,8 +205,9 @@ namespace GUI {
         }
 
         void Calibrate::calibrate_cb(std::stop_token st, Calibrate& self) {
+            self.shm->active_devices[self.index].information->clear();
             self.shm->cmd.send(
-                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
+                BLE_Client::StateMachines::Connection::Events::write_body_composition_feature {
                     self.index,
                     Magic::Commands::Sweep::Configure{
                         self.config.to_raw_array()
@@ -321,7 +322,7 @@ namespace GUI {
             );
 
             self.calibration_file = ns::CalibrationFile { impedance, self.config, tmp_calibration };
-            self.calibration_queue_to_load_into_measurement.push(self.calibration_file);
+            self.calibration_queue_to_load_into_measurement->push(self.calibration_file);
 
             self.status = Status::Calibrated;
             self.plotted = false;

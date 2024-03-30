@@ -140,8 +140,12 @@ namespace GUI {
                 client_windows.erase(remove_it);
             }
 
-            if(top.menu_bar_enables.demo) {
+            if(top.menu_bar_enables.imgui_demo) {
                 ImGui::ShowDemoWindow();
+            }
+
+            if(top.menu_bar_enables.implot_demo) {
+                ImPlot::ShowDemoWindow();
             }
 
             Boilerplate::render(renderer);

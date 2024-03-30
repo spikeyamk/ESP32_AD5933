@@ -6,9 +6,6 @@
 #include <cstddef>
 #include <vector>
 #include <stop_token>
-#include <optional>
-#include <mutex>
-#include <queue>
 
 #include "imgui.h"
 
@@ -19,6 +16,7 @@
 #include "json/conversion.hpp"
 #include "ble_client/shm/parent/parent.hpp"
 #include "gui/windows/client/lock.hpp"
+#include "misc/channel.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -89,7 +87,7 @@ namespace GUI {
             ns::CalibrationFile calibration_file;
             float progress_bar_fraction { 0.0f };
         public:
-            std::queue<ns::CalibrationFile> calibration_queue_to_load_into_measurement;
+            std::shared_ptr<Channel<ns::CalibrationFile>> calibration_queue_to_load_into_measurement { std::make_shared<Channel<ns::CalibrationFile>>() };
             Calibrate(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm);
             ~Calibrate();
             void draw(bool& enable, const ImGuiID side_id, Lock& lock);
@@ -98,6 +96,7 @@ namespace GUI {
         private:
             const std::optional<Lock> draw_inner();
             void draw_input_fields();
+            void send();
         private:
             static void calibrate_cb(std::stop_token st, Calibrate& self);
             void calibrate();

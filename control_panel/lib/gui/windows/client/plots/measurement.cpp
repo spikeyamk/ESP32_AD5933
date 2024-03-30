@@ -125,7 +125,6 @@ namespace GUI {
             }
 
             void Measurement::draw_periodic_raw_data() {
-                draw_freq_input(periodic_freq_selects.raw, periodic_index_selects.raw);
                 if(ImPlot::BeginPlot("Measurement Periodic Raw Real Data")) {
                     if(firsts.periodic.raw) {
                         ImPlot::SetupAxes("Time", "REAL_DATA", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
@@ -178,10 +177,12 @@ namespace GUI {
 
                     ns::save_to_fs(graph3D_file);
                 }
+
+                ImGui::SameLine();
+                draw_freq_input(periodic_freq_selects.raw, periodic_index_selects.raw);
             }
 
             void Measurement::draw_periodic_calculated_data() {
-                draw_freq_input(periodic_freq_selects.calculated, periodic_index_selects.calculated);
                 if(ImPlot::BeginPlot("Measurement Periodic Calculated Magnitude")) {
                     if(firsts.periodic.calculated) {
                         ImPlot::SetupAxes("Time", "RAW_MAGNITUDE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
@@ -234,10 +235,12 @@ namespace GUI {
 
                     ns::save_to_fs(graph3D_file);
                 }
+
+                ImGui::SameLine();
+                draw_freq_input(periodic_freq_selects.calculated, periodic_index_selects.calculated);
             }
 
             void Measurement::draw_periodic_corrected_gon_data() {
-                draw_freq_input(periodic_freq_selects.corrected_gon, periodic_index_selects.corrected_gon);
                 if(ImPlot::BeginPlot("Measurement Periodic Corrected Impedance")) {
                     if(firsts.periodic.corrected_gon) {
                         ImPlot::SetupAxes("Time", "IMPEDANCE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
@@ -291,10 +294,12 @@ namespace GUI {
 
                     ns::save_to_fs(graph3D_file);
                 }
+
+                ImGui::SameLine();
+                draw_freq_input(periodic_freq_selects.corrected_gon, periodic_index_selects.corrected_gon);
             }
 
             void Measurement::draw_periodic_corrected_alg_data() {
-                draw_freq_input(periodic_freq_selects.corrected_alg, periodic_index_selects.corrected_alg);
                 if(ImPlot::BeginPlot("Measurement Periodic Resistance Data")) {
                     if(firsts.periodic.corrected_alg) {
                         ImPlot::SetupAxes("Time", "RESISTANCE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
@@ -348,18 +353,21 @@ namespace GUI {
 
                     ns::save_to_fs(graph3D_file);
                 }
+
+                ImGui::SameLine();
+                draw_freq_input(periodic_freq_selects.corrected_alg, periodic_index_selects.corrected_alg);
             }
 
             void Measurement::update_periodic_vectors(
-                const std::vector<float>& freq,
-                std::queue<Measure::PeriodicPoint>& periodic_points
+                const std::optional<std::vector<float>>& freq,
+                const std::optional<Measure::PeriodicPoint>& periodic_point
             ) {
-                if(freq != periodic_vectors.freq) {
-                    periodic_vectors.freq = freq;
+                if(freq.has_value() && freq != periodic_vectors.freq) {
+                    periodic_vectors.freq = freq.value();
                     periodic_vectors.time_points.clear();
                     periodic_vectors.points.clear();
                     periodic_vectors.points.resize(periodic_vectors.freq.size());
-                    const uint32_t tmp_first_freq = static_cast<uint32_t>(freq.front());
+                    const uint32_t tmp_first_freq = static_cast<uint32_t>(freq.value().front());
                     periodic_freq_selects = PeriodicFreqSelects {
                         tmp_first_freq,
                         tmp_first_freq,
@@ -369,22 +377,21 @@ namespace GUI {
                     periodic_index_selects = PeriodicIndexSelects { 0, 0, 0, 0 };
                 }
 
-                const auto front_point { periodic_points.front() };
-                periodic_vectors.time_points.push_back(front_point.time_point);
+                if(periodic_point.has_value()) {
+                    periodic_vectors.time_points.push_back(periodic_point.value().time_point);
 
-                for(size_t i = 0; i < periodic_vectors.points.size(); i++) {
-                    periodic_vectors.points[i].raw.real_data.push_back(front_point.raw_measurement[i].get_real_data());
-                    periodic_vectors.points[i].raw.imag_data.push_back(front_point.raw_measurement[i].get_imag_data());
-                    periodic_vectors.points[i].raw.magnitude.push_back(front_point.raw_measurement[i].get_raw_magnitude<float>());
-                    periodic_vectors.points[i].raw.phase.push_back(front_point.raw_measurement[i].get_raw_phase<float>());
+                    for(size_t i = 0; i < periodic_vectors.points.size(); i++) {
+                        periodic_vectors.points[i].raw.real_data.push_back(periodic_point.value().raw_measurement[i].get_real_data());
+                        periodic_vectors.points[i].raw.imag_data.push_back(periodic_point.value().raw_measurement[i].get_imag_data());
+                        periodic_vectors.points[i].raw.magnitude.push_back(periodic_point.value().raw_measurement[i].get_raw_magnitude<float>());
+                        periodic_vectors.points[i].raw.phase.push_back(periodic_point.value().raw_measurement[i].get_raw_phase<float>());
 
-                    periodic_vectors.points[i].corrected.impedance.push_back(front_point.measurement[i].get_magnitude());
-                    periodic_vectors.points[i].corrected.phase.push_back(front_point.measurement[i].get_phase());
-                    periodic_vectors.points[i].corrected.resistance.push_back(front_point.measurement[i].get_resistance());
-                    periodic_vectors.points[i].corrected.reactance.push_back(front_point.measurement[i].get_reactance());
+                        periodic_vectors.points[i].corrected.impedance.push_back(periodic_point.value().measurement[i].get_magnitude());
+                        periodic_vectors.points[i].corrected.phase.push_back(periodic_point.value().measurement[i].get_phase());
+                        periodic_vectors.points[i].corrected.resistance.push_back(periodic_point.value().measurement[i].get_resistance());
+                        periodic_vectors.points[i].corrected.reactance.push_back(periodic_point.value().measurement[i].get_reactance());
+                    }
                 }
-
-                periodic_points.pop();
             }
 
             void Measurement::update_single_vectors(

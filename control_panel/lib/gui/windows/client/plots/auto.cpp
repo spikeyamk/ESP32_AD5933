@@ -70,18 +70,16 @@ namespace GUI {
                 ImGui::End();
             }
 
-            void Auto::update_send_vectors(std::queue<Windows::Auto::Point>& send_points) {
-                update_vectors(send_points, send_vectors);
+            void Auto::update_send_vectors(const Windows::Auto::Point& send_point) {
+                update_vectors(send_point, send_vectors);
             }
 
-            void Auto::update_vectors(std::queue<Windows::Auto::Point>& points, Vectors& vectors) {
-                const auto front_point { points.front() };
-                vectors.time.push_back(front_point.time);
-                vectors.impedance.push_back(front_point.auto_meas.impedance);
-                vectors.phase.push_back(front_point.auto_meas.phase);
-                vectors.resistance.push_back(front_point.auto_meas.impedance * std::cos(front_point.auto_meas.phase));
-                vectors.reactance.push_back(front_point.auto_meas.impedance * std::sin(front_point.auto_meas.phase));
-                points.pop();
+            void Auto::update_vectors(const Windows::Auto::Point& point, Vectors& vectors) {
+                vectors.time.push_back(point.time);
+                vectors.impedance.push_back(point.auto_meas.impedance);
+                vectors.phase.push_back(point.auto_meas.phase);
+                vectors.resistance.push_back(point.auto_meas.impedance * std::cos(point.auto_meas.phase));
+                vectors.reactance.push_back(point.auto_meas.impedance * std::sin(point.auto_meas.phase));
             }
 
             void Auto::draw_send_corrected_gon_data() {
@@ -158,11 +156,9 @@ namespace GUI {
                 }
             }
         
-            void Auto::update_save_vectors(std::queue<Windows::Auto::Point>& save_points) {
+            void Auto::update_save_vectors(const Windows::Auto::Point& save_point) {
                 save_vectors = Vectors {};
-                while(save_points.empty() == false) {
-                    update_vectors(save_points, save_vectors);
-                }
+                update_vectors(save_point, save_vectors);
             }
 
             void Auto::draw_save_corrected_gon_data() {

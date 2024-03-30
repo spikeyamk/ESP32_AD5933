@@ -3,15 +3,14 @@
 #include <string>
 #include <string_view>
 #include <memory>
-#include <queue>
 #include <stop_token>
-#include <optional>
 
 #include "imgui.h"
 
 #include "ble_client/shm/parent/parent.hpp"
 #include "magic/results/results.hpp"
 #include "gui/windows/client/lock.hpp"
+#include "misc/channel.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -85,7 +84,7 @@ namespace GUI {
             };
             Bytes bytes {};
             float progress_bar_fraction { 0.0f };
-            uint16_t tick_ms_min { 100 };
+            static constexpr uint16_t tick_ms_min { 0 };
             uint16_t tick_ms { tick_ms_min };
             uint16_t tick_ms_max { std::numeric_limits<uint16_t>::max() };
         public:
@@ -93,8 +92,8 @@ namespace GUI {
                 double time;
                 Magic::Results::Auto::Point auto_meas;
             };
-            std::queue<Point> send_points;
-            std::queue<Point> save_points;
+            std::shared_ptr<Channel<Point>> send_points { std::make_shared<Channel<Point>>() };
+            std::shared_ptr<Channel<Point>> save_points { std::make_shared<Channel<Point>>() };
             Auto() = default;
             Auto(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm);
             ~Auto();

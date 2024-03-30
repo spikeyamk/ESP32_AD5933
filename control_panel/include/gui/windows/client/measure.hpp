@@ -6,11 +6,9 @@
 #include <string_view>
 #include <stop_token>
 #include <vector>
-#include <queue>
 #include <span>
 #include <array>
 #include <chrono>
-#include <optional>
 
 #include "ad5933/masks/maps.hpp"
 #include "imgui.h"
@@ -21,6 +19,7 @@
 #include "ad5933/calibration/calibration.hpp"
 #include "ad5933/measurement/measurement.hpp"
 #include "gui/windows/client/lock.hpp"
+#include "misc/channel.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -62,7 +61,6 @@ namespace GUI {
                 Failed,
             };
             Status status { Status::NotLoaded };
-            bool single_plotted { false };
             struct Configs {
                 AD5933::Config calibration;
                 AD5933::Config measurement;
@@ -79,7 +77,8 @@ namespace GUI {
                 std::vector<AD5933::Measurement<float>> measurement;
                 std::vector<float> freq_float;
             };
-            SingleVectors single_vectors;
+            std::shared_ptr<Channel<SingleVectors>> single_vectors_channel { std::make_shared<Channel<SingleVectors>>() };
+            
             struct PeriodicPoint {
                 double time_point;
                 std::vector<AD5933::Data> raw_measurement;
@@ -89,7 +88,8 @@ namespace GUI {
                 std::vector<float> freq_float;
                 std::queue<PeriodicPoint> periodic_points;
             };
-            PeriodicVectors periodic_vectors;
+            std::shared_ptr<Channel<std::vector<float>>> periodic_freq_float_channel { std::make_shared<Channel<std::vector<float>>>() };
+            std::shared_ptr<Channel<PeriodicPoint>> periodic_point_channel { std::make_shared<Channel<PeriodicPoint>>() };
             std::stop_source stop_source;
         public:
             Measure() = default;

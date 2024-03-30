@@ -31,8 +31,8 @@ namespace GUI {
                 Auto() = default;
                 Auto(const size_t index);
                 void draw(bool& enable, const ImGuiID side_id);
-                void update_send_vectors(std::queue<Windows::Auto::Point>& send_points);
-                void update_save_vectors(std::queue<Windows::Auto::Point>& save_points);
+                void update_send_vectors(const Windows::Auto::Point& send_point);
+                void update_save_vectors(const Windows::Auto::Point& save_point);
             private:
                 struct Vectors {
                     std::vector<double> time;
@@ -43,7 +43,7 @@ namespace GUI {
                 };
                 Vectors send_vectors {};
                 Vectors save_vectors {};
-                void update_vectors(std::queue<Windows::Auto::Point>& points, Vectors& vectors);
+                void update_vectors(const Windows::Auto::Point& point, Vectors& vectors);
                 void draw_send_corrected_gon_data();
                 void draw_send_corrected_alg_data();
                 void draw_save_corrected_gon_data();

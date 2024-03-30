@@ -200,6 +200,7 @@ namespace GUI {
         }
 
         void Measure::single_cb(std::stop_token st, Measure& self) {
+            self.shm->active_devices[self.index].information->clear();
             const auto freq_start_it { std::find(self.calibration_vectors.freq_float.begin(), self.calibration_vectors.freq_float.end(), static_cast<float>(self.configs.measurement.get_start_freq().unwrap())) };
             if(freq_start_it == self.calibration_vectors.freq_float.end()) {
                 self.status = Status::Failed;
@@ -252,7 +253,12 @@ namespace GUI {
 
             const auto boost_timeout_ms { boost::posix_time::milliseconds(static_cast<size_t>(timeout_ms)) };
 
-            bool first_iteration { true };
+            SingleVectors tmp_single_vectors {
+                .raw_measurement = {},
+                .measurement = {},
+                .freq_float = tmp_freq,
+            };
+
             do {
                 self.progress_bar_fraction = 0.0f;
                 std::vector<AD5933::Data> tmp_raw_measurement;
@@ -305,13 +311,9 @@ namespace GUI {
                     self.progress_bar_fraction += progress_bar_step;
                 } while(tmp_measurement.size() != wished_size);
 
-
-                self.single_vectors.raw_measurement = tmp_raw_measurement;
-                self.single_vectors.measurement = tmp_measurement;
-                if(first_iteration) {
-                    self.single_vectors.freq_float = tmp_freq;
-                    first_iteration = false;
-                }
+                tmp_single_vectors.raw_measurement = tmp_raw_measurement;
+                tmp_single_vectors.measurement = tmp_measurement;
+                self.single_vectors_channel->push(tmp_single_vectors);
             } while(self.periodically_sweeping);
 
             self.shm->cmd.send(
@@ -343,7 +345,6 @@ namespace GUI {
             );
 
             self.status = Status::Loaded;
-            self.single_plotted = false;
         }
 
         void Measure::single() {
@@ -354,6 +355,7 @@ namespace GUI {
         }
 
         void Measure::periodic_cb(std::stop_token st, Measure& self) {
+            self.shm->active_devices[self.index].information->clear();
             const auto freq_start_it { std::find(self.calibration_vectors.freq_float.begin(), self.calibration_vectors.freq_float.end(), static_cast<float>(self.configs.measurement.get_start_freq().unwrap())) };
             if(freq_start_it == self.calibration_vectors.freq_float.end()) {
                 self.status = Status::Failed;
@@ -387,7 +389,8 @@ namespace GUI {
             assert(wished_size <= self.calibration_vectors.calibration.size());
             const float progress_bar_step = 1.0f / static_cast<float>(wished_size);
             const float timeout_ms {
-                500.0f + (
+                500.0f
+                + (
                     (1.0f / static_cast<float>(self.configs.measurement.get_start_freq().unwrap())) 
                     * [&]() {
                         const float ret { static_cast<float>(self.configs.measurement.get_settling_time_cycles_number().unwrap()) };
@@ -469,21 +472,23 @@ namespace GUI {
                     continue;
                 }
                 
-                mytimeval64_t tv;
-                gettimeofday(&tv, nullptr);
-                const double seconds = static_cast<double>(tv.tv_sec);
-                const double useconds_to_seconds = static_cast<double>(tv.tv_usec) / 1000000.0;
-
+                const double useconds_to_seconds = static_cast<double>(
+                    std::chrono::duration_cast<
+                        std::chrono::microseconds
+                    >(
+                        std::chrono::high_resolution_clock::now().time_since_epoch()
+                    ).count() / 1000000.0
+                );
                 const PeriodicPoint tmp_periodic_point {
-                    .time_point = seconds + useconds_to_seconds,
+                    .time_point = useconds_to_seconds,
                     .raw_measurement = tmp_raw_measurement,
                     .measurement = tmp_measurement,
                 };
 
-                self.periodic_vectors.periodic_points.push(tmp_periodic_point);
+                self.periodic_point_channel->push(tmp_periodic_point);
 
                 if(first_iteration) {
-                    self.periodic_vectors.freq_float = tmp_freq;
+                    self.periodic_freq_float_channel->push(tmp_freq);
                     first_iteration = false;
                 }
             } while(self.periodically_sweeping);
@@ -517,7 +522,6 @@ namespace GUI {
             );
 
             self.status = Status::Loaded;
-            self.single_plotted = false;
         }
 
         void Measure::periodic() {

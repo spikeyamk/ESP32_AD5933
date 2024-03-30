@@ -214,13 +214,9 @@ namespace BLE {
                 if(decoded.has_value()) {
                     std::visit([](auto &&arg) {
                         using T_Decay = std::decay_t<decltype(arg)>;
-                       if constexpr (std::is_same_v<T_Decay, Magic::Commands::Time::UpdateTimeval>) {
+                        if constexpr (std::is_same_v<T_Decay, Magic::Commands::Time::UpdateTimeval>) {
                             settimeofday(&arg, nullptr);
                             std::printf("BLE_Server::time_update_control_point_characteristic_access_cb: Updated timeval\n");
-                            Util::print_current_time();
-                        } else if constexpr (std::is_same_v<T_Decay, Magic::Commands::Time::UpdateTimezone>) {
-                            settimeofday(nullptr, &arg);
-                            std::printf("BLE_Server::time_update_control_point_characteristic_access_cb: Updated timezone\n");
                             Util::print_current_time();
                         }
                     }, decoded.value());

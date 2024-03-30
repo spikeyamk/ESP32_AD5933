@@ -316,6 +316,7 @@ namespace GUI {
 
         void Auto::start_sending_cb(std::stop_token st, Auto& self) {
             self.status = Status::Sending;
+            self.shm->active_devices[self.index].measurement->clear();
             self.shm->cmd.send(
                 BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     self.index,
@@ -352,15 +353,16 @@ namespace GUI {
 
                 std::visit([&self](auto&& event) {
                     if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Results::Auto::Point>) {
-                        mytimeval64_t tv;
-                        gettimeofday(&tv, nullptr);
-                        const double seconds = static_cast<double>(tv.tv_sec);
-                        const double useconds_to_seconds = static_cast<double>(tv.tv_usec) / 1000000.0;
+                        const auto now { std::chrono::high_resolution_clock::now() };
+                        const auto usecs {
+                            std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch())
+                        };
+                        const double usecs_to_seconds = static_cast<double>(usecs.count()) / 1000000.0;
                         const Point point {
-                            .time = seconds + useconds_to_seconds,
+                            .time = usecs_to_seconds,
                             .auto_meas = event,
                         };
-                        self.send_points.push(point);
+                        self.send_points->push(point);
                     }
                 }, rx_payload.value());
             }
@@ -389,6 +391,7 @@ namespace GUI {
         }
 
         void Auto::remove_cb(Auto& self) {
+            self.shm->active_devices[self.index].information->clear();
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::Start{} });
             const Magic::Commands::File::Remove remove_event { .path = self.list_table.paths[self.selected.value()].path };
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, remove_event });
@@ -457,6 +460,7 @@ namespace GUI {
 
         void Auto::list_cb(std::stop_token st, Auto& self) {
             self.status = Status::Listing;
+            self.shm->active_devices[self.index].information->clear();
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::Start{} });
 
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::Free{} });
@@ -638,6 +642,7 @@ namespace GUI {
         void Auto::download_cb(std::stop_token st, Auto& self) {
             try {
                 self.status = Status::Downloading;
+                self.shm->active_devices[self.index].information->clear();
                 self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::Start{} });
                 const Magic::Commands::File::Download download_event { .path = self.list_table.paths[self.selected.value()].path };
                 self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, download_event });
@@ -702,7 +707,6 @@ namespace GUI {
                         }
                     }
 
-                    std::queue<Point> tmp_points;
                     for(
                         auto it = file_content.begin();
                         it < file_content.end() && it + sizeof(Magic::Results::Auto::Record::Entry) < file_content.end();
@@ -713,7 +717,7 @@ namespace GUI {
 
                         const auto entry { Magic::Results::Auto::Record::Entry::from_raw_data(entry_serialized) };
 
-                        tmp_points.push(
+                        self.save_points->push(
                             {
                                 .time = entry.unix_timestamp,
                                 .auto_meas = {
@@ -723,7 +727,6 @@ namespace GUI {
                             } 
                         );
                     }
-                    self.save_points = tmp_points;
                 }
 
                 self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::End{} });
@@ -743,6 +746,7 @@ namespace GUI {
 
         void Auto::format_cb(std::stop_token st, Auto& self) {
             self.status = Status::Formatting;
+            self.shm->active_devices[self.index].information->clear();
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::Start{} });
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::Format{} });
             const auto format_payload { self.shm->active_devices[self.index].information->read_for(boost::posix_time::milliseconds(64'000)) };

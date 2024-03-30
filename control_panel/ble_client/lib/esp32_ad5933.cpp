@@ -52,9 +52,7 @@ namespace BLE_Client {
     }
 
     void ESP32_AD5933::update_time() {
-        Magic::Commands::Time::UpdateTimeval update_timeval;
-        gettimeofday(&update_timeval, nullptr);
-        const auto update_timeval_ser { Magic::Commands::Serializer::run(update_timeval) };
+        const auto update_timeval_ser { Magic::Commands::Serializer::run(Magic::Commands::Time::UpdateTimeval::now()) };
         peripheral.write_request(
             service.uuid(),
             service.time_update_control_point.uuid(),

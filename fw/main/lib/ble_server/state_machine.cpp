@@ -159,7 +159,14 @@ namespace BLE {
 						const auto data { ad5933.read_impe_data() };
 						if(data.has_value()) {
 							const Magic::Results::Sweep::ValidData valid_data_event { data.value() };
-							sender->notify_hid_information(valid_data_event);
+							for(size_t i = 0, stopper = 100; sender->notify_hid_information(valid_data_event) == false; i++) {
+								if(i == stopper) {
+									std::cout << "BLE::Actions::FreqSweep: i == stopper\n";
+									ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::PowerDownMode);
+									return;
+								}
+								std::this_thread::sleep_for(std::chrono::milliseconds(1));
+							}
 						}
 						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::IncFreq);
 					} while(ad5933.has_status_condition(AD5933::Masks::Or::Status::FreqSweepComplete) == false && stop_sources.run);
@@ -208,7 +215,13 @@ namespace BLE {
 					const uint64_t num_of_files = get_num_of_files();
 					std::cout << "BLE::Actions::File::list_count: \n\tnum_of_files: " << num_of_files << std::endl;
 					const Magic::Results::File::ListCount list_count_event { .num_of_files = num_of_files };
-					sender->notify_hid_information(list_count_event);
+					for(size_t i = 0, stopper = 100; sender->notify_hid_information(list_count_event) == false; i++) {
+						if(i == stopper) {
+							std::cout << "BLE::Actions::File::list_count: i == stopper\n";
+							return;
+						}
+						std::this_thread::sleep_for(std::chrono::milliseconds(1));
+					}
 
 				}, sender).detach();
 			}
@@ -227,7 +240,13 @@ namespace BLE {
 							Magic::T_MaxDataSlice tmp_path;
 							std::copy(filepath.begin(), filepath.end(), tmp_path.begin());
 							const Magic::Results::File::List list_event { .path = tmp_path };
-							sender->notify_hid_information(list_event);
+							for(size_t i = 0, stopper = 100; sender->notify_hid_information(list_event) == false; i++) {
+								if(i == stopper) {
+									std::cout << "BLE::Actions::File::list: i == stopper\n";
+									return;
+								}
+								std::this_thread::sleep_for(std::chrono::milliseconds(1));
+							}
 						}
 					}
 				}, sender).detach();
@@ -280,7 +299,11 @@ namespace BLE {
 					const auto start { std::chrono::high_resolution_clock::now() };
 					while(stop_sources.download && std::fread(tmp_slice.data(), 1, tmp_slice.size(), file) != 0) {
 						const Magic::Results::File::Download download_event { .slice = tmp_slice };
-						while(sender->notify_hid_information(download_event) == false) {
+						for(size_t i = 0, stopper = 100; sender->notify_hid_information(download_event) == false; i++) {
+							if(i == stopper) {
+								std::cout << "BLE::Actions::File::download: i == stopper\n";
+								return;
+							}
 							std::this_thread::sleep_for(std::chrono::milliseconds(1));
 						}
 					}
@@ -469,9 +492,14 @@ namespace BLE {
 									.impedance = measurement.get_magnitude(),
 									.phase = measurement.get_phase(),
 								};
-								if(sender->notify_body_composition_measurement(point) == false) {
-									ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::PowerDownMode);
-									return;
+
+								for(size_t i = 0, stopper = 100; sender->notify_body_composition_measurement(point) == false; i++) {
+									if(i == stopper) {
+										std::cout << "BLE::Actions::File::download: i == stopper\n";
+										ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::PowerDownMode);
+										return;
+									}
+									std::this_thread::sleep_for(std::chrono::milliseconds(1));
 								}
 							}
 							ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::IncFreq);

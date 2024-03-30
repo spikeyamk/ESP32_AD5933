@@ -48,11 +48,7 @@ namespace Magic {
 
         namespace Time {
             using UpdateTimeval = mytimeval64_t;
-            #ifdef _MSC_VER
-                using UpdateTimezone = timezone;
-            #else
-                using UpdateTimezone = struct timezone;
-            #endif
+            struct UpdateTimezone {};
         }
 
         namespace Auto {

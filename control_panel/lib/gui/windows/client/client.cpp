@@ -74,13 +74,13 @@ namespace GUI {
                     first = false;
                 } else {
                     if(enables.measurement_plots) {
-                        if(measure_window.single_plotted == false) {
-                            measurement_plots_window.update_single_vectors(measure_window.single_vectors.freq_float, measure_window.single_vectors.raw_measurement, measure_window.single_vectors.measurement);
-                            measure_window.single_plotted = true;
+                        const auto single_vectors { measure_window.single_vectors_channel->try_read() };
+                        if(single_vectors.has_value()) {
+                            measurement_plots_window.update_single_vectors(single_vectors.value().freq_float, single_vectors.value().raw_measurement, single_vectors.value().measurement);
                         }
-                        if(measure_window.periodic_vectors.periodic_points.empty() == false) {
-                            measurement_plots_window.update_periodic_vectors(measure_window.periodic_vectors.freq_float, measure_window.periodic_vectors.periodic_points);
-                        }
+                        const auto periodic_freq_float { measure_window.periodic_freq_float_channel->try_read() };
+                        const auto periodic_point { measure_window.periodic_point_channel->try_read() };
+                        measurement_plots_window.update_periodic_vectors(periodic_freq_float, periodic_point);
                         measurement_plots_window.draw(enables.measurement_plots, ImGui::GetID(static_cast<void*>(nullptr)));
                     }
                     if(enables.calibration_plots) {
@@ -91,11 +91,13 @@ namespace GUI {
                         calibration_plots_window.draw(enables.calibration_plots, ImGui::GetID(static_cast<void*>(nullptr)));
                     }
                     if(enables.auto_plots) {
-                        if(auto_window.send_points.empty() == false) {
-                            auto_plots_window.update_send_vectors(auto_window.send_points);
+                        const auto send_point { auto_window.send_points->try_read() };
+                        if(send_point.has_value()) {
+                            auto_plots_window.update_send_vectors(send_point.value());
                         }
-                        if(auto_window.save_points.empty() == false) {
-                            auto_plots_window.update_save_vectors(auto_window.save_points);
+                        const auto save_point { auto_window.save_points->try_read() };
+                        if(save_point.has_value()) {
+                            auto_plots_window.update_save_vectors(save_point.value());
                         }
                         auto_plots_window.draw(enables.auto_plots, ImGui::GetID(static_cast<void*>(nullptr)));
                     }
@@ -106,9 +108,9 @@ namespace GUI {
                         calibrate_window.draw(enables.calibrate, ImGui::GetID(static_cast<void*>(nullptr)), lock);
                     }
                     if(enables.measure) {
-                        if(calibrate_window.calibration_queue_to_load_into_measurement.empty() == false) {
-                            measure_window.load_from_memory(calibrate_window.calibration_queue_to_load_into_measurement.front());
-                            calibrate_window.calibration_queue_to_load_into_measurement.pop();
+                        const auto calibration_queue_to_load_into_measurement { calibrate_window.calibration_queue_to_load_into_measurement->try_read() };
+                        if(calibration_queue_to_load_into_measurement.has_value()) {
+                            measure_window.load_from_memory(calibration_queue_to_load_into_measurement.value());
                         }
                         measure_window.draw(enables.measure, ImGui::GetID(static_cast<void*>(nullptr)), lock);
                     }

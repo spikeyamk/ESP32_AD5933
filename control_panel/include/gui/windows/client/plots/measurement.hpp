@@ -75,8 +75,8 @@ namespace GUI {
                     const std::vector<AD5933::Measurement<float>>& measurement
                 );
                 void update_periodic_vectors(
-                    const std::vector<float>& freq,
-                    std::queue<Measure::PeriodicPoint>& periodic_points
+                    const std::optional<std::vector<float>>& freq,
+                    const std::optional<Measure::PeriodicPoint>& periodic_point
                 );
             private:
                 void draw_single_raw_data();

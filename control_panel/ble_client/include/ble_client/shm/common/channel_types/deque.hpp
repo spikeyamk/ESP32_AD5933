@@ -62,6 +62,11 @@ namespace BLE_Client {
                 this->data->pop_front();
                 return ret;
             }
+
+            void clear() {
+                boost::interprocess::scoped_lock lock(this->mutex);
+                this->data->clear();
+            }
         };
     }
 }
