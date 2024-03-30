@@ -16,6 +16,7 @@ else()
 
 	set(MAGIC_SRCS
 		tests/tests.cpp
+		lib/misc/gettimeofday.cpp
 	)
 
 	if(NOT TARGET serde)
@@ -29,7 +30,6 @@ else()
 
     target_include_directories(magic PUBLIC
 		${CMAKE_CURRENT_LIST_DIR}/include
-		${Boost_INCLUDE_DIRS}
 	)
 
     target_link_libraries(magic PUBLIC
