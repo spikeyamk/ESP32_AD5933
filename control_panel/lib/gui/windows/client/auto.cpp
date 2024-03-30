@@ -353,13 +353,10 @@ namespace GUI {
 
                 std::visit([&self](auto&& event) {
                     if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Results::Auto::Point>) {
-                        const auto now { std::chrono::high_resolution_clock::now() };
-                        const auto usecs {
-                            std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch())
-                        };
-                        const double usecs_to_seconds = static_cast<double>(usecs.count()) / 1000000.0;
+                        const auto tmp_timeval { Magic::Commands::Time::UpdateTimeval::now() };
+                        const double useconds_to_seconds = static_cast<double>(tmp_timeval.tv_sec) + (static_cast<double>(tmp_timeval.tv_usec) / 1000000.0);
                         const Point point {
-                            .time = usecs_to_seconds,
+                            .time = useconds_to_seconds,
                             .auto_meas = event,
                         };
                         self.send_points->push(point);

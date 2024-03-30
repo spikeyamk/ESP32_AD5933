@@ -18,10 +18,6 @@ else()
 		tests/tests.cpp
 	)
 
-	if(WIN32)
-		list(APPEND MAGIC_SRCS lib/misc/gettimeofday.cpp)
-	endif()
-
 	if(NOT TARGET serde)
 		set(SERDE_DIR ${CMAKE_CURRENT_LIST_DIR}/../serde_wrapper/serde)
 		add_subdirectory(${SERDE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/serde)
@@ -33,6 +29,7 @@ else()
 
     target_include_directories(magic PUBLIC
 		${CMAKE_CURRENT_LIST_DIR}/include
+		${Boost_INCLUDE_DIRS}
 	)
 
     target_link_libraries(magic PUBLIC

@@ -33,7 +33,7 @@
 				const auto now { boost::posix_time::microsec_clock::universal_time() };
 				return mytimeval64_t {
 					.tv_sec = boost::posix_time::to_time_t(now),
-					.tv_usec = static_cast<int32_t>(now.microseconds()),
+					.tv_usec = static_cast<int32_t>(now.time_of_day().fractional_seconds()),
 				};
 			}
 		#endif

@@ -471,14 +471,9 @@ namespace GUI {
                 if(timeout_counter != 0) {
                     continue;
                 }
-                
-                const double useconds_to_seconds = static_cast<double>(
-                    std::chrono::duration_cast<
-                        std::chrono::microseconds
-                    >(
-                        std::chrono::high_resolution_clock::now().time_since_epoch()
-                    ).count() / 1000000.0
-                );
+
+                const auto tmp_timeval { Magic::Commands::Time::UpdateTimeval::now() };
+                const double useconds_to_seconds = static_cast<double>(tmp_timeval.tv_sec) + (static_cast<double>(tmp_timeval.tv_usec) / 1000000.0);
                 const PeriodicPoint tmp_periodic_point {
                     .time_point = useconds_to_seconds,
                     .raw_measurement = tmp_raw_measurement,

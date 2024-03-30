@@ -3,7 +3,14 @@
 #include "ble_client/shm/parent/parent.hpp"
 #include "ble_client/child_main.hpp"
 
+#include <boost/date_time/posix_time/posix_time.hpp>
+
 int main(int argc, char* argv[]) {
+    for(size_t i = 0; i < 100; i++) {
+        std::cout << boost::posix_time::to_simple_string(boost::posix_time::microsec_clock::universal_time()) << std::endl;
+        const auto test_tmp { boost::posix_time::to_time_t(boost::posix_time::microsec_clock::universal_time()) };
+    }
+
     static const boost::filesystem::path self_path {
         []() {
             std::basic_string<boost::filesystem::path::value_type> ret;
