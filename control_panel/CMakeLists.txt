@@ -149,7 +149,7 @@ add_executable(${PROJECT_NAME}
 )
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU|Clang")
-	target_compile_options(${PROJECT_NAME} -Wall -Wextra -Wpedantic)
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	# Makes UTF-8 work. Could not get it to work with target definitions has to be global
 	add_compile_options("/utf-8")

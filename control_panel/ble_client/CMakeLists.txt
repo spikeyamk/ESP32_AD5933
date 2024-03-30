@@ -70,7 +70,7 @@ add_library(${PROJECT_NAME}
 )
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-	target_compile_options(${PROJECT_NAME} -Wall -Wextra -Wpedantic)
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	#target_compile_options(${PROJECT_NAME} /W4)
 endif()
