@@ -1,4 +1,3 @@
-#include <boost/thread/thread_time.hpp>
 #include <trielo/trielo.hpp>
 #include <simpleble/SimpleBLE.h>
 

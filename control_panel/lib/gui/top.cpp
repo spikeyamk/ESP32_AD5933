@@ -148,7 +148,7 @@ namespace GUI {
     }
 
     void Top::draw_about_page() {
-        ImGui::Text("Version: " "0.1.6");
+        ImGui::Text("Version: " "0.1.8");
         ImGui::Text("Built on: " __DATE__ " " __TIME__);
 
         static const char github_link[] { "[Contribute](https://www.github.com/spikeyamk/ESP32_AD5933)" };

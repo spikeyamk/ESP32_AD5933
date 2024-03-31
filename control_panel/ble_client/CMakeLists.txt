@@ -105,7 +105,6 @@ if(BLE_CLIENT_TEST)
 	set(TEST_SRCS 
 		"tests/tests.cpp"
 		"lib/shm/common/names.cpp"
-		lib/shm/common/clean.cpp
 		lib/shm/parent/specialized.cpp
 		lib/shm/parent/parent.cpp
 	)
