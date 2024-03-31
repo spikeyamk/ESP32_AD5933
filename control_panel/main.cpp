@@ -3,8 +3,6 @@
 #include "ble_client/shm/parent/parent.hpp"
 #include "ble_client/child_main.hpp"
 
-#include <boost/date_time/posix_time/posix_time.hpp>
-
 int main(int argc, char* argv[]) {
     static const boost::filesystem::path self_path {
         []() {
