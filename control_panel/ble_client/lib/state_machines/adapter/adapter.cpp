@@ -25,7 +25,7 @@ namespace BLE_Client {
             }
             
             namespace Guards {
-                bool bluetooth_active(SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm) {
+                bool bluetooth_active(SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::Parent> shm) {
                     const std::optional<SimpleBLE::Adapter> tmp_adapter { BLE_Client::find_default_active_adapter(shm) };
                     if(tmp_adapter.has_value() == false) {
                         return false;
@@ -46,32 +46,32 @@ namespace BLE_Client {
                     return false;
                 }
 
-                bool discovery_available(SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm) {
+                bool discovery_available(SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::Parent> shm) {
                     try {
                         adapter.set_callback_on_scan_start([shm]() {
                             shm->console.log("BLE_Client::callback_on_scan_start\n");
-                            auto remove_it { std::remove_if(shm->discovery_devices->begin(), shm->discovery_devices->end(), [](const auto& e) {
+                            auto remove_it { std::remove_if(shm->discovery_devices.begin(), shm->discovery_devices.end(), [](const auto& e) {
                                 if(e.get_connected() == false) {
                                     return true;
                                 } else {
                                     return false;
                                 }
                             }) };
-                            if(remove_it != shm->discovery_devices->end()) {
-                                shm->discovery_devices->erase(remove_it);
+                            if(remove_it != shm->discovery_devices.end()) {
+                                shm->discovery_devices.erase(remove_it);
                             }
                         });
                         adapter.set_callback_on_scan_stop([shm]() { shm->console.log("BLE_Client::Scan stopped\n"); });
                         adapter.set_callback_on_scan_found([shm](SimpleBLE::Peripheral found_peripheral) {
-                            if(std::find_if(shm->discovery_devices->begin(), shm->discovery_devices->end(), [&found_peripheral, shm](const BLE_Client::Discovery::Device& e) {
+                            if(std::find_if(shm->discovery_devices.begin(), shm->discovery_devices.end(), [&found_peripheral, shm](const BLE_Client::Discovery::Device& e) {
                                 return e.get_address() == found_peripheral.address();
-                            }) == shm->discovery_devices->end()) {
+                            }) == shm->discovery_devices.end()) {
                                 if(is_esp32_ad5933_before_attempting_connect(found_peripheral)) {
                                     for(auto service: found_peripheral.services()) {
                                         std::cout << service << std::endl;
                                     }
 
-                                    shm->discovery_devices->push_back(
+                                    shm->discovery_devices.push_back(
                                         BLE_Client::Discovery::Device{
                                             found_peripheral.identifier(), 
                                             found_peripheral.address(),
@@ -83,17 +83,17 @@ namespace BLE_Client {
                         });
                         
                         adapter.set_callback_on_scan_updated([shm](SimpleBLE::Peripheral found_peripheral) {
-                            auto it = std::find_if(shm->discovery_devices->begin(), shm->discovery_devices->end(), [&found_peripheral, shm](const BLE_Client::Discovery::Device& e) {
+                            auto it = std::find_if(shm->discovery_devices.begin(), shm->discovery_devices.end(), [&found_peripheral, shm](const BLE_Client::Discovery::Device& e) {
                                 return e.get_address() == found_peripheral.address();
                             });
 
-                            if(it == shm->discovery_devices->end()) {
+                            if(it == shm->discovery_devices.end()) {
                                 if(is_esp32_ad5933_before_attempting_connect(found_peripheral)) {
                                     for(auto service: found_peripheral.services()) {
                                         std::cout << service << std::endl;
                                     }
 
-                                    shm->discovery_devices->push_back(
+                                    shm->discovery_devices.push_back(
                                         BLE_Client::Discovery::Device{
                                             found_peripheral.identifier(), 
                                             found_peripheral.address(),

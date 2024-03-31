@@ -10,7 +10,7 @@
 
 namespace GUI {
     namespace Windows {
-        BLE_Adapter::BLE_Adapter(std::shared_ptr<BLE_Client::SHM::ParentSHM> shm, std::vector<Windows::Client>& client_windows) :
+        BLE_Adapter::BLE_Adapter(std::shared_ptr<BLE_Client::SHM::Parent> shm, std::vector<Windows::Client>& client_windows) :
             shm { shm },
             client_windows { client_windows }
         {
@@ -21,11 +21,11 @@ namespace GUI {
                 bool first { true };
                 while(st.stop_requested() == false) {
                     if(first) {
-                        if(variant_tester<BLE_Client::StateMachines::Adapter::States::off>(*self.shm->active_state) == false) {
+                        if(variant_tester<BLE_Client::StateMachines::Adapter::States::off>(self.shm->active_state) == false) {
                             first = false;
                         }
                     } else {
-                        if(variant_tester<BLE_Client::StateMachines::Adapter::States::off>(*self.shm->active_state)) {
+                        if(variant_tester<BLE_Client::StateMachines::Adapter::States::off>(self.shm->active_state)) {
                             first = true;
                             self.show_ble_off_error_pop_up = true;
                         }
@@ -69,13 +69,13 @@ namespace GUI {
                 } else {
                     static bool connecting = false;
                     if(
-                        shm->discovery_devices->empty() == false
+                        shm->discovery_devices.empty() == false
                         && selected.has_value()
                         && connecting == false
-                        && shm->discovery_devices->at(selected.value()).get_connected() == false
+                        && shm->discovery_devices.at(selected.value()).get_connected() == false
                         && [&]() {
                             if(std::find_if(client_windows.begin(), client_windows.end(), [&](const auto& e) {
-                                return e.get_address() == shm->discovery_devices->at(selected.value()).get_address();
+                                return e.get_address() == shm->discovery_devices.at(selected.value()).get_address();
                             }) != client_windows.end()) {
                                 return false;
                             }
@@ -85,21 +85,20 @@ namespace GUI {
                     ) {
                         if(ImGui::Button("Connect", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f))) {
                             connecting = true;
-                            const BLE_Client::StateMachines::Connector::Events::connect connect_event { shm->discovery_devices->at(selected.value()).get_address() };
-                            shm->cmd.send(connect_event);
-                            std::jthread t1([](std::stop_token st, auto shm, const BLE_Client::StateMachines::Connector::Events::connect connect_event, bool& connecting, std::vector<Windows::Client>& client_windows, bool& show_connection_attempt_timeout_error_pop_up) {
+                            const BLE_Client::StateMachines::Connector::Events::connect connect_event { shm->discovery_devices.at(selected.value()).get_address() };
+                            std::jthread t1([](std::stop_token st, std::shared_ptr<BLE_Client::SHM::Parent> shm, const BLE_Client::StateMachines::Connector::Events::connect connect_event, bool& connecting, std::vector<Windows::Client>& client_windows, bool& show_connection_attempt_timeout_error_pop_up) {
+                                const size_t size_before { shm->active_devices.size() };
+                                shm->cmd.send(connect_event);
                                 for(size_t i = 0, timeout_ms = 25'000; i < timeout_ms; i++) {
                                     if(st.stop_requested()) {
                                         return;
                                     }
-                                    try{
-                                        shm->attach_device(connect_event);
+                                    if(shm->active_devices.size() != size_before) {
                                         client_windows.push_back(std::move(Windows::Client{std::string(connect_event.get_address()), client_windows.size(), shm }));
                                         connecting = false;
                                         return;
-                                    } catch(...) {
-                                        std::this_thread::sleep_for(std::chrono::milliseconds(1));
                                     }
+                                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
                                 }
                                 show_connection_attempt_timeout_error_pop_up = true;
                                 connecting = false;
@@ -117,7 +116,7 @@ namespace GUI {
                     }
                     show_table();
                 }
-            }, *shm->active_state);
+            }, shm->active_state);
 
             ImGui::End();
 
@@ -161,7 +160,7 @@ namespace GUI {
                 ImGui::Text("Address");
                 ImGui::TableNextColumn();
                 ImGui::Text("Status");
-                std::for_each(shm->discovery_devices->begin(), shm->discovery_devices->end(), [index = 0, this](const BLE_Client::Discovery::Device& e) mutable {
+                std::for_each(shm->discovery_devices.begin(), shm->discovery_devices.end(), [index = 0, this](const BLE_Client::Discovery::Device& e) mutable {
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
                     ImGui::PushID(index);
@@ -199,7 +198,7 @@ namespace GUI {
                     if(st.stop_requested()) {
                         return;
                     }
-                    if(variant_tester<BLE_Client::StateMachines::Adapter::States::off>(*self.shm->active_state) == false) {
+                    if(variant_tester<BLE_Client::StateMachines::Adapter::States::off>(self.shm->active_state) == false) {
                         return;
                     }
                     std::this_thread::sleep_for(std::chrono::milliseconds(1));

@@ -21,7 +21,7 @@ namespace GUI {
             bool first { true };
             size_t index;
             std::u8string name { name_base };
-            std::shared_ptr<BLE_Client::SHM::ParentSHM> shm { nullptr };
+            std::shared_ptr<BLE_Client::SHM::Parent> shm { nullptr };
         public:
             enum class Status {
                 Off,
@@ -95,7 +95,7 @@ namespace GUI {
             std::shared_ptr<Channel<Point>> send_points { std::make_shared<Channel<Point>>() };
             std::shared_ptr<Channel<Point>> save_points { std::make_shared<Channel<Point>>() };
             Auto() = default;
-            Auto(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm);
+            Auto(const size_t index, std::shared_ptr<BLE_Client::SHM::Parent> shm);
             ~Auto();
             void draw(bool &enable, const ImGuiID side_id, Lock& lock);
         private:

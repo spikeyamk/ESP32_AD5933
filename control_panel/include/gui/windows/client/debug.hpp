@@ -180,7 +180,7 @@ namespace GUI {
             bool first { true };
             size_t index;
             std::string name {  name_base };
-            std::shared_ptr<BLE_Client::SHM::ParentSHM> shm { nullptr };
+            std::shared_ptr<BLE_Client::SHM::Parent> shm { nullptr };
         public:
             enum class Status {
                 NotDumped,
@@ -192,7 +192,7 @@ namespace GUI {
         public:
             Status get_status() const;
             Debug() = default;
-            Debug(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm);
+            Debug(const size_t index, std::shared_ptr<BLE_Client::SHM::Parent> shm);
             void draw(bool &enable, const ImGuiID side_id, const Lock lock);
         private:
             void draw_inner();

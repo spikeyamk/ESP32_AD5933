@@ -5,18 +5,6 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
-if(NOT Boost_FOUND)
-	if(WIN32)
-		set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
-		set(Boost_NO_SYSTEM_PATHS    ON)
-		set(Boost_USE_STATIC_RUNTIME ON)
-	endif()
-	set(Boost_USE_STATIC_LIBS    ON)
-	set(Boost_USE_MULTITHREADED  ON)
-
-	find_package(Boost COMPONENTS date_time filesystem)
-endif()
-
 if(NOT TARGET trielo)
     set(TRIELO_DIR ${CMAKE_CURRENT_LIST_DIR}/../../common/trielo_wrapper/trielo)
     add_subdirectory(${TRIELO_DIR} ${CMAKE_BINARY_DIR}/trielo)
@@ -49,8 +37,6 @@ set(BLE_CLIENT_SRCS
 	lib/cmd_listener.cpp
 	lib/child_main.cpp
 	"lib/shm/common/names.cpp"
-	lib/shm/child/specialized.cpp
-	lib/shm/child/child.cpp
 	lib/state_machines/adapter/adapter.cpp
 	lib/state_machines/adapter/states.cpp
 	lib/state_machines/adapter/checker.cpp
@@ -62,7 +48,6 @@ set(BLE_CLIENT_SRCS
 set(BLE_CLIENT_INCLUDE_DIRS
 	${CMAKE_CURRENT_LIST_DIR}/include
 	${CMAKE_CURRENT_LIST_DIR}/../include
-    ${Boost_INCLUDE_DIRS}
 )
 
 add_library(${PROJECT_NAME}
@@ -76,7 +61,6 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 endif()
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
-    ${Boost_LIBRARIES}
     sml
     simpleble::simpleble
     trielo
@@ -130,7 +114,6 @@ if(BLE_CLIENT_TEST)
 		${BLE_CLIENT_INCLUDE_DIRS}
 	)
 	set(TEST_LINK_LIBS
-		${Boost_LIBRARIES}
 		magic
 		AD5933_config
 		AD5933_data

@@ -40,14 +40,6 @@ set(SEMVER_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/semver)
 set(UTFCONV_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/utfconv)
 set(UTFCONV_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/utfconv)
 
-if(WIN32)
-	set(Boost_NO_SYSTEM_PATHS    ON)
-	set(Boost_USE_STATIC_RUNTIME ON)
-endif()
-set(Boost_USE_STATIC_LIBS    ON)
-set(Boost_USE_MULTITHREADED  ON)
-find_package(Boost COMPONENTS date_time filesystem)
-
 set(BOOST_SML_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/sml_wrapper/sml)
 add_subdirectory(${BOOST_SML_DIR} ${CMAKE_BINARY_DIR}/sml)
 
@@ -95,7 +87,6 @@ add_subdirectory(${BLE_CLIENT_DIR})
 
 add_executable(${PROJECT_NAME}
 	main.cpp
-	ble_client/lib/shm/common/clean.cpp
 	"ble_client/lib/shm/common/names.cpp"
 	ble_client/lib/shm/parent/specialized.cpp
 	ble_client/lib/shm/parent/parent.cpp
@@ -164,7 +155,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 	${CMAKE_CURRENT_LIST_DIR}/ble_client/include
 	${IMGUI_DIR}
 	${IMPLOT_DIR}
-    ${Boost_INCLUDE_DIRS}
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -177,7 +167,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 	AD5933_measurement
 	AD5933_temperature
 	AD5933_debug_data
-    ${Boost_LIBRARIES}
 	sml
 	nfd
 	nlohmann_json 

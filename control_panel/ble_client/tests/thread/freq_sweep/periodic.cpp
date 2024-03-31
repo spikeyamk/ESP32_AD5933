@@ -56,14 +56,14 @@ namespace BLE_Client {
                         }()
                     };
 
-                    std::shared_ptr<BLE_Client::SHM::ParentSHM> shm { nullptr };
+                    std::shared_ptr<BLE_Client::SHM::Parent> shm { nullptr };
                     try {
-                        shm = std::make_shared<BLE_Client::SHM::ParentSHM>();
+                        shm = std::make_shared<BLE_Client::SHM::Parent>();
                     } catch(const boost::interprocess::interprocess_exception& e) {
                         std::cout << "ERROR: GUI: Failed to open SHM: exception: " << e.what() << std::endl;
                         BLE_Client::SHM::clean(self_path.string());
                         try {
-                            shm = std::make_shared<BLE_Client::SHM::ParentSHM>();
+                            shm = std::make_shared<BLE_Client::SHM::Parent>();
                         } catch(const boost::interprocess::interprocess_exception& e) {
                             std::cout << "ERROR: GUI: Failed to open SHM even after cleaning: exception: " << e.what() << std::endl;
                             return -1;
@@ -141,7 +141,7 @@ namespace BLE_Client {
                     std::future<int> sweep_run_thread_future { sweep_run_thread_promise.get_future() };
 
                     std::jthread sweep_run_thread(
-                        [&sweep_run_thread_promise](std::stop_token st, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
+                        [&sweep_run_thread_promise](std::stop_token st, std::shared_ptr<BLE_Client::SHM::Parent> shm) {
                             const BLE_Client::StateMachines::Connection::Events::write_body_composition_feature sweep_run { 0, Magic::Commands::Sweep::Run{} };
                             while(st.stop_requested() == false) {
                                 shm->cmd.send(sweep_run);

@@ -2,7 +2,6 @@
 #include <trielo/trielo.hpp>
 #include <simpleble/SimpleBLE.h>
 
-#include "ble_client/shm/child/child.hpp"
 #include "ble_client/cmd_listener.hpp"
 #include "ble_client/state_machines/logger.hpp"
 #include "ble_client/state_machines/killer/killer.hpp"
@@ -14,16 +13,9 @@
 #include "ble_client/child_main.hpp"
 
 namespace BLE_Client {
-    int child_main() {
+    int child_main(std::shared_ptr<BLE_Client::SHM::Parent> child_shm) {
         std::cout << "BLE_Client: child process started\n";
         std::atexit([]() { std::cout << "BLE_Client: child process finished\n"; });
-        std::shared_ptr<BLE_Client::SHM::ChildSHM> child_shm = nullptr;
-        try {
-            child_shm = std::make_shared<BLE_Client::SHM::ChildSHM>();
-        } catch(const std::exception& e) {
-            std::cout << "ERROR: BLE_Client::child_main: could not attach to child SHM: exception: " << e.what() << std::endl;
-            return -1;
-        }
         std::stop_source stop_source;
 
         SimpleBLE::Adapter simpleble_adapter;

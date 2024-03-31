@@ -9,7 +9,7 @@
 
 #include "ble_client/state_machines/logger.hpp"
 #include "ble_client/state_machines/connection/events.hpp"
-#include "ble_client/shm/child/child.hpp"
+#include "ble_client/shm/parent/parent.hpp"
 #include "ble_client/esp32_ad5933.hpp"
 
 namespace BLE_Client {
@@ -22,12 +22,12 @@ namespace BLE_Client {
             }
 
             namespace Actions {
-                void disconnect(std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm);
+                void disconnect(std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::Parent> shm);
             }
             
             namespace Guards {
-                bool write_body_composition_feature_successful(const BLE_Client::StateMachines::Connection::Events::write_body_composition_feature& event, std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm);
-                bool write_body_composition_feature_failed(const BLE_Client::StateMachines::Connection::Events::write_body_composition_feature& event, std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm);
+                bool write_body_composition_feature_successful(const BLE_Client::StateMachines::Connection::Events::write_body_composition_feature& event, std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::Parent> shm);
+                bool write_body_composition_feature_failed(const BLE_Client::StateMachines::Connection::Events::write_body_composition_feature& event, std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::Parent> shm);
             }
 
             struct Connection {

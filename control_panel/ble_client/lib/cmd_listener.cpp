@@ -3,7 +3,7 @@
 namespace BLE_Client {
     void cmd_listener(
         std::stop_source stop_source,
-        std::shared_ptr<BLE_Client::SHM::ChildSHM> shm,
+        std::shared_ptr<BLE_Client::SHM::Parent> shm,
         BLE_Client::StateMachines::Killer::T_StateMachine& killer,
         BLE_Client::StateMachines::Adapter::T_StateMachine& adapter_sm,
         std::vector<decltype(BLE_Client::StateMachines::Connection::Dummy<int>::sm)*>& connections,
@@ -12,6 +12,8 @@ namespace BLE_Client {
     ) {
         std::stop_token st { stop_source.get_token() };
         while(st.stop_requested() == false) {
+            const auto read { shm->cmd.read() };
+
             std::visit([&killer, &adapter_sm, &connections, shm, &simpleble_adapter, &connector](auto&& event_variant) {
                 using T_EventVariantDecay = std::decay_t<decltype(event_variant)>;
                 if constexpr (std::is_same_v<T_EventVariantDecay, BLE_Client::StateMachines::Killer::Events::T_Variant>) {
@@ -36,7 +38,7 @@ namespace BLE_Client {
                         }
                     }, event_variant);
                 }
-            }, shm->cmd.read());
+            }, read);
        }
     }
 }

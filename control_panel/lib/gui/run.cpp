@@ -64,8 +64,7 @@ namespace GUI {
 namespace GUI {
     void run(
         bool &done,
-        boost::process::child& ble_client,
-        std::shared_ptr<BLE_Client::SHM::ParentSHM> shm
+        std::shared_ptr<BLE_Client::SHM::Parent> shm
     ) {
         SDL_Window* window { nullptr };
         SDL_Renderer* renderer { nullptr };
@@ -93,22 +92,19 @@ namespace GUI {
         ble_connector.draw(top.menu_bar_enables.ble_adapter, top_ids.left);
         Windows::Console console { top.menu_bar_enables.console };
         std::jthread stdout_reader(
-            [](Windows::Console& console, boost::process::child& ble_client, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) {
-                while(ble_client.running()) {
-                    const auto ret { shm->console.read_for(boost::posix_time::millisec(1)) };
-                    if(ret.has_value()) {
-                        console.log(ret.value());
-                    }
+            [](Windows::Console& console, std::shared_ptr<BLE_Client::SHM::Parent> shm) {
+                const auto ret { shm->console.read_for(std::chrono::milliseconds(1)) };
+                if(ret.has_value()) {
+                    console.log(ret.value());
                 }
             },
             std::ref(console),
-            std::ref(ble_client),
             shm
         );
         console.draw();
         Boilerplate::render(renderer);
 
-        while(done == false && ble_client.running()) {
+        while(done == false) {
             Boilerplate::process_events(window, renderer, sdl_event_quit);
 
             Boilerplate::start_new_frame();
@@ -151,10 +147,6 @@ namespace GUI {
             Boilerplate::render(renderer);
         }
         Boilerplate::shutdown(renderer, window);
-
-        if(ble_client.running() == false) {
-            std::cout << "ERROR: GUI::Windows::run: ble_client exited before gui\n";
-        }
 
         for(size_t i = 0; i < shm->active_devices.size(); i++) {
             shm->cmd.send(BLE_Client::StateMachines::Connection::Events::disconnect{i});

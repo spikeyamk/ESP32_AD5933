@@ -10,7 +10,7 @@ namespace BLE_Client {
     namespace StateMachines {
         namespace Connector {
             namespace Guards {
-                bool successful(const BLE_Client::StateMachines::Connector::Events::connect& event, SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm, std::vector<decltype(BLE_Client::StateMachines::Connection::Dummy<int>::sm)*>& connections) {
+                bool successful(const BLE_Client::StateMachines::Connector::Events::connect& event, SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::Parent> shm, std::vector<decltype(BLE_Client::StateMachines::Connection::Dummy<int>::sm)*>& connections) {
                     try {
                         std::vector<SimpleBLE::Peripheral> scan_results { adapter.scan_get_results() };
                         auto it = std::find_if(scan_results.begin(), scan_results.end(), [&](SimpleBLE::Peripheral& e) {
@@ -37,17 +37,17 @@ namespace BLE_Client {
                             throw std::runtime_error("not an ESP32_AD5933");
                         }
 
-                        shm->init_device(Events::connect{ it->address() });
+                        shm->attach_device(Events::connect{ it->address() });
                         auto tmp_esp32_ad5933 { std::make_shared<BLE_Client::ESP32_AD5933>(*it, service.value(), shm->active_devices.back().measurement, shm->active_devices.back().information, shm) };
                         tmp_esp32_ad5933->setup_subscriptions();
                         tmp_esp32_ad5933->update_time();
                         BLE_Client::StateMachines::Logger logger {};
                         connections.push_back(new decltype(BLE_Client::StateMachines::Connection::Dummy<int>::sm){ tmp_esp32_ad5933, logger, shm });
-                        auto discovery_devices_update_it { std::find_if(shm->discovery_devices->begin(), shm->discovery_devices->end(), [&it](const BLE_Client::Discovery::Device& e) {
+                        auto discovery_devices_update_it { std::find_if(shm->discovery_devices.begin(), shm->discovery_devices.end(), [&it](const BLE_Client::Discovery::Device& e) {
                             return e.get_address() == it->address();
                         }) };
 
-                        if(discovery_devices_update_it != shm->discovery_devices->end()) {
+                        if(discovery_devices_update_it != shm->discovery_devices.end()) {
                             const BLE_Client::Discovery::Device tmp_device { it->identifier(), it->address(), true };
                             *discovery_devices_update_it = tmp_device;
                         }
@@ -58,7 +58,7 @@ namespace BLE_Client {
                     }
                 }
 
-                bool failed(const BLE_Client::StateMachines::Connector::Events::connect& event, SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm, std::vector<decltype(BLE_Client::StateMachines::Connection::Dummy<int>::sm)*>& connections) {
+                bool failed(const BLE_Client::StateMachines::Connector::Events::connect& event, SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::Parent> shm, std::vector<decltype(BLE_Client::StateMachines::Connection::Dummy<int>::sm)*>& connections) {
                     return !successful(event, adapter, shm, connections);
                 }
             }

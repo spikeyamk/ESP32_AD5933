@@ -19,7 +19,7 @@ namespace GUI {
             return status;
         }
 
-        Debug::Debug(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) :
+        Debug::Debug(const size_t index, std::shared_ptr<BLE_Client::SHM::Parent> shm) :
             index { index },
             shm { shm }
         {
@@ -203,7 +203,7 @@ namespace GUI {
         bool Debug::dump() {
             shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Commands::Debug::Start{} });
             shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Commands::Debug::Dump{} });
-            const auto rx_payload { shm->active_devices[index].information->read_for(boost::posix_time::milliseconds(1'000)) };
+            const auto rx_payload { shm->active_devices[index].information->read_for(std::chrono::milliseconds(1'000)) };
 
             if(rx_payload.has_value() == false) {
     		    fmt::print(fmt::fg(fmt::color::red), "ERROR: GUI::Windows::Debug::dump: timeout\n");

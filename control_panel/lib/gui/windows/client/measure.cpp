@@ -1,5 +1,6 @@
 #include <thread>
 #include <cstdint>
+#include <fstream>
 
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -19,7 +20,7 @@
 
 namespace GUI {
     namespace Windows {
-        Measure::Measure(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) :
+        Measure::Measure(const size_t index, std::shared_ptr<BLE_Client::SHM::Parent> shm) :
             index { index },
             shm { shm }
         {
@@ -251,7 +252,7 @@ namespace GUI {
                 )
             };
 
-            const auto boost_timeout_ms { boost::posix_time::milliseconds(static_cast<size_t>(timeout_ms)) };
+            const auto boost_timeout_ms { std::chrono::milliseconds(static_cast<size_t>(timeout_ms)) };
 
             SingleVectors tmp_single_vectors {
                 .raw_measurement = {},
@@ -405,7 +406,7 @@ namespace GUI {
                 )
             };
 
-            const auto boost_timeout_ms { boost::posix_time::milliseconds(static_cast<size_t>(timeout_ms)) };
+            const auto boost_timeout_ms { std::chrono::milliseconds(static_cast<size_t>(timeout_ms)) };
 
             bool first_iteration { true };
             uint8_t timeout_counter { 0 };

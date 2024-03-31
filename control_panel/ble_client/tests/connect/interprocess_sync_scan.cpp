@@ -31,9 +31,9 @@ namespace BLE_Client {
 
         namespace Connect {
             int interprocess_sync_scan(const char* self_path, const std::string_view& magic_key) {
-                std::shared_ptr<BLE_Client::SHM::ParentSHM> shm { nullptr };
+                std::shared_ptr<BLE_Client::SHM::Parent> shm { nullptr };
                 try {
-                    shm = std::make_shared<BLE_Client::SHM::ParentSHM>();
+                    shm = std::make_shared<BLE_Client::SHM::Parent>();
                 } catch(const boost::interprocess::interprocess_exception& e) {
                     std::cout << "ERROR: BLE_Client::Tests::Connect::interprocess_sync_scan: Failed to open SHM: exception: " << e.what() << std::endl;
                     std::cout << "Try killing all child processes and cleaning with shm_cleaner\n";

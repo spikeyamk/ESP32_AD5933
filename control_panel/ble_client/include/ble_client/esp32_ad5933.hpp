@@ -14,7 +14,7 @@
 #include <thread>
 #include <stop_token>
 
-#include "ble_client/shm/child/child.hpp"
+#include "ble_client/shm/parent/parent.hpp"
 #include "magic/common.hpp"
 
 namespace BLE_Client {
@@ -39,20 +39,20 @@ namespace BLE_Client {
     private:
         Service service {};
         struct Channels {
-            std::shared_ptr<BLE_Client::SHM::NotifyChannelTX> body_composition_measurement { nullptr };
-            std::shared_ptr<BLE_Client::SHM::NotifyChannelTX> hid_information { nullptr };
+            std::shared_ptr<BLE_Client::SHM::NotifyChannelRX> body_composition_measurement { nullptr };
+            std::shared_ptr<BLE_Client::SHM::NotifyChannelRX> hid_information { nullptr };
         };
         Channels channels {};
-        std::shared_ptr<BLE_Client::SHM::ChildSHM> child_shm { nullptr };
+        std::shared_ptr<BLE_Client::SHM::Parent> child_shm { nullptr };
         std::jthread connection_checker;
     public:
         ESP32_AD5933() = default;
         ESP32_AD5933(
             SimpleBLE::Peripheral& peripheral, 
             Service& characteristics,
-            std::shared_ptr<BLE_Client::SHM::NotifyChannelTX> body_composition_measurement_channel,
-            std::shared_ptr<BLE_Client::SHM::NotifyChannelTX> hid_information_channel,
-            std::shared_ptr<BLE_Client::SHM::ChildSHM> child_shm
+            std::shared_ptr<BLE_Client::SHM::NotifyChannelRX> body_composition_measurement_channel,
+            std::shared_ptr<BLE_Client::SHM::NotifyChannelRX> hid_information_channel,
+            std::shared_ptr<BLE_Client::SHM::Parent> child_shm
         );
         ~ESP32_AD5933();
         void update_time();
@@ -63,7 +63,6 @@ namespace BLE_Client {
         void write(const std::array<uint8_t, N>& packet, SimpleBLE::Characteristic& characteristic) {
             static_assert(N <= Magic::MTU);
             peripheral.write_request(service.uuid(), characteristic.uuid(), std::string(packet.begin(), packet.end()));
-
         }
 
         static void connection_checker_cb(std::stop_token st, ESP32_AD5933& self);

@@ -23,9 +23,9 @@ namespace BLE_Client {
     ESP32_AD5933::ESP32_AD5933(
         SimpleBLE::Peripheral& peripheral, 
         Service& characteristics,
-        std::shared_ptr<BLE_Client::SHM::NotifyChannelTX> body_composition_measurement_channel,
-        std::shared_ptr<BLE_Client::SHM::NotifyChannelTX> hid_information_channel,
-        std::shared_ptr<BLE_Client::SHM::ChildSHM> child_shm
+        std::shared_ptr<BLE_Client::SHM::NotifyChannelRX> body_composition_measurement_channel,
+        std::shared_ptr<BLE_Client::SHM::NotifyChannelRX> hid_information_channel,
+        std::shared_ptr<BLE_Client::SHM::Parent> child_shm
     ) :
         peripheral{ peripheral },
         service { characteristics },
@@ -41,10 +41,10 @@ namespace BLE_Client {
 
     void ESP32_AD5933::connection_checker_cb(std::stop_token st, ESP32_AD5933& self) {
         while(st.stop_requested() == false) {
-            auto it { std::find_if(self.child_shm->discovery_devices->begin(), self.child_shm->discovery_devices->end(), [&](const auto& e) {
+            auto it { std::find_if(self.child_shm->discovery_devices.begin(), self.child_shm->discovery_devices.end(), [&](const auto& e) {
                 return self.peripheral.address() == e.get_address();
             }) };
-            if(it != self.child_shm->discovery_devices->end()) {
+            if(it != self.child_shm->discovery_devices.end()) {
                 it->update_connected(self.peripheral.is_connected());
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(10));

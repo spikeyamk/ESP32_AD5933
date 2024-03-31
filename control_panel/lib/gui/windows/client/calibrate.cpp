@@ -2,6 +2,7 @@
 #include <thread>
 #include <atomic>
 #include <limits>
+#include <fstream>
 
 #include <nfd.hpp>
 #include <utf/utf.hpp>
@@ -19,7 +20,7 @@
 
 namespace GUI {
     namespace Windows {
-        Calibrate::Calibrate(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm) :
+        Calibrate::Calibrate(const size_t index, std::shared_ptr<BLE_Client::SHM::Parent> shm) :
             index { index },
             shm{ shm }
         {
@@ -231,7 +232,7 @@ namespace GUI {
                 * 1'000'000.0f
                 * 100.0f
             };
-            const auto boost_timeout_ms { boost::posix_time::milliseconds(static_cast<size_t>(timeout_ms)) };
+            const auto boost_timeout_ms { std::chrono::milliseconds(static_cast<size_t>(timeout_ms)) };
             const float impedance = self.fields.impedance;
 
             std::vector<AD5933::Data> tmp_raw_calibration;

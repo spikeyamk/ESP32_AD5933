@@ -7,7 +7,7 @@ namespace BLE_Client {
                 std::stop_source stop_source,
                 BLE_Client::StateMachines::Adapter::T_StateMachine& adapter_sm,
                 SimpleBLE::Adapter& adapter,
-                std::shared_ptr<BLE_Client::SHM::ChildSHM> shm
+                std::shared_ptr<BLE_Client::SHM::Parent> shm
             ) {
                 std::stop_token st = stop_source.get_token();
                 using namespace boost::sml;
@@ -25,7 +25,7 @@ namespace BLE_Client {
 
                     adapter_sm.visit_current_states([&](auto&& visited_state) {
                         try {
-                            *(shm->active_state) = BLE_Client::StateMachines::Adapter::States::stupid_sml.at(visited_state.c_str());
+                            shm->active_state = BLE_Client::StateMachines::Adapter::States::stupid_sml.at(visited_state.c_str());
                         } catch(const std::exception& e) {
                             shm->console.log(std::string("ERROR: BLE_Client::checker: exception: ") + e.what() + "\n");
                             shm->console.log("ERROR: This compiler gives the visited_state a different prefix\n");

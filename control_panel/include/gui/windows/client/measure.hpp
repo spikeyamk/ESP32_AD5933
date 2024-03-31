@@ -30,7 +30,7 @@ namespace GUI {
             bool first { true };
             size_t index;
             std::u8string name { name_base };
-            std::shared_ptr<BLE_Client::SHM::ParentSHM> shm { nullptr };
+            std::shared_ptr<BLE_Client::SHM::Parent> shm { nullptr };
 
             static constexpr uint32_t res_freq = 1;
             static constexpr uint32_t max_9bit = 511;
@@ -93,7 +93,7 @@ namespace GUI {
             std::stop_source stop_source;
         public:
             Measure() = default;
-            Measure(const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> shm);
+            Measure(const size_t index, std::shared_ptr<BLE_Client::SHM::Parent> shm);
             void draw(bool &enable, const ImGuiID side_id, Lock& lock);
             ~Measure();
             void load_from_memory(const ns::CalibrationFile& calibration_file);

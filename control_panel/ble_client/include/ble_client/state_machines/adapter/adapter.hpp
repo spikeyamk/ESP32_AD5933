@@ -10,7 +10,7 @@
 #include "ble_client/state_machines/logger.hpp"
 #include "ble_client/state_machines/adapter/events.hpp"
 #include "ble_client/state_machines/adapter/states.hpp"
-#include "ble_client/shm/child/child.hpp"
+#include "ble_client/shm/parent/parent.hpp"
 
 namespace BLE_Client {
     namespace StateMachines {
@@ -21,8 +21,8 @@ namespace BLE_Client {
             }
             
             namespace Guards {
-                bool bluetooth_active(SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm);
-                bool discovery_available(SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::ChildSHM> shm);
+                bool bluetooth_active(SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::Parent> shm);
+                bool discovery_available(SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::Parent> shm);
             }
 
             struct Adapter {

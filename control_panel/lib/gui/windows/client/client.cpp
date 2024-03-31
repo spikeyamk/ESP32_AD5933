@@ -8,7 +8,7 @@
 
 namespace GUI {
     namespace Windows {
-        Client::Client(const std::string name, const size_t index, std::shared_ptr<BLE_Client::SHM::ParentSHM> parent_shm) :
+        Client::Client(const std::string name, const size_t index, std::shared_ptr<BLE_Client::SHM::Parent> parent_shm) :
             address{ name },
             name{ std::string(name).append("##").append(std::to_string(index)) },
             dockspace_name { std::string("DockSpace").append(name).append("##").append(std::to_string(index)) },
@@ -127,11 +127,11 @@ namespace GUI {
             }
             ImGui::End();
 
-            auto it { std::find_if(shm->discovery_devices->begin(), shm->discovery_devices->end(), [&](const auto& e) {
+            auto it { std::find_if(shm->discovery_devices.begin(), shm->discovery_devices.end(), [&](const auto& e) {
                 return e.get_address() == address;
             }) };
 
-            if(it != shm->discovery_devices->end()) {
+            if(it != shm->discovery_devices.end()) {
                 if(it->get_connected() == false && lock != Lock::UnexpectedDisconnection ) {
                     ImGui::OpenPopup("Error##2");
                     // Always center this window when appearing
