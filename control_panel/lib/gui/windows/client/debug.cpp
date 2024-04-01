@@ -1,6 +1,4 @@
 #include <iostream>
-#include <thread>
-#include <stdexcept>
 
 #include <fmt/core.h>
 #include <fmt/color.h>

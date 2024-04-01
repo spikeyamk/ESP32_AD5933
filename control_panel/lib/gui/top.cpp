@@ -1,15 +1,12 @@
 #include <fstream>
 
 #include <trielo/trielo.hpp>
-#include "imgui_internal.h"
 #include "implot.h"
 
 #include "gui/boilerplate.hpp"
 #include "imgui_custom/markdown.hpp"
 #include "gui/windows/console.hpp"
-#include "gui/windows/client/client.hpp"
 #include "gui/windows/ble_adapter.hpp"
-#include "legal/gpl2.hpp"
 #include "legal/boost.hpp"
 #include "legal/dear_imgui.hpp"
 #include "legal/implot.hpp"
@@ -83,6 +80,7 @@ namespace GUI {
                     ImGui::MenuItem((const char*) Windows::Debug::name_base.data(), nullptr, &menu_bar_enables.debug);
                     ImGui::MenuItem("ImGui Demo", nullptr, &menu_bar_enables.imgui_demo);
                     ImGui::MenuItem("ImPlot Demo", nullptr, &menu_bar_enables.implot_demo);
+                    ImGui::MenuItem("ImPlot Test", nullptr, &menu_bar_enables.implot_test);
                     ImGui::EndMenu();
                 }
 

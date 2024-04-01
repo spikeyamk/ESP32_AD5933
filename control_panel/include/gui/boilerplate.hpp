@@ -3,7 +3,6 @@
 #include <tuple>
 #include <functional>
 
-#include "imgui.h"
 #include "SDL3/SDL.h"
 
 #include "json/settings.hpp"

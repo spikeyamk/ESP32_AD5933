@@ -1,5 +1,3 @@
-#include <thread>
-
 #include "imgui_internal.h"
 
 #include "gui/boilerplate.hpp"

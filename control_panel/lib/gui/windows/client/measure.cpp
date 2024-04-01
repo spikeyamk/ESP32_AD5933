@@ -10,11 +10,11 @@
 
 #include "json/conversion.hpp"
 #include "ad5933/calibration/calibration.hpp"
-#include "imgui_custom/spinner.hpp"
 #include "imgui_custom/input_items.hpp"
 #include "imgui_custom/char_filters.hpp"
 #include "magic/misc/gettimeofday.hpp"
 #include "gui/boilerplate.hpp"
+#include "ad5933/masks/maps.hpp"
 
 #include "gui/windows/client/measure.hpp"
 

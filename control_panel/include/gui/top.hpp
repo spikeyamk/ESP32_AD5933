@@ -1,9 +1,8 @@
 #pragma once
 
-#include <string_view>
-
 #include "imgui.h"
 
+#include "gui/boilerplate.hpp"
 #include "json/settings.hpp"
 
 namespace GUI {
@@ -28,6 +27,7 @@ namespace GUI {
             bool console { false };
             bool imgui_demo { false };
             bool implot_demo { false };
+            bool implot_test { false };
         };
         MenuBarEnables menu_bar_enables {};
 

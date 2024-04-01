@@ -4,9 +4,7 @@
 #include <array>
 #include <cstring>
 #include <algorithm>
-#include <stdexcept>
 #include <optional>
-#include <iterator>
 #include <sstream>
 #include <iomanip>
 #include <memory>
@@ -15,7 +13,6 @@
 
 #include "ad5933/masks/masks.hpp"
 #include "ad5933/debug_data/debug_data.hpp"
-#include "ad5933/masks/maps.hpp"
 #include "ad5933/config/config.hpp"
 #include "ad5933/uint_types.hpp"
 

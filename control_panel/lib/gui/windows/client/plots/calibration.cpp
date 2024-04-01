@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <string_view>
 
 #include "imgui_internal.h"
 #include <nfd.hpp>

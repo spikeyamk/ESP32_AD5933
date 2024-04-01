@@ -1,4 +1,3 @@
-#include <span>
 #include <fstream>
 
 #include <trielo/trielo.hpp>
