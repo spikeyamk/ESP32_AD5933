@@ -28,6 +28,3 @@
 [submodule "gui/lib/extern/--force"]
 	path = control_panel/lib/extern/utfconv
 	url = https://github.com/spikeyamk/utfconv.git
-[submodule "common/serde_wrapper/serde"]
-	path = common/serde_wrapper/serde
-	url = https://github.com/spikeyamk/serde.git
