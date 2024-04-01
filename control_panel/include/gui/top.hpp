@@ -27,7 +27,6 @@ namespace GUI {
             bool console { false };
             bool imgui_demo { false };
             bool implot_demo { false };
-            bool implot_test { false };
         };
         MenuBarEnables menu_bar_enables {};
 

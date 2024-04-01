@@ -16,7 +16,6 @@
 #include "gui/windows/console.hpp"
 #include "gui/windows/ble_adapter.hpp"
 #include "gui/windows/client/client.hpp"
-#include "gui/windows/implot_test.hpp"
 
 #include "gui/run.hpp"
 
@@ -90,7 +89,6 @@ namespace GUI {
         DockspaceIDs top_ids { split_left_center(top_id) };
         std::vector<Windows::Client> client_windows;
 
-        std::unique_ptr<Windows::ImplotTest> implot_test { nullptr };
         Windows::BLE_Adapter ble_connector { shm, client_windows };
         ble_connector.draw(top.menu_bar_enables.ble_adapter, top_ids.left);
         Windows::Console console { top.menu_bar_enables.console };
@@ -145,18 +143,6 @@ namespace GUI {
 
             if(top.menu_bar_enables.implot_demo) {
                 ImPlot::ShowDemoWindow();
-            }
-
-            if(top.menu_bar_enables.implot_test) {
-                if(implot_test == nullptr) {
-                    implot_test = std::make_unique<decltype(implot_test)::element_type>();
-                } else {
-                    implot_test->draw(top.menu_bar_enables.implot_test);
-                }
-            } else {
-                if(implot_test != nullptr) {
-                    implot_test.reset(nullptr);
-                }
             }
 
             Boilerplate::render(renderer);

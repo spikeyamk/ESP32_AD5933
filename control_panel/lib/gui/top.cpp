@@ -80,7 +80,6 @@ namespace GUI {
                     ImGui::MenuItem((const char*) Windows::Debug::name_base.data(), nullptr, &menu_bar_enables.debug);
                     ImGui::MenuItem("ImGui Demo", nullptr, &menu_bar_enables.imgui_demo);
                     ImGui::MenuItem("ImPlot Demo", nullptr, &menu_bar_enables.implot_demo);
-                    ImGui::MenuItem("ImPlot Test", nullptr, &menu_bar_enables.implot_test);
                     ImGui::EndMenu();
                 }
 

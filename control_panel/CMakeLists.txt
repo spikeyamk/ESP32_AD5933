@@ -174,5 +174,3 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 	utfconv
 	serde 
 )
-
-add_executable(dummy misc/dummy.cpp)
