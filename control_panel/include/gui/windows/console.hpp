@@ -1,14 +1,8 @@
 #pragma once
 
-#include <iostream>
 #include <string>
 #include <vector>
 #include <mutex>
-
-#include "imgui.h"
-#include "misc/cpp/imgui_stdlib.h"
-
-#include "ble_client/shm/parent/parent.hpp"
 
 namespace GUI {
     namespace Windows {

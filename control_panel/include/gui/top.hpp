@@ -5,6 +5,7 @@
 #include <imgui.h>
 #include <SDL3/SDL.h>
 
+#include "gui/boilerplate.hpp"
 #include "json/settings.hpp"
 
 namespace GUI {

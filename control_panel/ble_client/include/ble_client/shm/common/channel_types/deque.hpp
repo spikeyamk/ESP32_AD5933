@@ -1,9 +1,10 @@
 #pragma once
 
 #include <optional>
-#include <thread>
 #include <chrono>
 #include <deque>
+
+#include "ble_client/shm/common/channel_types/base.hpp"
 
 namespace BLE_Client {
     namespace SHM {

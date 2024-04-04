@@ -1,4 +1,5 @@
 #include <iostream>
+#include <thread>
 
 #include "gui/run.hpp"
 #include "ble_client/shm/parent/parent.hpp"

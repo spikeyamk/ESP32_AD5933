@@ -1,5 +1,3 @@
-#include <algorithm>
-
 #include "json/conversion.hpp"
 
 namespace ns {

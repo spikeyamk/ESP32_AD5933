@@ -1,25 +1,11 @@
 #pragma once
 
 #include <memory>
-#include <stop_token>
-#include <vector>
 #include <string>
 #include <cstddef>
-#include <atomic>
 #include <memory>
-#include <string_view>
-#include <optional>
-#include <thread>
 
-#include <SDL3/SDL.h>
-#include "imgui.h"
-
-#include "ad5933/data/data.hpp"
-#include "ad5933/calibration/calibration.hpp"
-#include "ad5933/measurement/measurement.hpp"
-#include "gui/run.hpp"
 #include "ble_client/shm/parent/parent.hpp"
-
 #include "gui/windows/client/calibrate.hpp"
 #include "gui/windows/client/plots/calibration.hpp"
 #include "gui/windows/client/measure.hpp"

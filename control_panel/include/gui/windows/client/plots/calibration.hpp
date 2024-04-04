@@ -6,7 +6,6 @@
 
 #include "imgui.h"
 
-#include "ad5933/uint_types.hpp"
 #include "ad5933/data/data.hpp"
 #include "ad5933/calibration/calibration.hpp"
 #include "ad5933/config/config.hpp"

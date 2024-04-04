@@ -70,6 +70,7 @@ namespace GUI {
         bool sdl_event_quit { false };
         Boilerplate::process_events(window, renderer, sdl_event_quit);
         Boilerplate::start_new_frame();
+
         Top top { settings_file };
         bool reload { false };
         ImGuiID top_id = top.draw(done, reload);

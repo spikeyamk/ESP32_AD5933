@@ -8,9 +8,7 @@
 
 #include "gui/boilerplate.hpp"
 #include "ad5933/masks/maps.hpp"
-#include "imgui_custom/spinner.hpp"
 #include "imgui_custom/input_items.hpp"
-#include "imgui_custom/char_filters.hpp"
 
 #include "gui/windows/client/calibrate.hpp"
 #include <trielo/trielo.hpp>
