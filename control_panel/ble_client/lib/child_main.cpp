@@ -22,7 +22,7 @@ namespace BLE_Client {
         BLE_Client::StateMachines::Killer::T_StateMachine killer { stop_source, killer_logger };
         BLE_Client::StateMachines::Logger adapter_logger;
         BLE_Client::StateMachines::Adapter::T_StateMachine adapter_sm { simpleble_adapter, child_shm, adapter_logger };
-        std::vector<decltype(BLE_Client::StateMachines::Connection::Dummy<int>::sm)*> connections;
+        std::vector<BLE_Client::StateMachines::Connection::Dummy*> connections;
         BLE_Client::StateMachines::Connector::T_StateMachine connector { simpleble_adapter, child_shm, connections, adapter_logger };
         
         std::jthread cmd_listener_thread(BLE_Client::cmd_listener, stop_source, child_shm, std::ref(killer), std::ref(adapter_sm), std::ref(connections), std::ref(simpleble_adapter), std::ref(connector));

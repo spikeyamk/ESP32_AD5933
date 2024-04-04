@@ -1,27 +1,10 @@
 #include <fstream>
 
 #include <trielo/trielo.hpp>
-#include "imgui_internal.h"
-#include "implot.h"
+#include <imgui_internal.h>
+#include <implot.h>
 
-#include "gui/boilerplate.hpp"
-#include "imgui_custom/markdown.hpp"
-#include "gui/windows/console.hpp"
-#include "gui/windows/client/client.hpp"
-#include "gui/windows/ble_adapter.hpp"
-#include "legal/gpl2.hpp"
-#include "legal/boost.hpp"
-#include "legal/dear_imgui.hpp"
-#include "legal/implot.hpp"
-#include "legal/fmt.hpp"
-#include "legal/json.hpp"
-#include "legal/nativefiledialog_extended.hpp"
-#include "legal/sdl3.hpp"
-#include "legal/semver.hpp"
-#include "legal/simpleble.hpp"
-#include "legal/sml.hpp"
-#include "legal/ubuntu_sans_fonts.hpp"
-#include "legal/utfconv.hpp"
+#include "legal/all.hpp"
 
 #include "gui/top.hpp"
 
@@ -31,7 +14,7 @@ namespace GUI {
         scale_combo { settings_file.settings.scale_combo }
     {}
 
-    ImGuiID Top::draw(bool& done) {
+    ImGuiID Top::draw(bool& done, bool& reload) {
         // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
         // because it would be confusing to have two docking targets within each others.
         ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -59,6 +42,9 @@ namespace GUI {
                 if(ImGui::BeginMenu("File")) {
                     ImGui::MenuItem("Open");
                     ImGui::MenuItem("Save");
+                    if(ImGui::MenuItem("Reload")) {
+                        reload = true;
+                    }
                     if(ImGui::MenuItem("Settings")) {
                         settings_clicked = true;
                     }
@@ -83,6 +69,7 @@ namespace GUI {
                     ImGui::MenuItem((const char*) Windows::Debug::name_base.data(), nullptr, &menu_bar_enables.debug);
                     ImGui::MenuItem("ImGui Demo", nullptr, &menu_bar_enables.imgui_demo);
                     ImGui::MenuItem("ImPlot Demo", nullptr, &menu_bar_enables.implot_demo);
+                    ImGui::MenuItem("ImPlot Dense Test", nullptr, &menu_bar_enables.implot_dense_test);
                     ImGui::EndMenu();
                 }
 

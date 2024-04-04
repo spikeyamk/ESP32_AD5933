@@ -6,7 +6,6 @@
 #include <cstdint>
 #include <string>
 #include <iostream>
-#include <stdexcept>
 #include <string_view>
 #include <algorithm>
 #include <optional>

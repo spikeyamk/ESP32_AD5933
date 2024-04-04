@@ -1,6 +1,6 @@
 #include <algorithm>
 
-#include "imgui_internal.h"
+#include <imgui_internal.h>
 #include <utf/utf.hpp>
 
 #include "imgui_custom/input_items.hpp"

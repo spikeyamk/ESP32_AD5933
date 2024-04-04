@@ -1,6 +1,6 @@
 #include <cmath>
 
-#include "imgui_internal.h"
+#include <imgui_internal.h>
 #include <utf/utf.hpp>
 
 #include "gui/boilerplate.hpp"

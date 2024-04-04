@@ -2,7 +2,8 @@
 
 #include <string_view>
 
-#include "imgui.h"
+#include <imgui.h>
+#include <SDL3/SDL.h>
 
 #include "json/settings.hpp"
 
@@ -10,7 +11,7 @@ namespace GUI {
     class Top {
     private:
         int theme_combo { Boilerplate::respect_system_theme ? 0 : 1 };
-        int scale_combo {  Boilerplate::respect_system_scale ? 0 : 3 };
+        int scale_combo { Boilerplate::respect_system_scale ? 0 : 3 };
 
         bool settings_clicked { false };
         bool about_clicked { false };
@@ -28,11 +29,12 @@ namespace GUI {
             bool console { false };
             bool imgui_demo { false };
             bool implot_demo { false };
+            bool implot_dense_test { false };
         };
         MenuBarEnables menu_bar_enables {};
 
         Top(const ns::SettingsFile& settings_file);
-        ImGuiID draw(bool& done);
+        ImGuiID draw(bool& done, bool& reload);
     private:
         struct PopupEnables {
             bool legal { true };

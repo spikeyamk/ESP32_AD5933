@@ -45,14 +45,10 @@ namespace BLE_Client {
             };
             using T_StateMachine = boost::sml::sm<Connection, boost::sml::logger<BLE_Client::StateMachines::Logger>, boost::sml::thread_safe<std::recursive_mutex>, boost::sml::testing>;
 
-            /* Super ugly hack this is stupid, but I can't for the love of god find the full type of the T_StateMachine *
-             * The boost::sml library uses probably some SFINAE or some other complex bullshit I'm too stupid to understand */
-            template<typename T>
-            struct Dummy {
-                std::shared_ptr<BLE_Client::ESP32_AD5933> esp32_ad5933;
-                BLE_Client::StateMachines::Logger logger;
-                T_StateMachine sm { esp32_ad5933, logger };
-            };
+            using Dummy = decltype(T_StateMachine {
+                std::shared_ptr<BLE_Client::ESP32_AD5933> { nullptr },
+                BLE_Client::StateMachines::Logger {},
+            });
         }
     }
 }

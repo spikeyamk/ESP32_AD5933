@@ -26,8 +26,8 @@ namespace BLE_Client {
             }
 
             namespace Guards {
-                bool successful(const BLE_Client::StateMachines::Connector::Events::connect& event, SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::Parent> shm, std::vector<decltype(BLE_Client::StateMachines::Connection::Dummy<int>::sm)*>& connections);
-                bool failed(const BLE_Client::StateMachines::Connector::Events::connect& event, SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::Parent> shm, std::vector<decltype(BLE_Client::StateMachines::Connection::Dummy<int>::sm)*>& connections);
+                bool successful(const BLE_Client::StateMachines::Connector::Events::connect& event, SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::Parent> shm, std::vector<BLE_Client::StateMachines::Connection::Dummy*>& connections);
+                bool failed(const BLE_Client::StateMachines::Connector::Events::connect& event, SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::Parent> shm, std::vector<BLE_Client::StateMachines::Connection::Dummy*>& connections);
             }
 
             struct Connector {

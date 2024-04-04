@@ -1,5 +1,4 @@
 #include <string>
-#include <stdexcept>
 
 #include "ble_client/shm/parent/parent.hpp"
 

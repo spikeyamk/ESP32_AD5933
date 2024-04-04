@@ -1,8 +1,3 @@
-#include <iostream>
-#include <algorithm>
-#include <thread>
-#include <chrono>
-
 #include "ble_client/ostream_overloads.hpp"
 
 #include "ble_client/init.hpp"

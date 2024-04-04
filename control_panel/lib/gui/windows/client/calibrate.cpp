@@ -1,7 +1,4 @@
-#include <stdexcept>
 #include <thread>
-#include <atomic>
-#include <limits>
 #include <fstream>
 
 #include <nfd.hpp>

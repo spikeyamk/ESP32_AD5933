@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <string_view>
 
-#include "imgui_internal.h"
+#include <imgui_internal.h>
 #include <nfd.hpp>
 #include <utf/utf.hpp>
 

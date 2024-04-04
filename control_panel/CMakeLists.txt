@@ -15,14 +15,17 @@ endif()
 set(TRIELO_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/trielo_wrapper/trielo)
 set(SIMPLEBLE_DIR ${CMAKE_CURRENT_LIST_DIR}/common/SimpleBLE/simpleble)
 
-set(SDL_STATIC ON)
-set(SDL_SHARED OFF)
-set(SDL_TEST_LIBRARY OFF)
-set(SDL_TESTS OFF)
-set(SDL_DISABLE_INSTALL ON)
-set(SDL_DISABLE_INSTALL_DOCS ON)
-set(SDL_INSTALL_TESTS OFF)
-set(SDL3_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/SDL3)
+find_package(SDL3)
+if(SDL3_FOUND STREQUAL "0")
+	set(SDL_STATIC ON)
+	set(SDL_SHARED OFF)
+	set(SDL_TEST_LIBRARY OFF)
+	set(SDL_TESTS OFF)
+	set(SDL_DISABLE_INSTALL ON)
+	set(SDL_DISABLE_INSTALL_DOCS ON)
+	set(SDL_INSTALL_TESTS OFF)
+	set(SDL3_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/SDL3)
+endif()
 
 set(IMGUI_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/imgui)
 set(IMPLOT_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/implot)
@@ -42,13 +45,6 @@ set(UTFCONV_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/utfconv)
 
 set(BOOST_SML_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/sml_wrapper/sml)
 add_subdirectory(${BOOST_SML_DIR} ${CMAKE_BINARY_DIR}/sml)
-
-# This is disabled because we embed the font in the binary
-#configure_file(
-#	${CMAKE_CURRENT_LIST_DIR}/misc/UbuntuSans-Regular.ttf
-#	${CMAKE_BINARY_DIR}/UbuntuSans-Regular.ttf
-#	COPYONLY
-#)
 
 set(IMGUI_SRCS
 	${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp
@@ -70,7 +66,9 @@ set(IMPLOT_SRCS
 add_subdirectory(${TRIELO_DIR} ${CMAKE_BINARY_DIR}/trielo)
 add_subdirectory(${SIMPLEBLE_DIR})
 add_subdirectory(${MAGIC_DIR} ${CMAKE_BINARY_DIR}/magic)
-add_subdirectory(${SDL3_DIR})
+if(SDL3_FOUND STREQUAL "0")
+	add_subdirectory(${SDL3_DIR})
+endif()
 add_subdirectory(${AD5933_CONFIG_DIR} ${CMAKE_BINARY_DIR}/AD5933_config)
 add_subdirectory(${AD5933_MEASUREMENT_DIR} ${CMAKE_BINARY_DIR}/AD5933_measurement)
 add_subdirectory(${AD5933_TEMPERATURE_DIR} ${CMAKE_BINARY_DIR}/AD5933_temperature)
@@ -106,6 +104,7 @@ add_executable(${PROJECT_NAME}
 	# singleton windows
 	lib/gui/windows/console.cpp
 	lib/gui/windows/ble_adapter.cpp
+	lib/gui/windows/implot_dense_test.cpp
 
 	# dynamic windows
 	lib/gui/windows/client/client.cpp
@@ -122,7 +121,6 @@ add_executable(${PROJECT_NAME}
 	lib/json/conversion.cpp
 	lib/json/settings.cpp
 
-	lib/legal/gpl2.cpp
 	lib/legal/boost.cpp
 	lib/legal/dear_imgui.cpp
 	lib/legal/implot.cpp
@@ -161,7 +159,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 	trielo
 	simpleble::simpleble
 	magic
-	SDL3::SDL3-static
+	${SDL3_LIBRARIES}
 	AD5933_config
 	AD5933_calibration
 	AD5933_measurement
@@ -174,5 +172,3 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 	utfconv
 	serde 
 )
-
-add_executable(dummy misc/dummy.cpp)

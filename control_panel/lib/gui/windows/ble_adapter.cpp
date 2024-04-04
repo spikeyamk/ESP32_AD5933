@@ -1,6 +1,6 @@
 #include <thread>
 
-#include "imgui_internal.h"
+#include <imgui_internal.h>
 
 #include "imgui_custom/spinner.hpp"
 #include "gui/boilerplate.hpp"
@@ -115,6 +115,8 @@ namespace GUI {
                         show_disabled_connect_button();
                     }
                     show_table();
+                    const float scale { GUI::Boilerplate::get_scale() };
+                    Spinner::Spinner("ScanningSpinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                 }
             }, shm->active_state);
 

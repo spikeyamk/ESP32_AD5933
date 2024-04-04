@@ -23,11 +23,7 @@ public:
 
     std::optional<T> try_read() {
         std::unique_lock lock(mutex, std::defer_lock);
-        if(lock.try_lock() == false) {
-            return std::nullopt;
-        }
-
-        if(values.empty()) {
+        if(lock.try_lock() == false || values.empty()) {
             return std::nullopt;
         }
 

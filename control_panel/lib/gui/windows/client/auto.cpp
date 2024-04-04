@@ -1,7 +1,7 @@
 #include <iostream>
 #include <thread>
 
-#include "imgui_internal.h"
+#include <imgui_internal.h>
 #include <utf/utf.hpp>
 
 #include "misc/variant_tester.hpp"
