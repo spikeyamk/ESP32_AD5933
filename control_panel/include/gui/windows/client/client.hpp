@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <memory>
 
-#include "ble_client/shm/parent/parent.hpp"
+#include "ble_client/shm/shm.hpp"
 #include "gui/windows/client/calibrate.hpp"
 #include "gui/windows/client/plots/calibration.hpp"
 #include "gui/windows/client/measure.hpp"
@@ -29,7 +29,7 @@ namespace GUI {
             Lock lock { Lock::Released };
         private:
             std::string dockspace_name;
-            std::shared_ptr<BLE_Client::SHM::Parent> shm { nullptr };
+            std::shared_ptr<BLE_Client::SHM::SHM> shm { nullptr };
             Windows::Calibrate calibrate_window;
             Windows::Plots::Calibration calibration_plots_window;
             Windows::Measure measure_window;
@@ -38,7 +38,7 @@ namespace GUI {
             Windows::Auto auto_window;
             Windows::Plots::Auto auto_plots_window;
         public:
-            Client(const std::string name, const size_t index, std::shared_ptr<BLE_Client::SHM::Parent> parent_shm);
+            Client(const std::string name, const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> parent_shm);
             void draw(const ImGuiID center_id, Top::MenuBarEnables &enables);
             const std::string& get_address() const;
         };

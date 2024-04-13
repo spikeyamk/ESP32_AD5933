@@ -1,0 +1,5 @@
+if(ESP_PLATFORM)
+    idf_component_register()
+    add_subdirectory(serde)
+    target_link_libraries(${COMPONENT_LIB} INTERFACE serde)
+endif()

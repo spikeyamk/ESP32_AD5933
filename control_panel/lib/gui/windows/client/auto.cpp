@@ -13,7 +13,7 @@
 
 namespace GUI {
     namespace Windows {
-        Auto::Auto(const size_t index, std::shared_ptr<BLE_Client::SHM::Parent> shm) :
+        Auto::Auto(const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> shm) :
             index { index },
             shm { shm }
         {

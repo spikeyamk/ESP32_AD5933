@@ -25,7 +25,7 @@ namespace BLE_Client {
         Service& characteristics,
         std::shared_ptr<BLE_Client::SHM::NotifyChannelRX> body_composition_measurement_channel,
         std::shared_ptr<BLE_Client::SHM::NotifyChannelRX> hid_information_channel,
-        std::shared_ptr<BLE_Client::SHM::Parent> child_shm
+        std::shared_ptr<BLE_Client::SHM::SHM> child_shm
     ) :
         peripheral{ peripheral },
         service { characteristics },

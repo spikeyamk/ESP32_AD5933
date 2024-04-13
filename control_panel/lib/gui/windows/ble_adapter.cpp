@@ -10,7 +10,7 @@
 
 namespace GUI {
     namespace Windows {
-        BLE_Adapter::BLE_Adapter(std::shared_ptr<BLE_Client::SHM::Parent> shm, std::vector<Windows::Client>& client_windows) :
+        BLE_Adapter::BLE_Adapter(std::shared_ptr<BLE_Client::SHM::SHM> shm, std::vector<Windows::Client>& client_windows) :
             shm { shm },
             client_windows { client_windows }
         {
@@ -86,7 +86,7 @@ namespace GUI {
                         if(ImGui::Button("Connect", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f))) {
                             connecting = true;
                             const BLE_Client::StateMachines::Connector::Events::connect connect_event { shm->discovery_devices.at(selected.value()).get_address() };
-                            std::jthread t1([](std::stop_token st, std::shared_ptr<BLE_Client::SHM::Parent> shm, const BLE_Client::StateMachines::Connector::Events::connect connect_event, bool& connecting, std::vector<Windows::Client>& client_windows, bool& show_connection_attempt_timeout_error_pop_up) {
+                            std::jthread t1([](std::stop_token st, std::shared_ptr<BLE_Client::SHM::SHM> shm, const BLE_Client::StateMachines::Connector::Events::connect connect_event, bool& connecting, std::vector<Windows::Client>& client_windows, bool& show_connection_attempt_timeout_error_pop_up) {
                                 const size_t size_before { shm->active_devices.size() };
                                 shm->cmd.send(connect_event);
                                 for(size_t i = 0, timeout_ms = 25'000; i < timeout_ms; i++) {

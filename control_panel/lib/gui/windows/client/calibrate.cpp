@@ -15,7 +15,7 @@
 
 namespace GUI {
     namespace Windows {
-        Calibrate::Calibrate(const size_t index, std::shared_ptr<BLE_Client::SHM::Parent> shm) :
+        Calibrate::Calibrate(const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> shm) :
             index { index },
             shm{ shm }
         {

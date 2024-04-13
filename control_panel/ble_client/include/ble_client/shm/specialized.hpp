@@ -4,9 +4,9 @@
 #include <optional>
 #include <chrono>
 
-#include "ble_client/shm/common/common.hpp"
-#include "ble_client/shm/common/channel_types/base.hpp"
-#include "ble_client/shm/common/channel_types/deque.hpp"
+#include "ble_client/shm/common.hpp"
+#include "ble_client/shm/channel_types/base.hpp"
+#include "ble_client/shm/channel_types/deque.hpp"
 #include "ble_client/state_machines/events_variant.hpp"
 #include "magic/results/results.hpp"
 

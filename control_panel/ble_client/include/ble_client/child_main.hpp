@@ -2,8 +2,8 @@
 
 #include <memory>
 
-#include "ble_client/shm/parent/parent.hpp"
+#include "ble_client/shm/shm.hpp"
 
 namespace BLE_Client {
-    int child_main(std::shared_ptr<BLE_Client::SHM::Parent> child_shm);
+    int child_main(std::shared_ptr<BLE_Client::SHM::SHM> shm);
 }

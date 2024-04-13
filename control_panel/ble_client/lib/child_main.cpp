@@ -12,7 +12,7 @@
 #include "ble_client/child_main.hpp"
 
 namespace BLE_Client {
-    int child_main(std::shared_ptr<BLE_Client::SHM::Parent> child_shm) {
+    int child_main(std::shared_ptr<BLE_Client::SHM::SHM> shm) {
         std::cout << "BLE_Client: child process started\n";
         std::atexit([]() { std::cout << "BLE_Client: child process finished\n"; });
         std::stop_source stop_source;
@@ -21,12 +21,12 @@ namespace BLE_Client {
         BLE_Client::StateMachines::Logger killer_logger;
         BLE_Client::StateMachines::Killer::T_StateMachine killer { stop_source, killer_logger };
         BLE_Client::StateMachines::Logger adapter_logger;
-        BLE_Client::StateMachines::Adapter::T_StateMachine adapter_sm { simpleble_adapter, child_shm, adapter_logger };
+        BLE_Client::StateMachines::Adapter::T_StateMachine adapter_sm { simpleble_adapter, shm, adapter_logger };
         std::vector<BLE_Client::StateMachines::Connection::Dummy*> connections;
-        BLE_Client::StateMachines::Connector::T_StateMachine connector { simpleble_adapter, child_shm, connections, adapter_logger };
+        BLE_Client::StateMachines::Connector::T_StateMachine connector { simpleble_adapter, shm, connections, adapter_logger };
         
-        std::jthread cmd_listener_thread(BLE_Client::cmd_listener, stop_source, child_shm, std::ref(killer), std::ref(adapter_sm), std::ref(connections), std::ref(simpleble_adapter), std::ref(connector));
-        std::jthread checker_thread(BLE_Client::StateMachines::Adapter::checker, stop_source, std::ref(adapter_sm), std::ref(simpleble_adapter), child_shm);
+        std::jthread cmd_listener_thread(BLE_Client::cmd_listener, stop_source, shm, std::ref(killer), std::ref(adapter_sm), std::ref(connections), std::ref(simpleble_adapter), std::ref(connector));
+        std::jthread checker_thread(BLE_Client::StateMachines::Adapter::checker, stop_source, std::ref(adapter_sm), std::ref(simpleble_adapter), shm);
         return 0;
     }
 }

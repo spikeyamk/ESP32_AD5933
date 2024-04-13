@@ -16,7 +16,7 @@ namespace GUI {
             return status;
         }
 
-        Debug::Debug(const size_t index, std::shared_ptr<BLE_Client::SHM::Parent> shm) :
+        Debug::Debug(const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> shm) :
             index { index },
             shm { shm }
         {

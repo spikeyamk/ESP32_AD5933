@@ -51,7 +51,7 @@ namespace GUI {
 namespace GUI {
     void run(
         bool &done,
-        std::shared_ptr<BLE_Client::SHM::Parent> shm
+        std::shared_ptr<BLE_Client::SHM::SHM> shm
     ) {
         SDL_Window* window { nullptr };
         SDL_Renderer* renderer { nullptr };
@@ -81,7 +81,7 @@ namespace GUI {
         ble_connector.draw(top.menu_bar_enables.ble_adapter, top_ids.left);
         Windows::Console console { top.menu_bar_enables.console };
         std::jthread stdout_reader(
-            [](Windows::Console& console, std::shared_ptr<BLE_Client::SHM::Parent> shm) {
+            [](Windows::Console& console, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
                 const auto ret { shm->console.read_for(std::chrono::milliseconds(1)) };
                 if(ret.has_value()) {
                     console.log(ret.value());

@@ -36,7 +36,7 @@ set(BLE_CLIENT_SRCS
 	lib/esp32_ad5933.cpp
 	lib/cmd_listener.cpp
 	lib/child_main.cpp
-	"lib/shm/common/names.cpp"
+	"lib/shm/names.cpp"
 	lib/state_machines/adapter/adapter.cpp
 	lib/state_machines/adapter/states.cpp
 	lib/state_machines/adapter/checker.cpp
@@ -104,9 +104,9 @@ if(BLE_CLIENT_TEST)
 	enable_testing()
 	set(TEST_SRCS 
 		"tests/tests.cpp"
-		"lib/shm/common/names.cpp"
-		lib/shm/parent/specialized.cpp
-		lib/shm/parent/parent.cpp
+		"lib/shm/names.cpp"
+		lib/shm/specialized.cpp
+		lib/shm/shm.cpp
 	)
 	set(TEST_INCLUDE_DIRS
 		${CMAKE_CURRENT_LIST_DIR}/tests/include

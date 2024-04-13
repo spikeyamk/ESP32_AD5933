@@ -19,7 +19,7 @@
 
 namespace GUI {
     namespace Windows {
-        Measure::Measure(const size_t index, std::shared_ptr<BLE_Client::SHM::Parent> shm) :
+        Measure::Measure(const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> shm) :
             index { index },
             shm { shm }
         {

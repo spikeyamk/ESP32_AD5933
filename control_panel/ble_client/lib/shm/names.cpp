@@ -1,6 +1,6 @@
 #include <cstdlib>
 
-#include "ble_client/shm/common/names.hpp"
+#include "ble_client/shm/names.hpp"
 
 namespace BLE_Client {
     namespace SHM {

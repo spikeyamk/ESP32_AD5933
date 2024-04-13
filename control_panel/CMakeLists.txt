@@ -85,9 +85,9 @@ add_subdirectory(${BLE_CLIENT_DIR})
 
 add_executable(${PROJECT_NAME}
 	main.cpp
-	"ble_client/lib/shm/common/names.cpp"
-	ble_client/lib/shm/parent/specialized.cpp
-	ble_client/lib/shm/parent/parent.cpp
+	"ble_client/lib/shm/names.cpp"
+	ble_client/lib/shm/specialized.cpp
+	ble_client/lib/shm/shm.cpp
 
 	lib/imgui_custom/spinner.cpp
 	lib/imgui_custom/input_items.cpp

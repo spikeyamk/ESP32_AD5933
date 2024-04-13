@@ -8,7 +8,7 @@
 
 #include "imgui.h"
 
-#include "ble_client/shm/parent/parent.hpp"
+#include "ble_client/shm/shm.hpp"
 #include "gui/windows/client/client.hpp"
 
 namespace GUI {
@@ -16,7 +16,7 @@ namespace GUI {
         class BLE_Adapter {
         private:
             size_t index;
-            std::shared_ptr<BLE_Client::SHM::Parent> shm { nullptr };
+            std::shared_ptr<BLE_Client::SHM::SHM> shm { nullptr };
             bool first { true };
             std::optional<size_t> selected { std::nullopt };
             std::vector<Windows::Client>& client_windows;
@@ -25,7 +25,7 @@ namespace GUI {
             std::vector<std::stop_source> stop_sources;
         public:
             static constexpr std::u8string_view name { u8"BLE Adapter" };
-            BLE_Adapter(std::shared_ptr<BLE_Client::SHM::Parent> shm, std::vector<Windows::Client>& client_windows);
+            BLE_Adapter(std::shared_ptr<BLE_Client::SHM::SHM> shm, std::vector<Windows::Client>& client_windows);
             ~BLE_Adapter();
             void draw(bool &enable, const ImGuiID left_id);
         private:

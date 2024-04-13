@@ -14,7 +14,7 @@ namespace BLE_Client {
     namespace StateMachines {
         namespace Connection {
             namespace Actions {
-                void disconnect(std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::Parent> shm) {
+                void disconnect(std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
                     try {
                         if(esp32_ad5933->is_connected() == false) {
                             return;
