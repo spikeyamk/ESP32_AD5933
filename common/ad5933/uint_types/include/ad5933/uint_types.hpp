@@ -9,9 +9,9 @@ namespace AD5933 {
     template<uint32_t min> 
     class uint_freq_t {
     protected:
-        static constexpr uint32_t max = 100'000;
         uint32_t value { min };
     public:
+        static constexpr uint32_t max { 100'000 };
         uint_freq_t() = delete;
 
         explicit constexpr uint_freq_t(const uint32_t in_value) :

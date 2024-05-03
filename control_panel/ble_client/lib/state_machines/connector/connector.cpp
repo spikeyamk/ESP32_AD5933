@@ -4,7 +4,7 @@ namespace BLE_Client {
     namespace StateMachines {
         namespace Connector {
             namespace Guards {
-                bool successful(const BLE_Client::StateMachines::Connector::Events::connect& event, SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::Parent> shm, std::vector<BLE_Client::StateMachines::Connection::Dummy*>& connections) {
+                bool successful(const BLE_Client::StateMachines::Connector::Events::connect& event, SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::SHM> shm, std::vector<BLE_Client::StateMachines::Connection::Dummy*>& connections) {
                     try {
                         std::vector<SimpleBLE::Peripheral> scan_results { adapter.scan_get_results() };
                         auto it = std::find_if(scan_results.begin(), scan_results.end(), [&](SimpleBLE::Peripheral& e) {
@@ -52,7 +52,7 @@ namespace BLE_Client {
                     }
                 }
 
-                bool failed(const BLE_Client::StateMachines::Connector::Events::connect& event, SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::Parent> shm, std::vector<BLE_Client::StateMachines::Connection::Dummy*>& connections) {
+                bool failed(const BLE_Client::StateMachines::Connector::Events::connect& event, SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::SHM> shm, std::vector<BLE_Client::StateMachines::Connection::Dummy*>& connections) {
                     return !successful(event, adapter, shm, connections);
                 }
             }

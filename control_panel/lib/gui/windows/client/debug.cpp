@@ -26,7 +26,9 @@ namespace GUI {
         void Debug::draw_input_elements() {
             ImGui::SameLine();
 
-            ImGui::Button("Program");
+            if(ImGui::Button("Program")) {
+                program_and_dump();
+            }
 
             ImGui::Separator();
 

@@ -28,3 +28,6 @@
 [submodule "gui/lib/extern/--force"]
 	path = control_panel/lib/extern/utfconv
 	url = https://github.com/spikeyamk/utfconv.git
+[submodule "control_panel/common/fmt"]
+	path = control_panel/common/fmt
+	url = https://github.com/fmtlib/fmt.git

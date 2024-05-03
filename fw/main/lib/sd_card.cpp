@@ -32,7 +32,6 @@ namespace SD_Card {
         static const gpio_num_t clk   { GPIO_NUM_8  };
         static const gpio_num_t cs    { GPIO_NUM_11 };
         static const gpio_num_t nsden { GPIO_NUM_5  };
-        static const gpio_num_t calen { GPIO_NUM_20 };
     }
 
     sdmmc_card_t card {};
@@ -100,15 +99,11 @@ namespace SD_Card {
 
     void power_on() {
 		Trielo::trielo<gpio_reset_pin>(Trielo::OkErrCode(ESP_OK), Pins::nsden);
-		Trielo::trielo<gpio_reset_pin>(Trielo::OkErrCode(ESP_OK), Pins::calen);
     }
 
     void power_off() {
 		Trielo::trielo<gpio_reset_pin>(Trielo::OkErrCode(ESP_OK), Pins::nsden);
 		Trielo::trielo<gpio_set_direction>(Trielo::OkErrCode(ESP_OK), Pins::nsden, GPIO_MODE_OUTPUT);
-
-		Trielo::trielo<gpio_reset_pin>(Trielo::OkErrCode(ESP_OK), Pins::calen);
-		Trielo::trielo<gpio_set_direction>(Trielo::OkErrCode(ESP_OK), Pins::calen, GPIO_MODE_OUTPUT);
     }
 
     int init() {

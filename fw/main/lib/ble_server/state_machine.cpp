@@ -139,6 +139,22 @@ namespace BLE {
 				});
 				std::printf("\n");
 				ad5933.driver.block_write_to_register<12, AD5933::RegAddrs::RW::ControlHB>(configure_event.registers_data);
+
+				const gpio_num_t rcal_mux_pin { GPIO_NUM_20 };
+				
+				if(configure_event.calen) {
+					Trielo::trielo<gpio_reset_pin>(Trielo::OkErrCode(ESP_OK), rcal_mux_pin);
+					Trielo::trielo<gpio_set_direction>(Trielo::OkErrCode(ESP_OK), rcal_mux_pin, GPIO_MODE_OUTPUT);
+					Trielo::trielo<gpio_set_pull_mode>(Trielo::OkErrCode(ESP_OK), rcal_mux_pin, GPIO_PULLUP_PULLDOWN);
+					Trielo::trielo<gpio_set_level>(Trielo::OkErrCode(ESP_OK), rcal_mux_pin, 1);
+				} else {
+					Trielo::trielo<gpio_reset_pin>(Trielo::OkErrCode(ESP_OK), rcal_mux_pin);
+					Trielo::trielo<gpio_set_direction>(Trielo::OkErrCode(ESP_OK), rcal_mux_pin, GPIO_MODE_OUTPUT);
+					Trielo::trielo<gpio_set_pull_mode>(Trielo::OkErrCode(ESP_OK), rcal_mux_pin, GPIO_PULLDOWN_ONLY);
+					Trielo::trielo<gpio_pulldown_en>(Trielo::OkErrCode(ESP_OK), rcal_mux_pin);
+					Trielo::trielo<gpio_set_level>(Trielo::OkErrCode(ESP_OK), rcal_mux_pin, 0);
+				}
+
 				processing = false;
 			}
 
@@ -168,14 +184,18 @@ namespace BLE {
 								std::this_thread::sleep_for(std::chrono::milliseconds(1));
 							}
 						}
+						if(ad5933.has_status_condition(AD5933::Masks::Or::Status::FreqSweepComplete)) {
+							break;
+						}
 						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::IncFreq);
-					} while(ad5933.has_status_condition(AD5933::Masks::Or::Status::FreqSweepComplete) == false && stop_sources.run);
+					} while(stop_sources.run);
 					std::this_thread::sleep_for(std::chrono::milliseconds(1));
 					processing = false;
 				}, sender, std::ref(processing), std::ref(ad5933), std::ref(stop_sources)).detach();
 			}
 
-			void end(std::shared_ptr<Server::Sender> &sender, StopSources& stop_sources) {
+			void end(AD5933::Extension &ad5933, std::shared_ptr<Server::Sender> &sender, StopSources& stop_sources) {
+				ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::PowerDownMode);
 				sender->release();
 				stop_sources.run = false;
 			}

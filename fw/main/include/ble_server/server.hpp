@@ -144,7 +144,7 @@ namespace BLE {
 			void configure(std::atomic<bool> &processing, AD5933::Extension &ad5933, const Magic::Commands::Sweep::Configure &configure_event);
 			//static void run(Sender &sender, AD5933::Extension &ad5933, boost::sml::back::process<Events::FreqSweep::Private::sweep_complete> process_event) {
 			void run(std::atomic<bool> &processing, std::shared_ptr<Server::Sender> &sender, AD5933::Extension &ad5933, StopSources& stop_sources);
-			void end(std::shared_ptr<Server::Sender> &sender, StopSources& stop_sources);
+			void end(AD5933::Extension &ad5933, std::shared_ptr<Server::Sender> &sender, StopSources& stop_sources);
 		}
 
 		namespace File {

@@ -44,6 +44,7 @@ namespace GUI {
 
                 GUI_ItemInputs gui {};
                 Numeric numeric {};
+                bool rcal { false };
             };
             Inputs inputs {};
             float progress_bar_fraction { 0.0f };

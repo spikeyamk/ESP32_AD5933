@@ -38,17 +38,19 @@ namespace GUI {
                 static constexpr uint16_t settling_cycles { nine_bit };
             };
             Max max {};
+            static constexpr float rcal_impedance { 10'000.0f };
             struct Fields {
                 uint32_t freq_start { 30'000 };
                 uint32_t freq_inc { 10 };
                 uint16_t num_of_inc { 2 };
-                float impedance { 1'000.0f };
+                float impedance { rcal_impedance };
+                bool rcal { true };
                 int voltage_range_combo { 0 };
                 int pga_gain_combo { 0 };
                 int sysclk_src_combo { 0 };
                 int settling_number { 15 };
                 int settling_multiplier_combo { 0 };
-                uint32_t sysclk_freq { 16'667'000 };
+                uint32_t sysclk_freq { static_cast<uint32_t>(AD5933::SysClkFreq::Internal) };
             };
             Fields fields {};
             size_t index;
@@ -94,6 +96,7 @@ namespace GUI {
             bool plotted { false };
         private:
             const std::optional<Lock> draw_inner();
+            void draw_calibration_impedance_input_field();
             void draw_input_fields();
             void send();
         private:

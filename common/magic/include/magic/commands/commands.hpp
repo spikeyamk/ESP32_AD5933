@@ -21,6 +21,7 @@ namespace Magic {
 
         namespace Sweep {
             struct Configure {
+                bool calen;
                 std::array<uint8_t, 12> registers_data { 0 };
             };
             struct Run {};

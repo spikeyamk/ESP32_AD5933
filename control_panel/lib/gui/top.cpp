@@ -243,7 +243,7 @@ namespace GUI {
                 SDL_Event event;
                 SDL_zero(event);
                 event.type = SDL_EVENT_SYSTEM_THEME_CHANGED;
-                Trielo::trielo_lambda<SDL_PushEvent>(Trielo::OkErrCode(0), Boilerplate::sdl_error_lambda, &event);
+                Trielo::trielo_lambda<SDL_PushEvent>(Trielo::Success(0), Boilerplate::sdl_error_lambda, &event);
                 break;
             case 1:
                 Trielo::trielo<ImGui::StyleColorsDark>(nullptr);
@@ -264,10 +264,10 @@ namespace GUI {
         if(scale_combo != 0) {
             event.type = SDL_EVENT_USER;
             event.user.code = *reinterpret_cast<const Uint32*>(ns::Settings::Scales::values + static_cast<size_t>(scale_combo - 1));
-            Trielo::trielo_lambda<SDL_PushEvent>(Trielo::OkErrCode(0), Boilerplate::sdl_error_lambda, &event);
+            Trielo::trielo_lambda<SDL_PushEvent>(Trielo::Success(0), Boilerplate::sdl_error_lambda, &event);
         } else {
             event.type = SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED;
-            Trielo::trielo_lambda<SDL_PushEvent>(Trielo::OkErrCode(0), Boilerplate::sdl_error_lambda, &event);
+            Trielo::trielo_lambda<SDL_PushEvent>(Trielo::Success(0), Boilerplate::sdl_error_lambda, &event);
         }
     }
 }

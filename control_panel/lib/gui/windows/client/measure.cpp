@@ -226,6 +226,7 @@ namespace GUI {
                 BLE_Client::StateMachines::Connection::Events::write_body_composition_feature {
                     self.index,
                     Magic::Commands::Sweep::Configure{
+                        self.inputs.rcal,
                         self.configs.measurement.to_raw_array()
                     }
                 }
@@ -380,6 +381,7 @@ namespace GUI {
             const BLE_Client::StateMachines::Connection::Events::write_body_composition_feature configure_event {
                 self.index,
                 Magic::Commands::Sweep::Configure{
+                    self.inputs.rcal,
                     self.configs.measurement.to_raw_array()
                 }
             };
@@ -578,6 +580,8 @@ namespace GUI {
                     )
                 );
             }
+
+            ImGui::Checkbox("RCAL", &inputs.rcal);
         }
     }
 }

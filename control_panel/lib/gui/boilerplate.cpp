@@ -103,19 +103,19 @@ namespace GUI {
 
         std::tuple<SDL_Window*, SDL_Renderer*, ns::SettingsFile> init() {
             ns::SettingsFile settings_file;
-            if(Trielo::trielo_lambda<SDL_Init>(Trielo::OkErrCode(0), sdl_error_lambda, SDL_INIT_VIDEO) != 0) {
+            if(Trielo::trielo_lambda<SDL_Init>(Trielo::Success(0), sdl_error_lambda, SDL_INIT_VIDEO) != 0) {
                 return { nullptr, nullptr, settings_file };
             }
-            Trielo::trielo_lambda<SDL_SetHint>(Trielo::OkErrCode(SDL_bool{SDL_TRUE}), sdl_error_lambda, SDL_HINT_IME_SHOW_UI, "1");
+            Trielo::trielo_lambda<SDL_SetHint>(Trielo::Success(SDL_bool{SDL_TRUE}), sdl_error_lambda, SDL_HINT_IME_SHOW_UI, "1");
 
-            Trielo::trielo<NFD::Init>(Trielo::OkErrCode(NFD_OKAY));
-            Trielo::trielo<SDL_RegisterEvents>(Trielo::OkErrCode(static_cast<Uint32>(SDL_EVENT_USER)), 1);
+            Trielo::trielo<NFD::Init>(Trielo::Success(NFD_OKAY));
+            Trielo::trielo<SDL_RegisterEvents>(Trielo::Success(static_cast<Uint32>(SDL_EVENT_USER)), 1);
 
             SDL_Window* window { nullptr };
             if(
                 (
                     window = Trielo::trielo_lambda<SDL_CreateWindow>(
-                        Trielo::FailErrCode(static_cast<SDL_Window*>(nullptr)),
+                        Trielo::Error(static_cast<SDL_Window*>(nullptr)),
                         sdl_error_lambda,
                         "ESP32_AD5933",
                         1280,
@@ -134,7 +134,7 @@ namespace GUI {
             if(
                 (
                     renderer = Trielo::trielo_lambda<SDL_CreateRenderer>(
-                        Trielo::FailErrCode(static_cast<SDL_Renderer*>(nullptr)),
+                        Trielo::Error(static_cast<SDL_Renderer*>(nullptr)),
                         sdl_error_lambda,
                         window,
                         nullptr,
@@ -148,7 +148,7 @@ namespace GUI {
             {
                 SDL_RendererInfo info;
                 if(Trielo::trielo_lambda<SDL_GetRendererInfo>(
-                    Trielo::OkErrCode(0),
+                    Trielo::Success(0),
                     sdl_error_lambda,
                     renderer,
                     &info
@@ -158,7 +158,7 @@ namespace GUI {
             }
 
             if(Trielo::trielo<ImGui::DebugCheckVersionAndDataLayout>(
-                Trielo::OkErrCode(true),
+                Trielo::Success(true),
                 IMGUI_VERSION,
                 sizeof(ImGuiIO),
                 sizeof(ImGuiStyle),
@@ -169,10 +169,10 @@ namespace GUI {
             ) == false) {
                 return { nullptr, nullptr, settings_file };
             }
-            if(Trielo::trielo<ImGui::CreateContext>(Trielo::FailErrCode(static_cast<ImGuiContext*>(nullptr)), static_cast<ImFontAtlas*>(nullptr)) == nullptr) {
+            if(Trielo::trielo<ImGui::CreateContext>(Trielo::Error(static_cast<ImGuiContext*>(nullptr)), static_cast<ImFontAtlas*>(nullptr)) == nullptr) {
                 return { nullptr, nullptr, settings_file };
             }
-            if(Trielo::trielo<ImPlot::CreateContext>(Trielo::FailErrCode(static_cast<ImPlotContext*>(nullptr))) == nullptr) {
+            if(Trielo::trielo<ImPlot::CreateContext>(Trielo::Error(static_cast<ImPlotContext*>(nullptr))) == nullptr) {
                 return { nullptr, nullptr, settings_file };
             }
 
@@ -180,11 +180,11 @@ namespace GUI {
             io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_DockingEnable;
             io.IniFilename = nullptr;
 
-            if(Trielo::trielo<ImGui_ImplSDL3_InitForSDLRenderer>(Trielo::OkErrCode(true), window, renderer) == false) {
+            if(Trielo::trielo<ImGui_ImplSDL3_InitForSDLRenderer>(Trielo::Success(true), window, renderer) == false) {
                 return { nullptr, nullptr, settings_file };
             }
 
-            if(Trielo::trielo<ImGui_ImplSDLRenderer3_Init>(Trielo::OkErrCode(true), renderer) == false) {
+            if(Trielo::trielo<ImGui_ImplSDLRenderer3_Init>(Trielo::Success(true), renderer) == false) {
                 return { nullptr, nullptr, settings_file };
             }
             
@@ -216,7 +216,7 @@ namespace GUI {
                 }
 
                 if(settings_file.settings.scale_combo == 0) {
-                    Trielo::trielo<set_scale>(Trielo::trielo_lambda<SDL_GetWindowDisplayScale>(Trielo::OkErrCode(0.0f), Boilerplate::sdl_error_lambda, (window)));
+                    Trielo::trielo<set_scale>(Trielo::trielo_lambda<SDL_GetWindowDisplayScale>(Trielo::Success(0.0f), Boilerplate::sdl_error_lambda, (window)));
                 } else {
                     Trielo::trielo<set_scale>(ns::Settings::Scales::values[static_cast<size_t>(settings_file.settings.scale_combo - 1)]);
                 }
@@ -229,11 +229,11 @@ namespace GUI {
             } catch(const std::exception& e) {
                 std::cout << "ERROR: GUI::Top::Top(): error loading " << ns::settings_file_path << " file and parsing to json: exception: " << e.what() << std::endl;
                 switch_imgui_theme();
-                Trielo::trielo<set_scale>(Trielo::trielo_lambda<SDL_GetWindowDisplayScale>(Trielo::OkErrCode(0.0f), Boilerplate::sdl_error_lambda, (window)));
+                Trielo::trielo<set_scale>(Trielo::trielo_lambda<SDL_GetWindowDisplayScale>(Trielo::Success(0.0f), Boilerplate::sdl_error_lambda, (window)));
                 Trielo::trielo<set_implot_scale>();
             }
 
-            if(Trielo::trielo_lambda<SDL_ShowWindow>(Trielo::OkErrCode(0), Boilerplate::sdl_error_lambda, window) != 0) {
+            if(Trielo::trielo_lambda<SDL_ShowWindow>(Trielo::Success(0), Boilerplate::sdl_error_lambda, window) != 0) {
                 return { nullptr, nullptr, settings_file };
             }
 
@@ -253,7 +253,7 @@ namespace GUI {
                         break; 
                     case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
                         // This fires when changes system wide scale settings change
-                        Trielo::trielo<set_sdl_scale>(Trielo::trielo_lambda<SDL_GetWindowDisplayScale>(Trielo::OkErrCode(0.0f), sdl_error_lambda, window));
+                        Trielo::trielo<set_sdl_scale>(Trielo::trielo_lambda<SDL_GetWindowDisplayScale>(Trielo::Success(0.0f), sdl_error_lambda, window));
                         Trielo::trielo<set_implot_scale>();
                         break;
                     case SDL_EVENT_USER:
@@ -274,16 +274,16 @@ namespace GUI {
         void render_skip_frame(SDL_Renderer* renderer) {
             ImGui::Render();
             if(SDL_SetRenderScale(renderer, ImGui::GetIO().DisplayFramebufferScale.x, ImGui::GetIO().DisplayFramebufferScale.y) != 0) {
-                fmt::print(fmt::fg(fmt::color::yellow), "WARNING: SDL_RenderSetScale failed");
+                std::cout << "WARNING: SDL_RenderSetScale failed\n";
                 sdl_error_lambda();
             }
             static constexpr ImVec4 clear_color { 0.45f, 0.55f, 0.60f, 1.00f };
             if(SDL_SetRenderDrawColor(renderer, (Uint8)(clear_color.x * 255), (Uint8)(clear_color.y * 255), (Uint8)(clear_color.z * 255), (Uint8)(clear_color.w * 255)) != 0) {
-                fmt::print(fmt::fg(fmt::color::yellow), "WARNING: SDL_SetRenderDrawColor failed");
+                std::cout << "WARNING: SDL_SetRenderDrawColor failed\n";
                 sdl_error_lambda();
             }
             if(SDL_RenderClear(renderer) != 0) {
-                fmt::print(fmt::fg(fmt::color::yellow), "WARNING: SDL_RenderClear failed\n");
+                std::cout << "WARNING: SDL_RenderClear failed\n";
                 sdl_error_lambda();
             }
             ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData());
@@ -292,7 +292,7 @@ namespace GUI {
         void render(SDL_Renderer* renderer) {
             render_skip_frame(renderer);
             if(SDL_RenderPresent(renderer) != 0) {
-                fmt::print(fmt::fg(fmt::color::yellow), "WARNING: SDL_RenderClear failed\n");
+                std::cout << "WARNING: SDL_RenderClear failed\n";
                 sdl_error_lambda();
             }
         }
@@ -356,11 +356,11 @@ namespace GUI {
                 return -3;
             }
 
-            if(Trielo::trielo<ImGui_ImplSDL3_InitForSDLRenderer>(Trielo::OkErrCode(true), window, renderer) == false) {
+            if(Trielo::trielo<ImGui_ImplSDL3_InitForSDLRenderer>(Trielo::Success(true), window, renderer) == false) {
                 return -4;
             }
 
-            if(Trielo::trielo<ImGui_ImplSDLRenderer3_Init>(Trielo::OkErrCode(true), renderer) == false) {
+            if(Trielo::trielo<ImGui_ImplSDLRenderer3_Init>(Trielo::Success(true), renderer) == false) {
                 return -5;
             }
 
