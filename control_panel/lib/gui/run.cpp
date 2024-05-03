@@ -1,3 +1,5 @@
+#include <thread>
+
 #include <trielo/trielo.hpp>
 #include <imgui_internal.h>
 #include <implot.h>
