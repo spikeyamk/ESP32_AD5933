@@ -83,6 +83,5 @@ namespace BLE_Client {
     };
 
     std::optional<BLE_Client::ESP32_AD5933::Service> find_services_characteristics(SimpleBLE::Peripheral& peripheral);
-    std::optional<BLE_Client::ESP32_AD5933::Service> find_services_characteristics(SimpleBLE::Safe::Peripheral& peripheral);
     std::string get_address_without_semicolons(SimpleBLE::Peripheral& peripheral);
 }

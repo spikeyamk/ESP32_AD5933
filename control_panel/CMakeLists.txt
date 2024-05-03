@@ -13,21 +13,9 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 endif()
 
 set(TRIELO_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/trielo_wrapper/trielo)
-set(FMT_DIR ${CMAKE_CURRENT_LIST_DIR}/common/fmt)
-set(SIMPLEBLE_DIR ${CMAKE_CURRENT_LIST_DIR}/common/SimpleBLE/simpleble)
-
-find_package(SDL3)
-if(SDL3_FOUND STREQUAL "0")
-	set(SDL_STATIC ON)
-	set(SDL_SHARED OFF)
-	set(SDL_TEST_LIBRARY OFF)
-	set(SDL_TESTS OFF)
-	set(SDL_DISABLE_INSTALL ON)
-	set(SDL_DISABLE_INSTALL_DOCS ON)
-	set(SDL_INSTALL_TESTS OFF)
-	set(SDL3_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/SDL3)
-endif()
-
+#set(FMT_DIR ${CMAKE_CURRENT_LIST_DIR}/common/fmt)
+#set(SIMPLEBLE_DIR ${CMAKE_CURRENT_LIST_DIR}/common/SimpleBLE/simpleble)
+set(SDL3_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/SDL3)
 set(IMGUI_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/imgui)
 set(IMPLOT_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/implot)
 set(IMGUI_CONSOLE_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/imgui-console)
@@ -65,13 +53,19 @@ set(IMPLOT_SRCS
 )
 
 add_subdirectory(${TRIELO_DIR} ${CMAKE_BINARY_DIR}/trielo)
-add_subdirectory(${FMT_DIR})
-add_subdirectory(${SIMPLEBLE_DIR})
+#add_subdirectory(${FMT_DIR})
+#add_subdirectory(${SIMPLEBLE_DIR})
 add_subdirectory(${MAGIC_DIR} ${CMAKE_BINARY_DIR}/magic)
-if(SDL3_FOUND STREQUAL "0")
-	add_subdirectory(${SDL3_DIR})
-	set(SDL3_LIBRARIES SDL3::SDL3-static)
-endif()
+
+set(SDL_STATIC ON)
+set(SDL_SHARED OFF)
+set(SDL_TEST_LIBRARY OFF)
+set(SDL_TESTS OFF)
+set(SDL_DISABLE_INSTALL ON)
+set(SDL_DISABLE_INSTALL_DOCS ON)
+set(SDL_INSTALL_TESTS OFF)
+add_subdirectory(${SDL3_DIR})
+
 add_subdirectory(${AD5933_CONFIG_DIR} ${CMAKE_BINARY_DIR}/AD5933_config)
 add_subdirectory(${AD5933_MEASUREMENT_DIR} ${CMAKE_BINARY_DIR}/AD5933_measurement)
 add_subdirectory(${AD5933_TEMPERATURE_DIR} ${CMAKE_BINARY_DIR}/AD5933_temperature)
@@ -160,9 +154,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
 	trielo
-	simpleble::simpleble
+    #simpleble::simpleble
 	magic
-	${SDL3_LIBRARIES}
+    SDL3::SDL3-static
 	AD5933_config
 	AD5933_calibration
 	AD5933_measurement

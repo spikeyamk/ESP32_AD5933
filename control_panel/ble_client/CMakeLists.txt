@@ -16,8 +16,13 @@ if(NOT TARGET magic)
 endif()
 
 if(NOT TARGET simpleble::simpleble)
-    set(SIMPLE_BLE_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/SimpleBLE/simpleble)
+    set(SIMPLE_BLE_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/SimpleBLE/simpleble)
     add_subdirectory(${SIMPLE_BLE_DIR} ${CMAKE_BINARY_DIR}/simpleble)
+endif()
+
+if(NOT TARGET fmt)
+    set(FMT_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/fmt)
+    add_subdirectory(${FMT_DIR} ${CMAKE_BINARY_DIR}/fmt)
 endif()
 
 if(NOT TARGET sml)

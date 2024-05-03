@@ -96,10 +96,7 @@ namespace GUI {
             ImPlot::GetStyle().PlotDefaultSize.y = ImPlotStyle().PlotDefaultSize.y * scale;
         }
 
-        static const Uint32 renderer_flags {
-            SDL_RENDERER_ACCELERATED
-            | SDL_RENDERER_PRESENTVSYNC
-        };
+        const Uint32 renderer_flags { SDL_RENDERER_PRESENTVSYNC };
 
         std::tuple<SDL_Window*, SDL_Renderer*, ns::SettingsFile> init() {
             ns::SettingsFile settings_file;
