@@ -1,9 +1,0 @@
-ACS Data In 0x2B30
-ACS Data Out Indicate 0x2B32
-
-HID Control Point 0x2A4C
-HID Information 0x2A4A
-
-Current Time 0x2A2B
-Time Update Control Point 0x2A16
-Time Update State 0x2A17
