@@ -56,10 +56,10 @@ namespace AutoSaveNoBLE {
 		AD5933::Driver driver { I2C::Bus::get_instance().active_device_handles.at(AD5933::SLAVE_ADDRESS) };
 		AD5933::Extension extension { driver };
 
-		if(Trielo::trielo<SD_Card::init>(Trielo::OkErrCode(0)) != 0) {
-			Trielo::trielo<SD_Card::deinit>(Trielo::OkErrCode(0));
+		if(Trielo::trielo<SD_Card::init>(Trielo::Success(0)) != 0) {
+			Trielo::trielo<SD_Card::deinit>(Trielo::Success(0));
 			std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
-			if(Trielo::trielo<SD_Card::init>(Trielo::OkErrCode(0)) != 0) {
+			if(Trielo::trielo<SD_Card::init>(Trielo::Success(0)) != 0) {
 				return;
 			}
 		}
@@ -68,7 +68,7 @@ namespace AutoSaveNoBLE {
 			size_t bytes_total;
 			size_t bytes_free;
 			
-			if(Trielo::trielo<esp_littlefs_sdmmc_info>(Trielo::OkErrCode(ESP_OK), &SD_Card::card, &bytes_total, &bytes_free) != ESP_OK) {
+			if(Trielo::trielo<esp_littlefs_sdmmc_info>(Trielo::Success(ESP_OK), &SD_Card::card, &bytes_total, &bytes_free) != ESP_OK) {
 				return;
 			}
 
@@ -86,10 +86,10 @@ namespace AutoSaveNoBLE {
 			) {
 				if(i == stopper) {
 					// Removes the record file if it exists we should never get here
-					FILE* file_to_remove = Trielo::trielo<std::fopen>(Trielo::FailErrCode<FILE*>(nullptr), record_filepath.data(), "r");
+					FILE* file_to_remove = Trielo::trielo<std::fopen>(Trielo::Error<FILE*>(nullptr), record_filepath.data(), "r");
 					if(file_to_remove != nullptr) {
-						Trielo::trielo<std::fclose>(Trielo::OkErrCode(0), file_to_remove);
-						Trielo::trielo<unlink>(Trielo::OkErrCode(0), record_filepath.data());
+						Trielo::trielo<std::fclose>(Trielo::Success(0), file_to_remove);
+						Trielo::trielo<unlink>(Trielo::Success(0), record_filepath.data());
 					}
 				}
 				std::cout << "ERROR: BLE::Actions::Auto::start_saving: file: " << record_filepath.data() << " already exits: waiting for std::chrono::seconds(1)\n";
@@ -102,8 +102,8 @@ namespace AutoSaveNoBLE {
 				FILE* file {  };
 				~Scoped_FILE() {
 					if(file != nullptr) {
-						Trielo::trielo<std::fflush>(Trielo::OkErrCode(0), file);
-						Trielo::trielo<std::fclose>(Trielo::OkErrCode(0), file);
+						Trielo::trielo<std::fflush>(Trielo::Success(0), file);
+						Trielo::trielo<std::fclose>(Trielo::Success(0), file);
 					}
 
 					ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::PowerDownMode);
@@ -112,7 +112,7 @@ namespace AutoSaveNoBLE {
 
 			Scoped_FILE file {
 				.ad5933 = extension,
-				.file = Trielo::trielo<std::fopen>(Trielo::FailErrCode<FILE*>(nullptr), record_filepath.data(), "w")
+				.file = Trielo::trielo<std::fopen>(Trielo::Error<FILE*>(nullptr), record_filepath.data(), "w")
 			};
 
 			if(file.file == nullptr) {

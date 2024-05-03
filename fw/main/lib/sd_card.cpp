@@ -98,37 +98,37 @@ namespace SD_Card {
     sdspi_dev_handle_t handle;
 
     void power_on() {
-		Trielo::trielo<gpio_reset_pin>(Trielo::OkErrCode(ESP_OK), Pins::nsden);
+		Trielo::trielo<gpio_reset_pin>(Trielo::Success(ESP_OK), Pins::nsden);
     }
 
     void power_off() {
-		Trielo::trielo<gpio_reset_pin>(Trielo::OkErrCode(ESP_OK), Pins::nsden);
-		Trielo::trielo<gpio_set_direction>(Trielo::OkErrCode(ESP_OK), Pins::nsden, GPIO_MODE_OUTPUT);
+		Trielo::trielo<gpio_reset_pin>(Trielo::Success(ESP_OK), Pins::nsden);
+		Trielo::trielo<gpio_set_direction>(Trielo::Success(ESP_OK), Pins::nsden, GPIO_MODE_OUTPUT);
     }
 
     int init() {
         Trielo::trielo<power_on>();
         std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
 
-        if(Trielo::trielo<spi_bus_initialize>(Trielo::OkErrCode(ESP_OK), slot_config.host_id, &bus_cfg, SDSPI_DEFAULT_DMA) != ESP_OK) {
+        if(Trielo::trielo<spi_bus_initialize>(Trielo::Success(ESP_OK), slot_config.host_id, &bus_cfg, SDSPI_DEFAULT_DMA) != ESP_OK) {
             return -1;
         }
 
-        if(Trielo::trielo<sdspi_host_init>(Trielo::OkErrCode(ESP_OK)) != ESP_OK) {
+        if(Trielo::trielo<sdspi_host_init>(Trielo::Success(ESP_OK)) != ESP_OK) {
             return -2;
         }
 
-        if(Trielo::trielo<sdspi_host_init_device>(Trielo::OkErrCode(ESP_OK), &slot_config, &handle) != ESP_OK) {
+        if(Trielo::trielo<sdspi_host_init_device>(Trielo::Success(ESP_OK), &slot_config, &handle) != ESP_OK) {
             return -3;
         }
         
-        if(Trielo::trielo<sdmmc_card_init>(Trielo::OkErrCode(ESP_OK), &host, &card) != ESP_OK) {
+        if(Trielo::trielo<sdmmc_card_init>(Trielo::Success(ESP_OK), &host, &card) != ESP_OK) {
             return -4;
         }
 
         Trielo::trielo<sdmmc_card_print_info>(stdout, &card);
 
-        if(Trielo::trielo<esp_vfs_littlefs_register>(Trielo::OkErrCode(ESP_OK), &littlefs_conf) != ESP_OK) {
+        if(Trielo::trielo<esp_vfs_littlefs_register>(Trielo::Success(ESP_OK), &littlefs_conf) != ESP_OK) {
             return -5;
         }
 
@@ -136,7 +136,7 @@ namespace SD_Card {
     }
 
     esp_err_t format() {
-        return Trielo::trielo<esp_littlefs_format_sdmmc>(Trielo::OkErrCode(ESP_OK), &card);
+        return Trielo::trielo<esp_littlefs_format_sdmmc>(Trielo::Success(ESP_OK), &card);
     }
 
     int create_test_files() {
@@ -192,22 +192,22 @@ namespace SD_Card {
     esp_err_t deinit() {
         esp_err_t ret { ESP_OK };
 
-        if(Trielo::trielo<esp_vfs_littlefs_unregister_sdmmc>(Trielo::OkErrCode(ESP_OK), &card) != ESP_OK) {
+        if(Trielo::trielo<esp_vfs_littlefs_unregister_sdmmc>(Trielo::Success(ESP_OK), &card) != ESP_OK) {
             ret = 1;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-        if(Trielo::trielo<sdspi_host_remove_device>(Trielo::OkErrCode(ESP_OK), handle) != ESP_OK) {
+        if(Trielo::trielo<sdspi_host_remove_device>(Trielo::Success(ESP_OK), handle) != ESP_OK) {
             ret = 2;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         
-        if(Trielo::trielo<sdspi_host_deinit>(Trielo::OkErrCode(ESP_OK)) != ESP_OK) {
+        if(Trielo::trielo<sdspi_host_deinit>(Trielo::Success(ESP_OK)) != ESP_OK) {
             ret = 3;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-        if(Trielo::trielo<spi_bus_free>(Trielo::OkErrCode(ESP_OK), slot_config.host_id) != ESP_OK) {
+        if(Trielo::trielo<spi_bus_free>(Trielo::Success(ESP_OK), slot_config.host_id) != ESP_OK) {
             ret = 4;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -325,10 +325,10 @@ namespace SD_Card {
     size_t integrity_test(const size_t max_bin_pow) {
         for(size_t i = 1; i < (2 << max_bin_pow); i *= 2) {
             const std::string name { std::string("jcb").append(std::to_string(i)) };
-            if(Trielo::trielo<create_test_file>(Trielo::OkErrCode(0), i, name) != 0) {
+            if(Trielo::trielo<create_test_file>(Trielo::Success(0), i, name) != 0) {
                 return i;
             }
-            if(Trielo::trielo<check_test_file>(Trielo::OkErrCode(0), i, name) != 0) {
+            if(Trielo::trielo<check_test_file>(Trielo::Success(0), i, name) != 0) {
                 return i;
             }
         }

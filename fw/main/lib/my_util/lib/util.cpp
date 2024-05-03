@@ -133,7 +133,7 @@ namespace Util {
 		}
 		
 		void calculate_primes_endless_test() {
-			if(Trielo::trielo<esp_task_wdt_deinit>(Trielo::OkErrCode(ESP_OK)) == ESP_OK) {
+			if(Trielo::trielo<esp_task_wdt_deinit>(Trielo::Success(ESP_OK)) == ESP_OK) {
 				while(1) {
 					uint32_t primes_stopper = 30'000u;
 					TaskHandle_t calculate_primes_task_handle;
@@ -211,7 +211,7 @@ namespace Util {
 		}
 
 		void create_dump_all_registers_task(const size_t iterations, const AD5933::Driver &driver) {
-			if(Trielo::trielo<esp_task_wdt_deinit>(Trielo::OkErrCode(ESP_OK)) == ESP_OK) {
+			if(Trielo::trielo<esp_task_wdt_deinit>(Trielo::Success(ESP_OK)) == ESP_OK) {
 				DumpAllRegisters arg_to_pass = {
 					iterations,
 					driver
@@ -280,15 +280,15 @@ namespace Util {
 	const gpio_num_t button { GPIO_NUM_3 };
 
 	void init_button() {
-		Trielo::trielo<gpio_set_direction>(Trielo::OkErrCode(ESP_OK), button, GPIO_MODE_INPUT);
-		Trielo::trielo<gpio_set_pull_mode>(Trielo::OkErrCode(ESP_OK), button, GPIO_PULLUP_ONLY);
-		Trielo::trielo<gpio_set_intr_type>(Trielo::OkErrCode(ESP_OK), button, GPIO_INTR_NEGEDGE);
-		Trielo::trielo<gpio_install_isr_service>(Trielo::OkErrCode(ESP_OK), 0);
+		Trielo::trielo<gpio_set_direction>(Trielo::Success(ESP_OK), button, GPIO_MODE_INPUT);
+		Trielo::trielo<gpio_set_pull_mode>(Trielo::Success(ESP_OK), button, GPIO_PULLUP_ONLY);
+		Trielo::trielo<gpio_set_intr_type>(Trielo::Success(ESP_OK), button, GPIO_INTR_NEGEDGE);
+		Trielo::trielo<gpio_install_isr_service>(Trielo::Success(ESP_OK), 0);
 	}
 
 	void init_wakeup_button(Util::Status status) {
 		gpio_set_direction(button, GPIO_MODE_INPUT);
-		Trielo::trielo<gpio_set_pull_mode>(Trielo::OkErrCode(ESP_OK), button, GPIO_PULLUP_ONLY);
+		Trielo::trielo<gpio_set_pull_mode>(Trielo::Success(ESP_OK), button, GPIO_PULLUP_ONLY);
 		ESP_ERROR_CHECK(esp_deep_sleep_enable_gpio_wakeup(BIT(button), ESP_GPIO_WAKEUP_GPIO_LOW));
 		esp_deep_sleep_start();
 		mode_status = status;
@@ -296,16 +296,16 @@ namespace Util {
 	}
 
 	void deinit_button() {
-		Trielo::trielo<gpio_intr_disable>(Trielo::OkErrCode(ESP_OK), button);
-		Trielo::trielo<gpio_isr_handler_remove>(Trielo::OkErrCode(ESP_OK), button);
-		Trielo::trielo<gpio_reset_pin>(Trielo::OkErrCode(ESP_OK), button);
+		Trielo::trielo<gpio_intr_disable>(Trielo::Success(ESP_OK), button);
+		Trielo::trielo<gpio_isr_handler_remove>(Trielo::Success(ESP_OK), button);
+		Trielo::trielo<gpio_reset_pin>(Trielo::Success(ESP_OK), button);
 		Trielo::trielo<gpio_uninstall_isr_service>();
 	}
 
 	void init_enter_auto_save_no_ble_button() {
 		Trielo::trielo<init_button>();
 		TRIELO_EQ(ESP_OK, gpio_isr_handler_add(button, enter_auto_save_no_ble_cb, nullptr));
-		Trielo::trielo<gpio_intr_enable>(Trielo::OkErrCode(ESP_OK), button);
+		Trielo::trielo<gpio_intr_enable>(Trielo::Success(ESP_OK), button);
 	}
 
 	void deinit_enter_auto_save_no_ble_button() {
@@ -315,7 +315,7 @@ namespace Util {
 	void init_exit_auto_save_no_ble_button() {
 		Trielo::trielo<init_button>();
 		TRIELO_EQ(ESP_OK, gpio_isr_handler_add(button, exit_auto_save_no_ble_cb, nullptr));
-		Trielo::trielo<gpio_intr_enable>(Trielo::OkErrCode(ESP_OK), button);
+		Trielo::trielo<gpio_intr_enable>(Trielo::Success(ESP_OK), button);
 	}
 
     void print_current_time() {
