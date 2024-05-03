@@ -6,7 +6,6 @@
 
 #include "gui/boilerplate.hpp"
 #include "gui/top.hpp"
-#include "gui/windows/console.hpp"
 #include "gui/windows/ble_adapter.hpp"
 #include "gui/windows/client/client.hpp"
 #include "gui/windows/implot_dense_test.hpp"
@@ -15,9 +14,8 @@
 
 namespace GUI {
     DockspaceIDs split_left_center(ImGuiID dockspace_id) {
-        const ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_DockSpace;
         ImGui::DockBuilderRemoveNode(dockspace_id);
-        ImGui::DockBuilderAddNode(dockspace_id, dockspace_flags);
+        ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
         ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->Size);
         ImGuiID dock_id_center;
         const ImGuiID dock_id_left = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.225f, nullptr, &dock_id_center);
@@ -81,18 +79,6 @@ namespace GUI {
 
         Windows::BLE_Adapter ble_connector { shm, client_windows };
         ble_connector.draw(top.menu_bar_enables.ble_adapter, top_ids.left);
-        Windows::Console console { top.menu_bar_enables.console };
-        std::jthread stdout_reader(
-            [](Windows::Console& console, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
-                const auto ret { shm->console.read_for(std::chrono::milliseconds(1)) };
-                if(ret.has_value()) {
-                    console.log(ret.value());
-                }
-            },
-            std::ref(console),
-            shm
-        );
-        console.draw();
         Boilerplate::render(renderer);
 
         bool reloaded { false };
@@ -104,7 +90,6 @@ namespace GUI {
             top_id = top.draw(done, reload);
             
             ble_connector.draw(top.menu_bar_enables.ble_adapter, top_ids.left);
-            console.draw();
             for(size_t i = 0; i < client_windows.size(); i++) {
                 client_windows[i].draw(top_ids.center, top.menu_bar_enables);
             }

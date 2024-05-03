@@ -6,6 +6,8 @@
 
 #include "legal/all.hpp"
 
+#include "gui/windows/ble_adapter.hpp"
+#include "imgui_custom/markdown.hpp"
 #include "gui/top.hpp"
 
 namespace GUI {
@@ -65,7 +67,6 @@ namespace GUI {
                     ImGui::MenuItem((const char*) Windows::Plots::Calibration::name_base.data(), nullptr, &menu_bar_enables.calibration_plots);
                     ImGui::MenuItem((const char*) Windows::Plots::Auto::name_base.data(), nullptr, &menu_bar_enables.auto_plots);
 
-                    ImGui::MenuItem((const char*) Windows::Console::name.data(), nullptr, &menu_bar_enables.console);
                     ImGui::MenuItem((const char*) Windows::Debug::name_base.data(), nullptr, &menu_bar_enables.debug);
                     ImGui::MenuItem("ImGui Demo", nullptr, &menu_bar_enables.imgui_demo);
                     ImGui::MenuItem("ImPlot Demo", nullptr, &menu_bar_enables.implot_demo);

@@ -1,10 +1,5 @@
 #pragma once
 
-#include "gui/boilerplate.hpp"
-#include "imgui_custom/markdown.hpp"
-#include "gui/windows/console.hpp"
-#include "gui/windows/client/client.hpp"
-#include "gui/windows/ble_adapter.hpp"
 #include "legal/boost.hpp"
 #include "legal/dear_imgui.hpp"
 #include "legal/implot.hpp"

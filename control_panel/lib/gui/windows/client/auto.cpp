@@ -60,7 +60,7 @@ namespace GUI {
                     ImGui::SameLine();
                     ImGui::EndDisabled();
                     const float scale { GUI::Boilerplate::get_scale() };
-                    Spinner::Spinner("SendingSinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                    ImGui::Spinner("SendingSinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                     ImGui::BeginDisabled();
                 }
 
@@ -69,7 +69,7 @@ namespace GUI {
                     ImGui::SameLine();
                     ImGui::EndDisabled();
                     const float scale { GUI::Boilerplate::get_scale() };
-                    Spinner::Spinner("SavingSinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                    ImGui::Spinner("SavingSinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                     ImGui::BeginDisabled();
                 }
 
@@ -99,7 +99,7 @@ namespace GUI {
                     ImGui::EndDisabled();
                     ImGui::SameLine();
                     const float scale { GUI::Boilerplate::get_scale() };
-                    Spinner::Spinner("FormattingSpinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                    ImGui::Spinner("FormattingSpinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                     ImGui::BeginDisabled();
                 }
 
@@ -122,7 +122,7 @@ namespace GUI {
                     ImGui::EndDisabled();
                     ImGui::SameLine();
                     const float scale { GUI::Boilerplate::get_scale() };
-                    Spinner::Spinner("RemovingSpinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                    ImGui::Spinner("RemovingSpinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                     ImGui::BeginDisabled();
                 }
 

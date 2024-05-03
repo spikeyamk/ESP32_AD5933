@@ -32,22 +32,11 @@ namespace GUI {
                 return;
             }
 
-            static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
-            ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoMove;
-
-            //window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-            //window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-
-            // When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background
-            // and handle the pass-thru hole, so we ask Begin() to not render a background.
-            if(dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
-                window_flags |= ImGuiWindowFlags_NoBackground;
-
             if(first) {
                 ImGui::DockBuilderDockWindow(name.c_str(), center_id);
             }
 
-            ImGui::Begin(name.c_str(), &(enable), window_flags);
+            ImGui::Begin(name.c_str(), &(enable), ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoMove);
 
             if(enable == false) {
                 ImGui::End();
@@ -55,14 +44,13 @@ namespace GUI {
             }
 
             if(ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_DockingEnable) {
-                ImGuiID dockspace_id = ImGui::GetID(dockspace_name.c_str());
-                ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+                ImGuiID dockspace_id { ImGui::GetID(dockspace_name.c_str()) };
+                ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f));
                 if(first) {
-                    static const ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_DockSpace;
                     ImGui::DockBuilderRemoveNode(dockspace_id); // clear any previous layout
-                    ImGui::DockBuilderAddNode(dockspace_id, dockspace_flags);
+                    ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
                     ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetWindowSize());
-                    const ImGuiID right_id = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.5f, nullptr, &dockspace_id);
+                    const ImGuiID right_id { ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.5f, nullptr, &dockspace_id) };
                     calibration_plots_window.draw(enables.calibration_plots, right_id);
                     measurement_plots_window.draw(enables.measurement_plots, right_id);
                     auto_plots_window.draw(enables.auto_plots, right_id);

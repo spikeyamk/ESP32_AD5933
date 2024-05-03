@@ -110,13 +110,13 @@ namespace GUI {
                         show_disabled_connect_button();
                         ImGui::SameLine();
                         const float scale = GUI::Boilerplate::get_scale();
-                        Spinner::Spinner("ClientSpinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                        ImGui::Spinner("ClientSpinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                     } else {
                         show_disabled_connect_button();
                     }
                     show_table();
                     const float scale { GUI::Boilerplate::get_scale() };
-                    Spinner::Spinner("ScanningSpinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                    ImGui::Spinner("ScanningSpinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                 }
             }, shm->active_state);
 

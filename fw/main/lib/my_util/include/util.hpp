@@ -11,8 +11,8 @@
 #include <condition_variable>
 #include <variant>
 
-#include "led_strip.h"
 #include <driver/gpio.h>
+#include <freertos/FreeRTOS.h>
 
 #include "ad5933/driver/driver.hpp"
 

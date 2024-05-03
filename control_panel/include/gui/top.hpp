@@ -27,7 +27,6 @@ namespace GUI {
             bool measurement_plots { true };
             bool calibration_plots { true };
             bool auto_plots { true };
-            bool console { false };
             bool imgui_demo { false };
             bool implot_demo { false };
             bool implot_dense_test { false };

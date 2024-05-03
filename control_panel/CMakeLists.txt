@@ -13,12 +13,9 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 endif()
 
 set(TRIELO_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/trielo_wrapper/trielo)
-#set(FMT_DIR ${CMAKE_CURRENT_LIST_DIR}/common/fmt)
-#set(SIMPLEBLE_DIR ${CMAKE_CURRENT_LIST_DIR}/common/SimpleBLE/simpleble)
 set(SDL3_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/SDL3)
 set(IMGUI_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/imgui)
 set(IMPLOT_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/implot)
-set(IMGUI_CONSOLE_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/imgui-console)
 set(MAGIC_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/magic)
 set(AD5933_MASKS_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/ad5933/masks)
 set(AD5933_CONFIG_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/ad5933/config)
@@ -53,8 +50,6 @@ set(IMPLOT_SRCS
 )
 
 add_subdirectory(${TRIELO_DIR} ${CMAKE_BINARY_DIR}/trielo)
-#add_subdirectory(${FMT_DIR})
-#add_subdirectory(${SIMPLEBLE_DIR})
 add_subdirectory(${MAGIC_DIR} ${CMAKE_BINARY_DIR}/magic)
 
 set(SDL_STATIC ON)
@@ -99,7 +94,6 @@ add_executable(${PROJECT_NAME}
 	lib/gui/ubuntu_sans_regular.cpp
 
 	# singleton windows
-	lib/gui/windows/console.cpp
 	lib/gui/windows/ble_adapter.cpp
 	lib/gui/windows/implot_dense_test.cpp
 
@@ -137,10 +131,6 @@ add_executable(${PROJECT_NAME}
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU|Clang")
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-	# Makes UTF-8 work. Could not get it to work with target definitions has to be global
-	add_compile_options("/utf-8")
-	# Set the Visual C++ runtime to be statically linked
-	set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
 	# This macro _WIN32_WINNT is for some reason needed for using boost libraries because they can't detect the Windows version themselves?
 	target_compile_definitions(${PROJECT_NAME} PRIVATE _WIN32_WINNT=0x0A00)
 endif()
@@ -154,7 +144,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
 	trielo
-    #simpleble::simpleble
 	magic
     SDL3::SDL3-static
 	AD5933_config
