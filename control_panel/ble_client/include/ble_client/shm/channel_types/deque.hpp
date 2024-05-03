@@ -4,7 +4,7 @@
 #include <chrono>
 #include <deque>
 
-#include "ble_client/shm/common/channel_types/base.hpp"
+#include "ble_client/shm/channel_types/base.hpp"
 
 namespace BLE_Client {
     namespace SHM {

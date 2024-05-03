@@ -7,7 +7,7 @@ namespace BLE_Client {
                 std::stop_source stop_source,
                 BLE_Client::StateMachines::Adapter::T_StateMachine& adapter_sm,
                 SimpleBLE::Adapter& adapter,
-                std::shared_ptr<BLE_Client::SHM::Parent> shm
+                std::shared_ptr<BLE_Client::SHM::SHM> shm
             ) {
                 std::stop_token st = stop_source.get_token();
                 using namespace boost::sml;

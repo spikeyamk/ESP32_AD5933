@@ -1,4 +1,3 @@
-#include <stdexcept>
 #include <iostream>
 #include <vector>
 #include <string>
@@ -15,7 +14,7 @@ namespace BLE_Client {
     namespace StateMachines {
         namespace Connection {
             namespace Actions {
-                void disconnect(std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::Parent> shm) {
+                void disconnect(std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
                     try {
                         if(esp32_ad5933->is_connected() == false) {
                             return;
@@ -37,7 +36,7 @@ namespace BLE_Client {
             }
 
             namespace Guards {
-                bool write_body_composition_feature_successful(const BLE_Client::StateMachines::Connection::Events::write_body_composition_feature& event, std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::Parent> shm) {
+                bool write_body_composition_feature_successful(const BLE_Client::StateMachines::Connection::Events::write_body_composition_feature& event, std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
                     try{
                         std::visit([esp32_ad5933](auto&& event) {
                             esp32_ad5933->write_body_composition_feature(Magic::Commands::Serializer::run(event));
@@ -49,7 +48,7 @@ namespace BLE_Client {
                     }
                 }
 
-                bool write_body_composition_feature_failed(const BLE_Client::StateMachines::Connection::Events::write_body_composition_feature& event, std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::Parent> shm) {
+                bool write_body_composition_feature_failed(const BLE_Client::StateMachines::Connection::Events::write_body_composition_feature& event, std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
                     return !write_body_composition_feature_successful(event, esp32_ad5933, shm);
                 }
             }

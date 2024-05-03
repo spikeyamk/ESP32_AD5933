@@ -2,9 +2,9 @@
 
 #include <memory>
 
-#include "imgui.h"
+#include <imgui.h>
 
-#include "ble_client/shm/parent/parent.hpp"
+#include "ble_client/shm/shm.hpp"
 
 namespace GUI {
     struct DockspaceIDs {
@@ -14,6 +14,6 @@ namespace GUI {
 
     void run(
         bool &done,
-        std::shared_ptr<BLE_Client::SHM::Parent> shm
+        std::shared_ptr<BLE_Client::SHM::SHM> shm
     );
 }

@@ -16,8 +16,13 @@ if(NOT TARGET magic)
 endif()
 
 if(NOT TARGET simpleble::simpleble)
-    set(SIMPLE_BLE_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/SimpleBLE/simpleble)
+    set(SIMPLE_BLE_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/SimpleBLE/simpleble)
     add_subdirectory(${SIMPLE_BLE_DIR} ${CMAKE_BINARY_DIR}/simpleble)
+endif()
+
+if(NOT TARGET fmt)
+    set(FMT_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/fmt)
+    add_subdirectory(${FMT_DIR} ${CMAKE_BINARY_DIR}/fmt)
 endif()
 
 if(NOT TARGET sml)
@@ -36,7 +41,7 @@ set(BLE_CLIENT_SRCS
 	lib/esp32_ad5933.cpp
 	lib/cmd_listener.cpp
 	lib/child_main.cpp
-	"lib/shm/common/names.cpp"
+	"lib/shm/names.cpp"
 	lib/state_machines/adapter/adapter.cpp
 	lib/state_machines/adapter/states.cpp
 	lib/state_machines/adapter/checker.cpp
@@ -104,9 +109,9 @@ if(BLE_CLIENT_TEST)
 	enable_testing()
 	set(TEST_SRCS 
 		"tests/tests.cpp"
-		"lib/shm/common/names.cpp"
-		lib/shm/parent/specialized.cpp
-		lib/shm/parent/parent.cpp
+		"lib/shm/names.cpp"
+		lib/shm/specialized.cpp
+		lib/shm/shm.cpp
 	)
 	set(TEST_INCLUDE_DIRS
 		${CMAKE_CURRENT_LIST_DIR}/tests/include

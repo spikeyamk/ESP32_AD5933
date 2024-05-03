@@ -1,8 +1,7 @@
 #include <iostream>
+#include <thread>
 
-#include <fmt/core.h>
-#include <fmt/color.h>
-#include "imgui_internal.h"
+#include <imgui_internal.h>
 
 #include "magic/commands/commands.hpp"
 #include "magic/results/results.hpp"
@@ -17,7 +16,7 @@ namespace GUI {
             return status;
         }
 
-        Debug::Debug(const size_t index, std::shared_ptr<BLE_Client::SHM::Parent> shm) :
+        Debug::Debug(const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> shm) :
             index { index },
             shm { shm }
         {
@@ -27,7 +26,9 @@ namespace GUI {
         void Debug::draw_input_elements() {
             ImGui::SameLine();
 
-            ImGui::Button("Program");
+            if(ImGui::Button("Program")) {
+                program_and_dump();
+            }
 
             ImGui::Separator();
 
@@ -204,12 +205,12 @@ namespace GUI {
             const auto rx_payload { shm->active_devices[index].information->read_for(std::chrono::milliseconds(1'000)) };
 
             if(rx_payload.has_value() == false) {
-    		    fmt::print(fmt::fg(fmt::color::red), "ERROR: GUI::Windows::Debug::dump: timeout\n");
+                std::cout << "ERROR: GUI::Windows::Debug::dump: timeout\n";
                 return false;
             }
 
             if(variant_tester<Magic::Results::Debug::Dump>(rx_payload.value()) == false) {
-    		    fmt::print(fmt::fg(fmt::color::red), "ERROR: GUI::Windows::Debug::dump: rx_payload: wrong variant type\n");
+                std::cout << "ERROR: GUI::Windows::Debug::dump: rx_payload: wrong variant type\n";
                 return false;
             }
 

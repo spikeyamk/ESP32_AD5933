@@ -1,5 +1,4 @@
 #include <thread>
-#include <limits>
 #include <fstream>
 
 #include <nfd.hpp>
@@ -16,7 +15,7 @@
 
 namespace GUI {
     namespace Windows {
-        Calibrate::Calibrate(const size_t index, std::shared_ptr<BLE_Client::SHM::Parent> shm) :
+        Calibrate::Calibrate(const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> shm) :
             index { index },
             shm{ shm }
         {
@@ -25,6 +24,17 @@ namespace GUI {
         
         Calibrate::~Calibrate() {
             stop_source.request_stop();
+        }
+
+        void Calibrate::draw_calibration_impedance_input_field() {
+            ImGui::SliderFloat(
+                "Calibration Impedance [Ohm]",
+                &fields.impedance,
+                std::numeric_limits<float>::min(),
+                1'000'000.0f,
+                "%.3f",
+                ImGuiSliderFlags_AlwaysClamp
+            );
         }
 
         void Calibrate::draw_input_fields() {
@@ -81,14 +91,17 @@ namespace GUI {
 
             ImGui::Separator(); 
 
-            ImGui::SliderFloat(
-                "Calibration Impedance [Ohm]",
-                &fields.impedance,
-                std::numeric_limits<float>::min(),
-                1'000'000.0f,
-                "%.3f",
-                ImGuiSliderFlags_AlwaysClamp
-            );
+            if(fields.rcal) {
+                ImGui::BeginDisabled();
+                draw_calibration_impedance_input_field();
+                ImGui::EndDisabled();
+            } else {
+                draw_calibration_impedance_input_field();
+            }
+
+            if(ImGui::Checkbox("RCAL", &fields.rcal)) {
+                fields.impedance = rcal_impedance;
+            }
 
             ImGui::Separator(); 
 
@@ -207,6 +220,7 @@ namespace GUI {
                 BLE_Client::StateMachines::Connection::Events::write_body_composition_feature {
                     self.index,
                     Magic::Commands::Sweep::Configure{
+                        self.fields.rcal,
                         self.config.to_raw_array()
                     }
                 }

@@ -1,4 +1,5 @@
-#include "imgui_internal.h"
+#include <imgui_internal.h>
+
 #include "misc/cpp/imgui_stdlib.h"
 
 #include "gui/windows/console.hpp"

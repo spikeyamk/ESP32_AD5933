@@ -9,7 +9,7 @@
 
 #include "ble_client/state_machines/logger.hpp"
 #include "ble_client/state_machines/connection/events.hpp"
-#include "ble_client/shm/parent/parent.hpp"
+#include "ble_client/shm/shm.hpp"
 #include "ble_client/esp32_ad5933.hpp"
 
 namespace BLE_Client {
@@ -22,12 +22,12 @@ namespace BLE_Client {
             }
 
             namespace Actions {
-                void disconnect(std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::Parent> shm);
+                void disconnect(std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::SHM> shm);
             }
             
             namespace Guards {
-                bool write_body_composition_feature_successful(const BLE_Client::StateMachines::Connection::Events::write_body_composition_feature& event, std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::Parent> shm);
-                bool write_body_composition_feature_failed(const BLE_Client::StateMachines::Connection::Events::write_body_composition_feature& event, std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::Parent> shm);
+                bool write_body_composition_feature_successful(const BLE_Client::StateMachines::Connection::Events::write_body_composition_feature& event, std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::SHM> shm);
+                bool write_body_composition_feature_failed(const BLE_Client::StateMachines::Connection::Events::write_body_composition_feature& event, std::shared_ptr<ESP32_AD5933> esp32_ad5933, std::shared_ptr<BLE_Client::SHM::SHM> shm);
             }
 
             struct Connection {
@@ -45,14 +45,10 @@ namespace BLE_Client {
             };
             using T_StateMachine = boost::sml::sm<Connection, boost::sml::logger<BLE_Client::StateMachines::Logger>, boost::sml::thread_safe<std::recursive_mutex>, boost::sml::testing>;
 
-            /* Super ugly hack this is stupid, but I can't for the love of god find the full type of the T_StateMachine *
-             * The boost::sml library uses probably some SFINAE or some other complex bullshit I'm too stupid to understand */
-            template<typename T>
-            struct Dummy {
-                std::shared_ptr<BLE_Client::ESP32_AD5933> esp32_ad5933;
-                BLE_Client::StateMachines::Logger logger;
-                T_StateMachine sm { esp32_ad5933, logger };
-            };
+            using Dummy = decltype(T_StateMachine {
+                std::shared_ptr<BLE_Client::ESP32_AD5933> { nullptr },
+                BLE_Client::StateMachines::Logger {},
+            });
         }
     }
 }

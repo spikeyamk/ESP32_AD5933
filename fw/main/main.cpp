@@ -19,18 +19,18 @@ inline void run() {
 }
 
 inline void test() {
-	if(Trielo::trielo<SD_Card::init>(Trielo::OkErrCode(0)) != ESP_OK) {
+	if(Trielo::trielo<SD_Card::init>(Trielo::Success(0)) != ESP_OK) {
 		return;
 	}
-	if(Trielo::trielo<SD_Card::format>(Trielo::OkErrCode(0)) != ESP_OK) {
+	if(Trielo::trielo<SD_Card::format>(Trielo::Success(0)) != ESP_OK) {
 		return;
 	}
 	const std::string_view name { "test" };
 	const auto start { std::chrono::high_resolution_clock::now() };
-	if(Trielo::trielo<SD_Card::create_test_file>(Trielo::OkErrCode(0), (2 << 15), name) != 0) {
+	if(Trielo::trielo<SD_Card::create_test_file>(Trielo::Success(0), (2 << 15), name) != 0) {
 		return;
 	}
-	if(Trielo::trielo<SD_Card::check_test_file>(Trielo::OkErrCode(0), (2 << 15), name) != 0) {
+	if(Trielo::trielo<SD_Card::check_test_file>(Trielo::Success(0), (2 << 15), name) != 0) {
 		return;
 	}
 	const auto finish { std::chrono::high_resolution_clock::now() };

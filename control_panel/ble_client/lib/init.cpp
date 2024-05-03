@@ -1,14 +1,9 @@
-#include <iostream>
-#include <algorithm>
-#include <thread>
-#include <chrono>
-
 #include "ble_client/ostream_overloads.hpp"
 
 #include "ble_client/init.hpp"
 
 namespace BLE_Client {
-    std::optional<SimpleBLE::Adapter> find_default_active_adapter(std::shared_ptr<BLE_Client::SHM::Parent> shm) {
+    std::optional<SimpleBLE::Adapter> find_default_active_adapter(std::shared_ptr<BLE_Client::SHM::SHM> shm) {
         if(SimpleBLE::Adapter::bluetooth_enabled() == false) {
             shm->console.log("WARNING: BLE_Client::find_default_active_adapter:: Bleutooth disabled.\n");
             return std::nullopt;

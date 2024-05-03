@@ -52,8 +52,8 @@ namespace BLE {
             std::printf("BLE::Server::stop: Stoping BLE and notification task\n");
             std::thread([]() {
                 // This must run in a separate thread because otherwise it'll stall the nimble event thread and that one will never consume the stop event because this stop function is called within the function pointers of the nimble events
-                Trielo::trielo<nimble_port_stop>(Trielo::OkErrCode(0));
-                Trielo::trielo<nimble_port_deinit>(Trielo::OkErrCode(ESP_OK));
+                Trielo::trielo<nimble_port_stop>(Trielo::Success(0));
+                Trielo::trielo<nimble_port_deinit>(Trielo::Success(ESP_OK));
             }).detach();
         }
 
@@ -138,7 +138,7 @@ namespace BLE {
             case BLE_GAP_EVENT_NOTIFY_RX:
                 break;
             default:
-    		    fmt::print(fmt::fg(fmt::color::red), "WE HERE: PROBABLY UNKNOWN UNHANDLED GAP EVENT: {}\n", event->type);
+                std::cout << "WE HERE: PROBABLY UNKNOWN UNHANDLED GAP EVENT: " << event->type << std::endl;
                 break;
             }
             return 0;
@@ -282,7 +282,7 @@ namespace BLE {
                 .mfg_data_len = sizeof(mfg_data)
             };
 
-            Trielo::trielo<&ble_gap_adv_set_fields>(Trielo::OkErrCode(0), &adv_fields);
+            Trielo::trielo<&ble_gap_adv_set_fields>(Trielo::Success(0), &adv_fields);
 
             static constexpr ble_gap_adv_params adv_params {
                 .conn_mode = BLE_GAP_CONN_MODE_UND,
@@ -297,7 +297,7 @@ namespace BLE {
             //static constexpr int32_t advertising_timeout_ms = BLE_HS_FOREVER;
             static constexpr int32_t advertising_timeout_ms = 60'000;
             Trielo::trielo<&ble_gap_adv_start>(
-                Trielo::OkErrCode(0),
+                Trielo::Success(0),
                 own_addr_type,
                 nullptr,
                 advertising_timeout_ms,
@@ -313,8 +313,8 @@ namespace BLE {
 
         static void sync_cb() {
             std::printf("BLE::Server::sync_cb\n");
-            Trielo::trielo<&ble_hs_util_ensure_addr>(Trielo::OkErrCode(0), 0);
-            Trielo::trielo<&ble_hs_id_infer_auto>(Trielo::OkErrCode(0), 0, &own_addr_type);
+            Trielo::trielo<&ble_hs_util_ensure_addr>(Trielo::Success(0), 0);
+            Trielo::trielo<&ble_hs_id_infer_auto>(Trielo::Success(0), 0, &own_addr_type);
         }
 
         void gatt_register_cb(ble_gatt_register_ctxt *ctxt, void *arg) {
@@ -371,13 +371,13 @@ namespace BLE {
         }
 
         void run() {
-            const esp_err_t ret = Trielo::trielo<nvs_flash_init>(Trielo::OkErrCode(ESP_OK));
+            const esp_err_t ret = Trielo::trielo<nvs_flash_init>(Trielo::Success(ESP_OK));
             if(ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-                Trielo::trielo<nvs_flash_erase>(Trielo::OkErrCode(ESP_OK));
-                Trielo::trielo<nvs_flash_init>(Trielo::OkErrCode(ESP_OK));
+                Trielo::trielo<nvs_flash_erase>(Trielo::Success(ESP_OK));
+                Trielo::trielo<nvs_flash_init>(Trielo::Success(ESP_OK));
             }
             
-            Trielo::trielo<nimble_port_init>(Trielo::OkErrCode(ESP_OK));
+            Trielo::trielo<nimble_port_init>(Trielo::Success(ESP_OK));
 
             ble_hs_cfg.reset_cb = &reset_cb;
             ble_hs_cfg.sync_cb = &sync_cb;
@@ -484,12 +484,12 @@ namespace BLE {
                 { 0, nullptr, nullptr, nullptr },
             };
 
-            Trielo::trielo<ble_gatts_count_cfg>(Trielo::OkErrCode(0), gatt_services);
-            Trielo::trielo<&ble_gatts_add_svcs>(Trielo::OkErrCode(0), gatt_services);
-            Trielo::trielo<ble_att_set_preferred_mtu>(Trielo::OkErrCode(0), 23);
+            Trielo::trielo<ble_gatts_count_cfg>(Trielo::Success(0), gatt_services);
+            Trielo::trielo<&ble_gatts_add_svcs>(Trielo::Success(0), gatt_services);
+            Trielo::trielo<ble_att_set_preferred_mtu>(Trielo::Success(0), 23);
             Trielo::trielo<nimble_port_freertos_init>(task_cb);
-            Trielo::trielo<&ble_hs_util_ensure_addr>(Trielo::OkErrCode(0), 0);
-            Trielo::trielo<&ble_hs_id_infer_auto>(Trielo::OkErrCode(0), 0, &own_addr_type);
+            Trielo::trielo<&ble_hs_util_ensure_addr>(Trielo::Success(0), 0);
+            Trielo::trielo<&ble_hs_id_infer_auto>(Trielo::Success(0), 0, &own_addr_type);
             dummy_state_machine.process_event(Events::advertise{});
         }
     }
@@ -498,7 +498,7 @@ namespace BLE {
         bool notify_hid_information(const std::span<uint8_t, std::dynamic_extent>& message) {
             struct os_mbuf *txom = ble_hs_mbuf_from_flat(message.data(), message.size());
             if(txom == nullptr) {
-    		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ");
+                Trielo::Detail::print_error();
                 std::cout << "BLE::Server::notify_hid_information: failed to ble_hs_mbuf_from_flat\n";
                 return false;
             }
@@ -506,7 +506,7 @@ namespace BLE {
             if(ret == 0) {
                 return true;
             } else {
-    		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ");
+                Trielo::Detail::print_error();
                 std::cout << "BLE::Server::notify_hid_information: failed to ble_gatts_notify_custom: " << ret << std::endl;
                 return false;
             }
@@ -515,7 +515,7 @@ namespace BLE {
         bool notify_body_composition_measurement(const std::span<uint8_t, std::dynamic_extent>& message) {
             struct os_mbuf *txom = ble_hs_mbuf_from_flat(message.data(), message.size());
             if(txom == nullptr) {
-    		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ");
+                Trielo::Detail::print_error();
                 std::cout << "BLE::Server::notify_body_composition_measurement: failed to ble_hs_mbuf_from_flat\n";
                 return false;
             }
@@ -523,7 +523,7 @@ namespace BLE {
             if(ret == 0) {
                 return true;
             } else {
-    		    fmt::print(fmt::fg(fmt::color::red), "ERROR: ");
+                Trielo::Detail::print_error();
                 std::cout << "BLE::Server::notify_body_composition_measurement: failed to ble_gatts_notify_custom: " << ret << std::endl;
                 return false;
             }

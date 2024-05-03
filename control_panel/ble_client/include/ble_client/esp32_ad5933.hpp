@@ -6,7 +6,6 @@
 #include <cstdint>
 #include <string>
 #include <iostream>
-#include <stdexcept>
 #include <string_view>
 #include <algorithm>
 #include <optional>
@@ -14,7 +13,7 @@
 #include <thread>
 #include <stop_token>
 
-#include "ble_client/shm/parent/parent.hpp"
+#include "ble_client/shm/shm.hpp"
 #include "magic/common.hpp"
 
 namespace BLE_Client {
@@ -43,7 +42,7 @@ namespace BLE_Client {
             std::shared_ptr<BLE_Client::SHM::NotifyChannelRX> hid_information { nullptr };
         };
         Channels channels {};
-        std::shared_ptr<BLE_Client::SHM::Parent> child_shm { nullptr };
+        std::shared_ptr<BLE_Client::SHM::SHM> child_shm { nullptr };
         std::jthread connection_checker;
     public:
         ESP32_AD5933() = default;
@@ -52,7 +51,7 @@ namespace BLE_Client {
             Service& characteristics,
             std::shared_ptr<BLE_Client::SHM::NotifyChannelRX> body_composition_measurement_channel,
             std::shared_ptr<BLE_Client::SHM::NotifyChannelRX> hid_information_channel,
-            std::shared_ptr<BLE_Client::SHM::Parent> child_shm
+            std::shared_ptr<BLE_Client::SHM::SHM> child_shm
         );
         ~ESP32_AD5933();
         void update_time();

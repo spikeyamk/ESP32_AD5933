@@ -25,7 +25,7 @@ namespace BLE_Client {
             }
             
             namespace Guards {
-                bool bluetooth_active(SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::Parent> shm) {
+                bool turn_on_successful(SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
                     const std::optional<SimpleBLE::Adapter> tmp_adapter { BLE_Client::find_default_active_adapter(shm) };
                     if(tmp_adapter.has_value() == false) {
                         return false;
@@ -46,7 +46,7 @@ namespace BLE_Client {
                     return false;
                 }
 
-                bool discovery_available(SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::Parent> shm) {
+                bool discovery_available(SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
                     try {
                         adapter.set_callback_on_scan_start([shm]() {
                             shm->console.log("BLE_Client::callback_on_scan_start\n");

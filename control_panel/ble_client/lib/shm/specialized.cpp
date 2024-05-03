@@ -1,4 +1,4 @@
-#include "ble_client/shm/parent/specialized.hpp"
+#include "ble_client/shm/specialized.hpp"
 
 namespace BLE_Client {
     namespace SHM {

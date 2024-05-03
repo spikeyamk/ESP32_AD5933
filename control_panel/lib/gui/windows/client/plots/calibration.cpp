@@ -1,6 +1,6 @@
 #include <algorithm>
 
-#include "imgui_internal.h"
+#include <imgui_internal.h>
 #include <nfd.hpp>
 #include <utf/utf.hpp>
 

@@ -10,11 +10,10 @@
 #include "imgui.h"
 
 #include "ad5933/masks/masks.hpp"
-#include "ble_client/shm/parent/parent.hpp"
+#include "ble_client/shm/shm.hpp"
 #include "ad5933/config/config.hpp"
 #include "ad5933/calibration/calibration.hpp"
 #include "json/conversion.hpp"
-#include "ble_client/shm/parent/parent.hpp"
 #include "gui/windows/client/lock.hpp"
 #include "misc/channel.hpp"
 
@@ -39,17 +38,19 @@ namespace GUI {
                 static constexpr uint16_t settling_cycles { nine_bit };
             };
             Max max {};
+            static constexpr float rcal_impedance { 10'000.0f };
             struct Fields {
                 uint32_t freq_start { 30'000 };
                 uint32_t freq_inc { 10 };
                 uint16_t num_of_inc { 2 };
-                float impedance { 1'000.0f };
+                float impedance { rcal_impedance };
+                bool rcal { true };
                 int voltage_range_combo { 0 };
                 int pga_gain_combo { 0 };
                 int sysclk_src_combo { 0 };
                 int settling_number { 15 };
                 int settling_multiplier_combo { 0 };
-                uint32_t sysclk_freq { 16'667'000 };
+                uint32_t sysclk_freq { static_cast<uint32_t>(AD5933::SysClkFreq::Internal) };
             };
             Fields fields {};
             size_t index;
@@ -78,7 +79,7 @@ namespace GUI {
             };
         private:
             std::stop_source stop_source;
-            std::shared_ptr<BLE_Client::SHM::Parent> shm;
+            std::shared_ptr<BLE_Client::SHM::SHM> shm;
         public:
             std::vector<AD5933::Data> raw_calibration {};
             std::vector<AD5933::Calibration<float>> calibration {};
@@ -88,13 +89,14 @@ namespace GUI {
             float progress_bar_fraction { 0.0f };
         public:
             std::shared_ptr<Channel<ns::CalibrationFile>> calibration_queue_to_load_into_measurement { std::make_shared<Channel<ns::CalibrationFile>>() };
-            Calibrate(const size_t index, std::shared_ptr<BLE_Client::SHM::Parent> shm);
+            Calibrate(const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> shm);
             ~Calibrate();
             void draw(bool& enable, const ImGuiID side_id, Lock& lock);
             Status get_status() const;
             bool plotted { false };
         private:
             const std::optional<Lock> draw_inner();
+            void draw_calibration_impedance_input_field();
             void draw_input_fields();
             void send();
         private:

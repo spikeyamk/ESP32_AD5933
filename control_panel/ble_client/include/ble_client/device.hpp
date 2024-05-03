@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <array>
 #include <cstring>
-#include <string_view>
 #include <cctype>
 
 namespace BLE_Client {
@@ -65,7 +64,7 @@ namespace BLE_Client {
         private:
             template<typename T>
             std::string_view get_string_view(const T& array) const {
-                const size_t len = std::strlen(array.data());
+                const size_t len { std::strlen(array.data()) };
                 const std::string_view ret { array.begin(), (len > array.size()) ? (array.end()) : (array.begin() + len) };
                 return ret;
             }

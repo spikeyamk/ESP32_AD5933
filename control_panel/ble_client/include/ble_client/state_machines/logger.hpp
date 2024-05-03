@@ -6,7 +6,7 @@
 namespace BLE_Client {
     namespace StateMachines {
         struct Logger {
-            static constexpr bool enable { false };
+            static constexpr bool enable { true };
             // https://github.com/boost-ext/sml/blob/master/example/logging.cpp
             template <class SM, class TEvent>
             void log_process_event(const TEvent&) {

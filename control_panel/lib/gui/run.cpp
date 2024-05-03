@@ -1,27 +1,17 @@
-#include <chrono>
-#include <cstddef>
-#include <functional>
-#include <memory>
-#include <optional>
 #include <thread>
-#include <vector>
 
 #include <trielo/trielo.hpp>
-#include <SDL3/SDL_events.h>
-#include "imgui_internal.h"
-#include "implot.h"
+#include <imgui_internal.h>
+#include <implot.h>
 
 #include "gui/boilerplate.hpp"
 #include "gui/top.hpp"
 #include "gui/windows/console.hpp"
 #include "gui/windows/ble_adapter.hpp"
 #include "gui/windows/client/client.hpp"
+#include "gui/windows/implot_dense_test.hpp"
 
 #include "gui/run.hpp"
-
-#if !SDL_VERSION_ATLEAST(2,0,17)
-#error This backend requires SDL 2.0.17+ because of SDL_RenderGeometry() function
-#endif
 
 namespace GUI {
     DockspaceIDs split_left_center(ImGuiID dockspace_id) {
@@ -63,7 +53,7 @@ namespace GUI {
 namespace GUI {
     void run(
         bool &done,
-        std::shared_ptr<BLE_Client::SHM::Parent> shm
+        std::shared_ptr<BLE_Client::SHM::SHM> shm
     ) {
         SDL_Window* window { nullptr };
         SDL_Renderer* renderer { nullptr };
@@ -84,8 +74,8 @@ namespace GUI {
         Boilerplate::start_new_frame();
 
         Top top { settings_file };
-
-        ImGuiID top_id = top.draw(done);
+        bool reload { false };
+        ImGuiID top_id = top.draw(done, reload);
         DockspaceIDs top_ids { split_left_center(top_id) };
         std::vector<Windows::Client> client_windows;
 
@@ -93,7 +83,7 @@ namespace GUI {
         ble_connector.draw(top.menu_bar_enables.ble_adapter, top_ids.left);
         Windows::Console console { top.menu_bar_enables.console };
         std::jthread stdout_reader(
-            [](Windows::Console& console, std::shared_ptr<BLE_Client::SHM::Parent> shm) {
+            [](Windows::Console& console, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
                 const auto ret { shm->console.read_for(std::chrono::milliseconds(1)) };
                 if(ret.has_value()) {
                     console.log(ret.value());
@@ -105,12 +95,13 @@ namespace GUI {
         console.draw();
         Boilerplate::render(renderer);
 
+        bool reloaded { false };
         while(done == false) {
             Boilerplate::process_events(window, renderer, sdl_event_quit);
 
             Boilerplate::start_new_frame();
             draw_quit_popup(sdl_event_quit, done, client_windows);
-            top_id = top.draw(done);
+            top_id = top.draw(done, reload);
             
             ble_connector.draw(top.menu_bar_enables.ble_adapter, top_ids.left);
             console.draw();
@@ -145,7 +136,22 @@ namespace GUI {
                 ImPlot::ShowDemoWindow();
             }
 
-            Boilerplate::render(renderer);
+            if(top.menu_bar_enables.implot_dense_test) {
+                ImPlotDenseTest::draw(top.menu_bar_enables.implot_dense_test);
+            }
+
+            if(reloaded) {
+                reloaded = false;
+                Boilerplate::render_skip_frame(renderer);
+            } else {
+                Boilerplate::render(renderer);
+            }
+            
+            if(reload) {
+                reload = false;
+                Boilerplate::reload(window, renderer);
+                reloaded = true;
+            }
         }
         Boilerplate::shutdown(renderer, window);
 

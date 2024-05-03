@@ -25,10 +25,10 @@ namespace BLE {
 	namespace Actions {
 		void turn_on() {
 			TRIELO_EQ(Util::Blinky::get_instance().start(Util::Blinky::Mode::Single, std::chrono::milliseconds(50)), true);
-			if(Trielo::trielo<SD_Card::init>(Trielo::OkErrCode(0)) != 0) {
-				Trielo::trielo<SD_Card::deinit>(Trielo::OkErrCode(0));
+			if(Trielo::trielo<SD_Card::init>(Trielo::Success(0)) != 0) {
+				Trielo::trielo<SD_Card::deinit>(Trielo::Success(0));
 				std::this_thread::sleep_for(std::chrono::milliseconds(10'000));
-				Trielo::trielo<SD_Card::init>(Trielo::OkErrCode(0));
+				Trielo::trielo<SD_Card::init>(Trielo::Success(0));
 			}
 			Server::run();
 		};
@@ -139,6 +139,22 @@ namespace BLE {
 				});
 				std::printf("\n");
 				ad5933.driver.block_write_to_register<12, AD5933::RegAddrs::RW::ControlHB>(configure_event.registers_data);
+
+				const gpio_num_t rcal_mux_pin { GPIO_NUM_20 };
+				
+				if(configure_event.calen) {
+					Trielo::trielo<gpio_reset_pin>(Trielo::Success(ESP_OK), rcal_mux_pin);
+					Trielo::trielo<gpio_set_direction>(Trielo::Success(ESP_OK), rcal_mux_pin, GPIO_MODE_OUTPUT);
+					Trielo::trielo<gpio_set_pull_mode>(Trielo::Success(ESP_OK), rcal_mux_pin, GPIO_PULLUP_PULLDOWN);
+					Trielo::trielo<gpio_set_level>(Trielo::Success(ESP_OK), rcal_mux_pin, 1);
+				} else {
+					Trielo::trielo<gpio_reset_pin>(Trielo::Success(ESP_OK), rcal_mux_pin);
+					Trielo::trielo<gpio_set_direction>(Trielo::Success(ESP_OK), rcal_mux_pin, GPIO_MODE_OUTPUT);
+					Trielo::trielo<gpio_set_pull_mode>(Trielo::Success(ESP_OK), rcal_mux_pin, GPIO_PULLDOWN_ONLY);
+					Trielo::trielo<gpio_pulldown_en>(Trielo::Success(ESP_OK), rcal_mux_pin);
+					Trielo::trielo<gpio_set_level>(Trielo::Success(ESP_OK), rcal_mux_pin, 0);
+				}
+
 				processing = false;
 			}
 
@@ -168,14 +184,18 @@ namespace BLE {
 								std::this_thread::sleep_for(std::chrono::milliseconds(1));
 							}
 						}
+						if(ad5933.has_status_condition(AD5933::Masks::Or::Status::FreqSweepComplete)) {
+							break;
+						}
 						ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::IncFreq);
-					} while(ad5933.has_status_condition(AD5933::Masks::Or::Status::FreqSweepComplete) == false && stop_sources.run);
+					} while(stop_sources.run);
 					std::this_thread::sleep_for(std::chrono::milliseconds(1));
 					processing = false;
 				}, sender, std::ref(processing), std::ref(ad5933), std::ref(stop_sources)).detach();
 			}
 
-			void end(std::shared_ptr<Server::Sender> &sender, StopSources& stop_sources) {
+			void end(AD5933::Extension &ad5933, std::shared_ptr<Server::Sender> &sender, StopSources& stop_sources) {
+				ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::PowerDownMode);
 				sender->release();
 				stop_sources.run = false;
 			}
@@ -185,7 +205,7 @@ namespace BLE {
 			void free(std::shared_ptr<Server::Sender> &sender) {
 				size_t total_bytes { 0 };
 				size_t used_bytes { 0 };
-				if(Trielo::trielo<esp_littlefs_sdmmc_info>(Trielo::OkErrCode(ESP_OK), &SD_Card::card, &total_bytes, &used_bytes) == ESP_OK) {
+				if(Trielo::trielo<esp_littlefs_sdmmc_info>(Trielo::Success(ESP_OK), &SD_Card::card, &total_bytes, &used_bytes) == ESP_OK) {
 					std::cout << "BLE::Actions::File::free: \n\ttotal_bytes: " << total_bytes << "\n\tused_bytes: " << used_bytes << std::endl;
 					const Magic::Results::File::Free file_free_event { .used_bytes = used_bytes, .total_bytes = total_bytes };
 					sender->notify_hid_information(file_free_event);
@@ -278,7 +298,7 @@ namespace BLE {
 				std::array<char, SD_Card::mount_point_prefix.size() + Magic::MTU> path { 0 };
 				std::copy(SD_Card::mount_point_prefix.begin(), SD_Card::mount_point_prefix.end(), path.begin());
 				std::copy(event.path.begin(), event.path.end(), path.begin() + SD_Card::mount_point_prefix.size());
-				const Magic::Results::File::Remove remove_event { .status = Trielo::trielo<unlink>(Trielo::OkErrCode(0), path.data()) == 0 };
+				const Magic::Results::File::Remove remove_event { .status = Trielo::trielo<unlink>(Trielo::Success(0), path.data()) == 0 };
 				sender->notify_hid_information(remove_event);
 			}
 
@@ -318,7 +338,7 @@ namespace BLE {
 			void format(std::shared_ptr<Server::Sender> &sender) {
 				std::thread([](std::shared_ptr<Server::Sender> sender) {
 					const Magic::Results::File::Format format_event {
-						.status = Trielo::trielo<SD_Card::format>(Trielo::OkErrCode(0)) == 0,
+						.status = Trielo::trielo<SD_Card::format>(Trielo::Success(0)) == 0,
 					};
 					sender->notify_hid_information(format_event);
 				}, sender).detach();
@@ -327,14 +347,14 @@ namespace BLE {
 			void create_test_files(std::shared_ptr<Server::Sender> &sender) {
 				std::thread([](std::shared_ptr<Server::Sender> sender) {
 					int ret { 0 };
-					ret = Trielo::trielo<SD_Card::create_test_file>(Trielo::OkErrCode(0), 1 * 1024, "1kB");
-					ret = Trielo::trielo<SD_Card::create_test_file>(Trielo::OkErrCode(0), 2 * 1024, "2kB");
-					ret = Trielo::trielo<SD_Card::create_test_file>(Trielo::OkErrCode(0), 4 * 1024, "4kB");
-					//Trielo::trielo<SD_Card::create_test_file>(Trielo::OkErrCode(0), 8 * 1024, "8kB");
-					//Trielo::trielo<SD_Card::create_test_file>(Trielo::OkErrCode(0), 16 * 1024, "16kB");
-					//Trielo::trielo<SD_Card::create_test_file>(Trielo::OkErrCode(0), 32 * 1024, "32kB");
-					//Trielo::trielo<SD_Card::create_test_file>(Trielo::OkErrCode(0), 64 * 1024, "64kB");
-					//Trielo::trielo<SD_Card::create_test_file>(Trielo::OkErrCode(0), 128 * 1024, "128kB");
+					ret = Trielo::trielo<SD_Card::create_test_file>(Trielo::Success(0), 1 * 1024, "1kB");
+					ret = Trielo::trielo<SD_Card::create_test_file>(Trielo::Success(0), 2 * 1024, "2kB");
+					ret = Trielo::trielo<SD_Card::create_test_file>(Trielo::Success(0), 4 * 1024, "4kB");
+					//Trielo::trielo<SD_Card::create_test_file>(Trielo::Success(0), 8 * 1024, "8kB");
+					//Trielo::trielo<SD_Card::create_test_file>(Trielo::Success(0), 16 * 1024, "16kB");
+					//Trielo::trielo<SD_Card::create_test_file>(Trielo::Success(0), 32 * 1024, "32kB");
+					//Trielo::trielo<SD_Card::create_test_file>(Trielo::Success(0), 64 * 1024, "64kB");
+					//Trielo::trielo<SD_Card::create_test_file>(Trielo::Success(0), 128 * 1024, "128kB");
 
 					const Magic::Results::File::CreateTestFiles create_test_files_event {
 						.status = ret == 0
@@ -361,7 +381,7 @@ namespace BLE {
 						size_t bytes_total;
 						size_t bytes_free;
 						
-						if(Trielo::trielo<esp_littlefs_sdmmc_info>(Trielo::OkErrCode(ESP_OK), &SD_Card::card, &bytes_total, &bytes_free) != ESP_OK) {
+						if(Trielo::trielo<esp_littlefs_sdmmc_info>(Trielo::Success(ESP_OK), &SD_Card::card, &bytes_total, &bytes_free) != ESP_OK) {
 							return;
 						}
 
@@ -379,10 +399,10 @@ namespace BLE {
 						) {
 							if(i == stopper) {
 								// Removes the record file if it exists we should never get here
-								FILE* file_to_remove = Trielo::trielo<std::fopen>(Trielo::FailErrCode<FILE*>(nullptr), record_filepath.data(), "r");
+								FILE* file_to_remove = Trielo::trielo<std::fopen>(Trielo::Error<FILE*>(nullptr), record_filepath.data(), "r");
 								if(file_to_remove != nullptr) {
-									Trielo::trielo<std::fclose>(Trielo::OkErrCode(0), file_to_remove);
-									Trielo::trielo<unlink>(Trielo::OkErrCode(0), record_filepath.data());
+									Trielo::trielo<std::fclose>(Trielo::Success(0), file_to_remove);
+									Trielo::trielo<unlink>(Trielo::Success(0), record_filepath.data());
 								}
 							}
 							std::cout << "ERROR: BLE::Actions::Auto::start_saving: file: " << record_filepath.data() << " already exits: waiting for std::chrono::seconds(1)\n";
@@ -395,8 +415,8 @@ namespace BLE {
 							FILE* file {  };
 							~Scoped_FILE() {
 								if(file != nullptr) {
-									Trielo::trielo<std::fflush>(Trielo::OkErrCode(0), file);
-									Trielo::trielo<std::fclose>(Trielo::OkErrCode(0), file);
+									Trielo::trielo<std::fflush>(Trielo::Success(0), file);
+									Trielo::trielo<std::fclose>(Trielo::Success(0), file);
 								}
 
 								ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::PowerDownMode);
@@ -405,7 +425,7 @@ namespace BLE {
 
 						Scoped_FILE file {
 							.ad5933 = ad5933,
-							.file = Trielo::trielo<std::fopen>(Trielo::FailErrCode<FILE*>(nullptr), record_filepath.data(), "w")
+							.file = Trielo::trielo<std::fopen>(Trielo::Error<FILE*>(nullptr), record_filepath.data(), "w")
 						};
 						
 						std::setbuf(file.file, buf);

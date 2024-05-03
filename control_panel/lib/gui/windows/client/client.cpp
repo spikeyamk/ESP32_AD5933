@@ -1,4 +1,6 @@
-#include "imgui_internal.h"
+#include <thread>
+
+#include <imgui_internal.h>
 
 #include "gui/boilerplate.hpp"
 
@@ -6,7 +8,7 @@
 
 namespace GUI {
     namespace Windows {
-        Client::Client(const std::string name, const size_t index, std::shared_ptr<BLE_Client::SHM::Parent> parent_shm) :
+        Client::Client(const std::string name, const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> parent_shm) :
             address{ name },
             name{ std::string(name).append("##").append(std::to_string(index)) },
             dockspace_name { std::string("DockSpace").append(name).append("##").append(std::to_string(index)) },
