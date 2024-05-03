@@ -96,6 +96,7 @@ add_executable(${PROJECT_NAME}
 	# singleton windows
 	lib/gui/windows/ble_adapter.cpp
 	lib/gui/windows/implot_dense_test.cpp
+	lib/gui/windows/popup_queue.cpp
 
 	# dynamic windows
 	lib/gui/windows/client/client.cpp

@@ -14,8 +14,9 @@
 
 namespace GUI {
     DockspaceIDs split_left_center(ImGuiID dockspace_id) {
+        const ImGuiDockNodeFlags dockspace_flags { ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_DockSpace };
         ImGui::DockBuilderRemoveNode(dockspace_id);
-        ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
+        ImGui::DockBuilderAddNode(dockspace_id, dockspace_flags);
         ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->Size);
         ImGuiID dock_id_center;
         const ImGuiID dock_id_left = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.225f, nullptr, &dock_id_center);
@@ -76,9 +77,10 @@ namespace GUI {
         ImGuiID top_id = top.draw(done, reload);
         DockspaceIDs top_ids { split_left_center(top_id) };
         std::vector<Windows::Client> client_windows;
+        Windows::PopupQueue popup_queue {};
 
-        Windows::BLE_Adapter ble_connector { shm, client_windows };
-        ble_connector.draw(top.menu_bar_enables.ble_adapter, top_ids.left);
+        Windows::BLE_Adapter ble_adapter { shm, client_windows, popup_queue };
+        ble_adapter.draw(top.menu_bar_enables.ble_adapter, top_ids.left);
         Boilerplate::render(renderer);
 
         bool reloaded { false };
@@ -89,7 +91,7 @@ namespace GUI {
             draw_quit_popup(sdl_event_quit, done, client_windows);
             top_id = top.draw(done, reload);
             
-            ble_connector.draw(top.menu_bar_enables.ble_adapter, top_ids.left);
+            ble_adapter.draw(top.menu_bar_enables.ble_adapter, top_ids.left);
             for(size_t i = 0; i < client_windows.size(); i++) {
                 client_windows[i].draw(top_ids.center, top.menu_bar_enables);
             }
@@ -119,6 +121,14 @@ namespace GUI {
 
             if(top.menu_bar_enables.implot_demo) {
                 ImPlot::ShowDemoWindow();
+            }
+
+            if(popup_queue.empty() == false && popup_queue.active() == false) {
+                popup_queue.activate_front();
+            }
+
+            if(popup_queue.active()) {
+                popup_queue.show_active();
             }
 
             if(top.menu_bar_enables.implot_dense_test) {

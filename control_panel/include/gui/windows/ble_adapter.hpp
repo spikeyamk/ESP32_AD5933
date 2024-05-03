@@ -10,6 +10,7 @@
 
 #include "ble_client/shm/shm.hpp"
 #include "gui/windows/client/client.hpp"
+#include "gui/windows/popup_queue.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -20,12 +21,12 @@ namespace GUI {
             bool first { true };
             std::optional<size_t> selected { std::nullopt };
             std::vector<Windows::Client>& client_windows;
-            bool show_ble_off_error_pop_up { false };
-            bool show_connection_attempt_timeout_error_pop_up { false };
             std::vector<std::stop_source> stop_sources;
+            bool connecting { false };
+            PopupQueue& popup_queue;
         public:
             static constexpr std::u8string_view name { u8"BLE Adapter" };
-            BLE_Adapter(std::shared_ptr<BLE_Client::SHM::SHM> shm, std::vector<Windows::Client>& client_windows);
+            BLE_Adapter(std::shared_ptr<BLE_Client::SHM::SHM> shm, std::vector<Windows::Client>& client_windows, PopupQueue& popup_queue);
             ~BLE_Adapter();
             void draw(bool &enable, const ImGuiID left_id);
         private:

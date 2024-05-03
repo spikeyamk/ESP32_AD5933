@@ -252,7 +252,7 @@ namespace GUI {
                 )
             };
 
-            const auto boost_timeout_ms { std::chrono::milliseconds(static_cast<size_t>(timeout_ms)) };
+            const std::chrono::milliseconds boost_timeout_ms { static_cast<size_t>(timeout_ms) };
 
             SingleVectors tmp_single_vectors {
                 .raw_measurement = {},
@@ -407,7 +407,7 @@ namespace GUI {
                 )
             };
 
-            const auto boost_timeout_ms { std::chrono::milliseconds(static_cast<size_t>(timeout_ms)) };
+            const std::chrono::milliseconds boost_timeout_ms { static_cast<size_t>(timeout_ms) };
 
             bool first_iteration { true };
             uint8_t timeout_counter { 0 };

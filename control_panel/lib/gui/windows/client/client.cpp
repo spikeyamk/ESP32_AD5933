@@ -32,11 +32,16 @@ namespace GUI {
                 return;
             }
 
+            static constexpr ImGuiWindowFlags window_flags {
+                ImGuiWindowFlags_MenuBar
+                | ImGuiWindowFlags_NoMove
+            };
+
             if(first) {
                 ImGui::DockBuilderDockWindow(name.c_str(), center_id);
             }
 
-            ImGui::Begin(name.c_str(), &(enable), ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoMove);
+            ImGui::Begin(name.c_str(), &enable, window_flags);
 
             if(enable == false) {
                 ImGui::End();
@@ -47,8 +52,9 @@ namespace GUI {
                 ImGuiID dockspace_id { ImGui::GetID(dockspace_name.c_str()) };
                 ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f));
                 if(first) {
+                    static constexpr ImGuiDockNodeFlags dockspace_flags { ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_DockSpace };
                     ImGui::DockBuilderRemoveNode(dockspace_id); // clear any previous layout
-                    ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
+                    ImGui::DockBuilderAddNode(dockspace_id, dockspace_flags);
                     ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetWindowSize());
                     const ImGuiID right_id { ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.5f, nullptr, &dockspace_id) };
                     calibration_plots_window.draw(enables.calibration_plots, right_id);

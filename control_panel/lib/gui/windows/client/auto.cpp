@@ -41,7 +41,7 @@ namespace GUI {
                 ImGui::EndDisabled();
 
                 ImGui::Separator();
-                ImGui::Text("Total: %llu [Bytes]\nUsed: %llu [Bytes]", bytes.total, bytes.used);
+                ImGui::Text(bytes.text.c_str());
 
                 if(ImGui::Button("List", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
                     list();
@@ -84,7 +84,7 @@ namespace GUI {
                 }
 
                 ImGui::Separator();
-                ImGui::Text("Total: %llu [Bytes]\nUsed: %llu [Bytes]", bytes.total, bytes.used);
+                ImGui::Text(bytes.text.c_str());
 
                 ImGui::Button("List", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f));
                 if(status == Status::Listing) {
@@ -490,8 +490,7 @@ namespace GUI {
 
             std::visit([&self](auto&& event) {
                 if constexpr(std::is_same_v<std::decay_t<decltype(event)>, Magic::Results::File::Free>) {
-                    self.bytes.used = event.used_bytes;
-                    self.bytes.total = event.total_bytes;
+                    self.bytes.update(event);
                 }
             }, free_payload.value());
 

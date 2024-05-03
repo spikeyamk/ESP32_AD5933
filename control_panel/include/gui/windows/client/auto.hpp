@@ -79,8 +79,33 @@ namespace GUI {
             ListTable list_table {};
             std::optional<size_t> selected { std::nullopt };
             struct Bytes {
-                uint64_t used { 0 };
                 uint64_t total { 0 };
+                uint64_t used { 0 };
+                uint64_t free { 0 };
+                std::string text;
+                inline void update(const Magic::Results::File::Free& free_result) {
+                    total = free_result.total_bytes;
+                    used = free_result.used_bytes;
+                    free = total - used;
+                    std::string total_str { std::string("Total: ").append(std::to_string(total)) };
+                    std::string used_str { std::string("Used: ").append(std::to_string(used)) };
+                    std::string free_str { std::string("Free:  ").append(std::to_string(free)) };
+                    const size_t max_len { std::max(std::max(total_str.length(), used_str.length()), free_str.length()) };
+                    add_padding(total_str, max_len);
+                    add_padding(used_str, max_len);
+                    add_padding(free_str, max_len);
+                    total_str.append(" [Bytes]");
+                    used_str.append(" [Bytes]");
+                    free_str.append(" [Bytes]");
+                    text = total_str;
+                    text.append("\n").append(used_str).append("\n").append(free_str);
+                }
+
+                inline void add_padding(std::string& str, const size_t max_len) {
+                    while(str.length() != max_len) {
+                        str.append(" ");
+                    }
+                }
             };
             Bytes bytes {};
             float progress_bar_fraction { 0.0f };

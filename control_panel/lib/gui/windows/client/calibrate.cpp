@@ -229,20 +229,22 @@ namespace GUI {
             const uint16_t wished_size = self.config.get_num_of_inc().unwrap() + 1;
             const float progress_bar_step = 1.0f / static_cast<float>(wished_size);
             const float timeout_ms {
-                (1.0f / static_cast<float>(self.config.get_start_freq().unwrap())) 
-                * [&]() {
-                    const float ret { static_cast<float>(self.config.get_settling_time_cycles_number().unwrap()) };
-                    if(ret == 0) {
-                        return 1.0f;
-                    } else {
-                        return ret;
-                    }
-                }()
-                * AD5933::Masks::Or::SettlingTimeCyclesHB::get_multiplier_float(self.config.get_settling_time_cycles_multiplier())
-                * 1'000'000.0f
-                * 100.0f
+                500.0f
+                + (
+                    (1.0f / static_cast<float>(self.config.get_start_freq().unwrap())) 
+                    * [&]() {
+                        const float ret { static_cast<float>(self.config.get_settling_time_cycles_number().unwrap()) };
+                        if(ret == 0) {
+                            return 1.0f;
+                        } else {
+                            return ret;
+                        }
+                    }()
+                    * AD5933::Masks::Or::SettlingTimeCyclesHB::get_multiplier_float(self.config.get_settling_time_cycles_multiplier())
+                    * 1'000'000.0f
+                )
             };
-            const auto boost_timeout_ms { std::chrono::milliseconds(static_cast<size_t>(timeout_ms)) };
+            const std::chrono::milliseconds boost_timeout_ms { static_cast<size_t>(timeout_ms) };
             const float impedance = self.fields.impedance;
 
             std::vector<AD5933::Data> tmp_raw_calibration;
