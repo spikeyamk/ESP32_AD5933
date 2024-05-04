@@ -316,7 +316,7 @@ namespace GUI {
 
         void Auto::start_sending_cb(std::stop_token st, Auto& self) {
             self.status = Status::Sending;
-            self.shm->active_devices[self.index].measurement->clear();
+            self.shm->active_devices->at(self.index).measurement->clear();
             self.shm->cmd.send(
                 BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{
                     self.index,
@@ -324,7 +324,7 @@ namespace GUI {
                 }
             );
             while(st.stop_requested() == false) {
-                const auto rx_payload { self.shm->active_devices[self.index].measurement->read_for(std::chrono::milliseconds(10'000)) };
+                const auto rx_payload { self.shm->active_devices->at(self.index).measurement->read_for(std::chrono::milliseconds(10'000)) };
                 if(rx_payload.has_value() == false) {
                     std::cout << "ERROR: GUI::Windows::Auto::start_sending_cb: rx_payload: timeout\n";
                     self.status = Status::Error;
@@ -388,13 +388,13 @@ namespace GUI {
         }
 
         void Auto::remove_cb(Auto& self) {
-            self.shm->active_devices[self.index].information->clear();
+            self.shm->active_devices->at(self.index).information->clear();
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::Start{} });
             const Magic::Commands::File::Remove remove_event { .path = self.list_table.paths[self.selected.value()].path };
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, remove_event });
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::End{} });
 
-            const auto remove_payload { self.shm->active_devices[self.index].information->read_for(std::chrono::milliseconds(5'000)) };
+            const auto remove_payload { self.shm->active_devices->at(self.index).information->read_for(std::chrono::milliseconds(5'000)) };
 
             if(remove_payload.has_value() == false) {
                 std::cout << "GUI::Windows::Auto::remove_cb: remove_payload timeout\n";
@@ -457,11 +457,11 @@ namespace GUI {
 
         void Auto::list_cb(std::stop_token st, Auto& self) {
             self.status = Status::Listing;
-            self.shm->active_devices[self.index].information->clear();
+            self.shm->active_devices->at(self.index).information->clear();
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::Start{} });
 
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::Free{} });
-            const auto free_payload { self.shm->active_devices[self.index].information->read_for(std::chrono::milliseconds(5'000)) };
+            const auto free_payload { self.shm->active_devices->at(self.index).information->read_for(std::chrono::milliseconds(5'000)) };
             if(free_payload.has_value() == false) {
                 std::cout << "ERROR: GUI::Windows::RecordManager::list_cb: failed to retreive free: timeout\n";
                 self.status = Status::Error;
@@ -495,7 +495,7 @@ namespace GUI {
             }, free_payload.value());
 
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::ListCount{} });
-            const auto list_count_payload { self.shm->active_devices[self.index].information->read_for(std::chrono::milliseconds(5'000)) };
+            const auto list_count_payload { self.shm->active_devices->at(self.index).information->read_for(std::chrono::milliseconds(5'000)) };
 
             if(list_count_payload.has_value() == false) { 
                 std::cout << "ERROR: GUI::Windows::RecordManager::list_cb: failed to retreive list_count: timeout\n";
@@ -549,7 +549,7 @@ namespace GUI {
             std::vector<Magic::Results::File::List> listed_paths;
             listed_paths.reserve(list_count.num_of_files);
             while(listed_paths.size() != list_count.num_of_files) {
-                const auto list_payload { self.shm->active_devices[self.index].information->read_for(std::chrono::milliseconds(5'000)) };
+                const auto list_payload { self.shm->active_devices->at(self.index).information->read_for(std::chrono::milliseconds(5'000)) };
                 if(list_payload.has_value() == false) {
                     std::cout << "ERROR: GUI::Windows::RecordManager::list_cb: failed to retreive list_path: timeout\n";
                     self.status = Status::Error;
@@ -590,7 +590,7 @@ namespace GUI {
             for(const auto& path: listed_paths) {
                 const Magic::Commands::File::Size size_event { .path = path.path };
                 self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, size_event });
-                const auto size_payload { self.shm->active_devices[self.index].information->read_for(std::chrono::milliseconds(5'000)) };
+                const auto size_payload { self.shm->active_devices->at(self.index).information->read_for(std::chrono::milliseconds(5'000)) };
 
                 if(size_payload.has_value() == false) {
                     std::cout << "ERROR: GUI::Windows::RecordManager::list_cb: failed to retreive list_size: timeout\n";
@@ -638,7 +638,7 @@ namespace GUI {
         void Auto::download_cb(std::stop_token st, Auto& self) {
             try {
                 self.status = Status::Downloading;
-                self.shm->active_devices[self.index].information->clear();
+                self.shm->active_devices->at(self.index).information->clear();
                 self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::Start{} });
                 const Magic::Commands::File::Download download_event { .path = self.list_table.paths[self.selected.value()].path };
                 self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, download_event });
@@ -654,7 +654,7 @@ namespace GUI {
                         return;
                     }
 
-                    const auto download_payload { self.shm->active_devices[self.index].information->read_for(std::chrono::milliseconds(64'000)) };
+                    const auto download_payload { self.shm->active_devices->at(self.index).information->read_for(std::chrono::milliseconds(64'000)) };
                     if(download_payload.has_value() == false) {
                         std::cout << "ERROR: GUI::Windows::RecordManager::download_cb: failed to retreive download_payload: timeout\n";
                         self.status = Status::Error;
@@ -742,10 +742,10 @@ namespace GUI {
 
         void Auto::format_cb(std::stop_token st, Auto& self) {
             self.status = Status::Formatting;
-            self.shm->active_devices[self.index].information->clear();
+            self.shm->active_devices->at(self.index).information->clear();
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::Start{} });
             self.shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ self.index, Magic::Commands::File::Format{} });
-            const auto format_payload { self.shm->active_devices[self.index].information->read_for(std::chrono::milliseconds(64'000)) };
+            const auto format_payload { self.shm->active_devices->at(self.index).information->read_for(std::chrono::milliseconds(64'000)) };
 
             if(format_payload.has_value() == false) {
                 std::cout << "GUI::Windows::RecordManager::format_cb: timeout\n";

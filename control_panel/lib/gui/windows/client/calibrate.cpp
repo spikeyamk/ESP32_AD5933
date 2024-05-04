@@ -215,7 +215,7 @@ namespace GUI {
         }
 
         void Calibrate::calibrate_cb(std::stop_token st, Calibrate& self) {
-            self.shm->active_devices[self.index].information->clear();
+            self.shm->active_devices->at(self.index).information->clear();
             self.shm->cmd.send(
                 BLE_Client::StateMachines::Connection::Events::write_body_composition_feature {
                     self.index,
@@ -261,7 +261,7 @@ namespace GUI {
 
             do {
                 const auto rx_payload {
-                    self.shm->active_devices[self.index].information->read_for(
+                    self.shm->active_devices->at(self.index).information->read_for(
                         boost_timeout_ms
                     )
                 };

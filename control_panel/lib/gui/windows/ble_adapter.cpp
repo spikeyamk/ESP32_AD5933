@@ -87,13 +87,13 @@ namespace GUI {
                             connecting = true;
                             const BLE_Client::StateMachines::Connector::Events::connect connect_event { shm->discovery_devices.at(selected.value()).get_address() };
                             std::jthread t1([](std::stop_token st, BLE_Adapter& self, const BLE_Client::StateMachines::Connector::Events::connect connect_event) {
-                                const size_t size_before { self.shm->active_devices.size() };
+                                const size_t size_before { self.shm->active_devices->size() };
                                 self.shm->cmd.send(connect_event);
-                                for(size_t i = 0, timeout_ms = 25'000; i < timeout_ms; i++) {
+                                for(size_t i = 0, timeout_ms = 10'000; i < timeout_ms; i++) {
                                     if(st.stop_requested()) {
                                         return;
                                     }
-                                    if(self.shm->active_devices.size() != size_before) {
+                                    if(self.shm->active_devices->size() != size_before) {
                                         self.client_windows.push_back(std::move(Windows::Client{std::string(connect_event.get_address()), self.client_windows.size(), self.shm }));
                                         self.connecting = false;
                                         return;

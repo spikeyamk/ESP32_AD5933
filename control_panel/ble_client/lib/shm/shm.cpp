@@ -9,7 +9,7 @@ namespace BLE_Client {
                 std::make_shared<NotifyChannelRX>(),
                 std::make_shared<NotifyChannelRX>()
             };
-            active_devices.push_back(tmp_device);
+            active_devices->push_back(tmp_device);
         }
     }
 }

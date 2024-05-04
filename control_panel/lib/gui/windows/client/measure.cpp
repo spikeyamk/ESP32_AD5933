@@ -200,7 +200,7 @@ namespace GUI {
         }
 
         void Measure::single_cb(std::stop_token st, Measure& self) {
-            self.shm->active_devices[self.index].information->clear();
+            self.shm->active_devices->at(self.index).information->clear();
             const auto freq_start_it { std::find(self.calibration_vectors.freq_float.begin(), self.calibration_vectors.freq_float.end(), static_cast<float>(self.configs.measurement.get_start_freq().unwrap())) };
             if(freq_start_it == self.calibration_vectors.freq_float.end()) {
                 self.status = Status::Failed;
@@ -274,7 +274,7 @@ namespace GUI {
                     }
                 );
                 do {
-                    const auto rx_payload { self.shm->active_devices[self.index].information->read_for(boost_timeout_ms) };
+                    const auto rx_payload { self.shm->active_devices->at(self.index).information->read_for(boost_timeout_ms) };
                     if(rx_payload.has_value() == false) {
                         self.status = Status::Failed;
                         std::cout << "ERROR: GUI::Windows::Measure::single_cb: sweep: timeout\n";
@@ -356,7 +356,7 @@ namespace GUI {
         }
 
         void Measure::periodic_cb(std::stop_token st, Measure& self) {
-            self.shm->active_devices[self.index].information->clear();
+            self.shm->active_devices->at(self.index).information->clear();
             const auto freq_start_it { std::find(self.calibration_vectors.freq_float.begin(), self.calibration_vectors.freq_float.end(), static_cast<float>(self.configs.measurement.get_start_freq().unwrap())) };
             if(freq_start_it == self.calibration_vectors.freq_float.end()) {
                 self.status = Status::Failed;
@@ -426,7 +426,7 @@ namespace GUI {
                     }
                 );
                 do {
-                    const auto rx_payload { self.shm->active_devices[self.index].information->read_for(boost_timeout_ms) };
+                    const auto rx_payload { self.shm->active_devices->at(self.index).information->read_for(boost_timeout_ms) };
                     if(rx_payload.has_value() == false) {
                         std::cout << "ERROR: GUI::Windows::Measure::periodic_cb: sweep: timeout: timeout_counter: " << timeout_counter << std::endl;
                         if(timeout_counter < timeout_stopper) {

@@ -202,7 +202,7 @@ namespace GUI {
         bool Debug::dump() {
             shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Commands::Debug::Start{} });
             shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Commands::Debug::Dump{} });
-            const auto rx_payload { shm->active_devices[index].information->read_for(std::chrono::milliseconds(1'000)) };
+            const auto rx_payload { shm->active_devices->at(index).information->read_for(std::chrono::milliseconds(1'000)) };
 
             if(rx_payload.has_value() == false) {
                 std::cout << "ERROR: GUI::Windows::Debug::dump: timeout\n";

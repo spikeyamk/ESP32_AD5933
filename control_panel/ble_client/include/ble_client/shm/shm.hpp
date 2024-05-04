@@ -18,7 +18,7 @@ namespace BLE_Client {
                 std::shared_ptr<NotifyChannelRX> measurement { nullptr };
                 std::shared_ptr<NotifyChannelRX> information { nullptr };
             };
-            std::vector<Device> active_devices;
+            std::shared_ptr<std::vector<Device>> active_devices { std::make_shared<std::vector<Device>>() };
             BLE_Client::StateMachines::Adapter::States::T_Variant active_state;
             SHM() = default;
             void attach_device(const BLE_Client::StateMachines::Connector::Events::connect& connect_event);

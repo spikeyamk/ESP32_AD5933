@@ -105,7 +105,7 @@ namespace GUI {
                     std::thread([](auto shm, const size_t index) {
                         shm->cmd.send(BLE_Client::StateMachines::Connection::Events::disconnect{ index });
                         std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
-                        shm->active_devices.erase(shm->active_devices.begin() + index);
+                        shm->active_devices->erase(shm->active_devices->begin() + index);
                     }, shm, e.index).detach();
                     return true;
                 })
@@ -150,7 +150,7 @@ namespace GUI {
         }
         Boilerplate::shutdown(renderer, window);
 
-        for(size_t i = 0; i < shm->active_devices.size(); i++) {
+        for(size_t i = 0; i < shm->active_devices->size(); i++) {
             shm->cmd.send(BLE_Client::StateMachines::Connection::Events::disconnect{i});
         }
         shm->cmd.send_killer(BLE_Client::StateMachines::Killer::Events::kill{});
