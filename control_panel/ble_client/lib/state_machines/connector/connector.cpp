@@ -7,9 +7,9 @@ namespace BLE_Client {
                 bool successful(const BLE_Client::StateMachines::Connector::Events::connect& event, SimpleBLE::Adapter& adapter, std::shared_ptr<BLE_Client::SHM::SHM> shm, std::vector<BLE_Client::StateMachines::Connection::Dummy*>& connections) {
                     try {
                         std::vector<SimpleBLE::Peripheral> scan_results { adapter.scan_get_results() };
-                        auto it = std::find_if(scan_results.begin(), scan_results.end(), [&](SimpleBLE::Peripheral& e) {
+                        auto it { std::find_if(scan_results.begin(), scan_results.end(), [&](SimpleBLE::Peripheral& e) {
                             return event.get_address() == e.address();
-                        });
+                        }) };
 
                         if(it == scan_results.end()) {
                             shm->console.log("ERROR: BLE_Client::Discovery::Actions::connect: didn't find the device with the address in the scan_results\n");
@@ -25,7 +25,6 @@ namespace BLE_Client {
                             std::this_thread::sleep_for(std::chrono::milliseconds(1));
                         }
                         
-                        std::this_thread::sleep_for(std::chrono::milliseconds(100));
                         std::optional<BLE_Client::ESP32_AD5933::Service> service { find_services_characteristics(*it) };
                         if(service.has_value() == false) {
                             it->disconnect();
