@@ -4,10 +4,15 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_BUILD_TYPE Debug)
 
+add_subdirectory(lib/extern/pfr)
 add_library(${PROJECT_NAME} INTERFACE)
 
 target_include_directories(${PROJECT_NAME} INTERFACE
     "include"
+)
+
+target_link_libraries(${PROJECT_NAME} INTERFACE
+    boost_pfr
 )
 
 option(SERDE_TEST "Enable Serde Tests" OFF)

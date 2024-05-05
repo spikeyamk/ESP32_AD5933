@@ -34,3 +34,6 @@
 [submodule "fw/components/esp_littlefs"]
 	path = fw/components/esp_littlefs
 	url = https://github.com/joltwallet/esp_littlefs.git
+[submodule "common/serde_wrapper/serde/lib/extern/pfr"]
+	path = common/serde_wrapper/serde/lib/extern/pfr
+	url = https://github.com/boostorg/pfr.git
