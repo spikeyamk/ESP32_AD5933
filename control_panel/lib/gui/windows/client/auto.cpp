@@ -69,7 +69,6 @@ namespace GUI {
                 ImGui::Button("Stop", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f));
                 ImGui::EndDisabled();
 
-                ImGui::Separator();
                 draw_bytes_table();
 
                 if(ImGui::Button("List", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
@@ -126,7 +125,6 @@ namespace GUI {
                     ImGui::Button("Stop", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f));
                 }
 
-                ImGui::Separator();
                 draw_bytes_table();
 
                 ImGui::Button("List", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f));
