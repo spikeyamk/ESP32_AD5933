@@ -4,7 +4,7 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
-#include <nfd.hpp>
+#include <nfd.h>
 #include <utf/utf.hpp>
 
 #include "json/conversion.hpp"
@@ -159,20 +159,27 @@ namespace GUI {
         }
 
         bool Measure::load_from_disk() {
-            nfdchar_t *outPath = nullptr;
-            const std::array<nfdfilteritem_t, 1> filterItem { { "Calibration", "json" } };
-            switch(NFD::OpenDialog(outPath, filterItem.data(), static_cast<nfdfiltersize_t>(filterItem.size()))) {
+            nfdchar_t *outPath { nullptr };
+            const std::array<nfdfilteritem_t, 1> filterItem {
+                #ifdef _MSC_VER
+                    { L"Graph", L"json" }
+                #else
+                    { "Graph", "json" }
+                #endif
+            };
+
+            switch(NFD_SaveDialog(&outPath, filterItem.data(), static_cast<nfdfiltersize_t>(filterItem.size()), nullptr, nullptr)) {
                 case NFD_CANCEL:
                     std::printf("GUI::Windows::Measure::load(): NFD_CANCEL: User pressed cancel!\n");
                     if(outPath != nullptr) {
-                        NFD::FreePath(outPath);
+                        NFD_FreePath(outPath);
                         outPath = nullptr;
                     }
                     return false;
                 case NFD_ERROR:
-                    std::printf("ERROR: GUI::Windows::Measure::load(): NFD_ERROR: %s\n", NFD::GetError());
+                    std::printf("ERROR: GUI::Windows::Measure::load(): NFD_ERROR: %s\n", NFD_GetError());
                     if(outPath != nullptr) {
-                        NFD::FreePath(outPath);
+                        NFD_FreePath(outPath);
                         outPath = nullptr;
                     }
                     return false;
@@ -181,7 +188,7 @@ namespace GUI {
                         json j;
                         std::ifstream(outPath) >> j;
                         if(outPath != nullptr) {
-                            NFD::FreePath(outPath);
+                            NFD_FreePath(outPath);
                             outPath = nullptr;
                         }
                         const ns::CalibrationFile calibration_file = j;
@@ -190,7 +197,7 @@ namespace GUI {
                     } catch(const std::exception& e) {
                         std::cout << "ERROR: GUI::Windows::Measure::load(): exception: " << e.what() << std::endl;
                         if(outPath != nullptr) {
-                            NFD::FreePath(outPath);
+                            NFD_FreePath(outPath);
                             outPath = nullptr;
                         }
                         return false;

@@ -11,7 +11,7 @@
 
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
-#include <nfd.hpp>
+#include <nfd.h>
 
 namespace ns {
     template<typename T, const char* in_name>
@@ -341,27 +341,45 @@ namespace ns {
 
     template<typename T>
     void save_to_fs(const T obj) {
-        nfdchar_t* outPath = nullptr;
-        const std::array<nfdfilteritem_t, 1> filterItem { { "Graph", "json" } };
-        const nfdresult_t result = NFD::SaveDialog(outPath, filterItem.data(), static_cast<nfdfiltersize_t>(filterItem.size()), nullptr, "graph.json");
+        nfdchar_t* outPath { nullptr };
+        const std::array<nfdfilteritem_t, 1> filterItem {
+            #ifdef _MSC_VER
+                { L"Graph", L"json" }
+            #else
+                { "Graph", "json" }
+            #endif
+        };
+        const nfdresult_t result { 
+            NFD_SaveDialog(
+                &outPath,
+                filterItem.data(),
+                static_cast<nfdfiltersize_t>(filterItem.size()),
+                nullptr,
+                #ifdef _MSC_VER
+                    L"graph.json"
+                #else
+                    "graph.json"
+                #endif
+            )
+        };
         if(result == NFD_OKAY) {
             const json j = obj;
-            std::ofstream(outPath) << std::setw(4) << j;
+            std::ofstream(std::filesystem::path(outPath)) << std::setw(4) << j;
             if(outPath != nullptr) {
-                NFD::FreePath(outPath);
+                NFD_FreePath(outPath);
                 outPath = nullptr;
             }
         } else if(result == NFD_CANCEL) {
             std::printf("User pressed cancel!\n");
             if(outPath != nullptr) {
-                NFD::FreePath(outPath);
+                NFD_FreePath(outPath);
                 outPath = nullptr;
             }
             return;
         } else {
-            std::printf("Error: %s\n", NFD::GetError());
+            std::printf("Error: %s\n", NFD_GetError());
             if(outPath != nullptr) {
-                NFD::FreePath(outPath);
+                NFD_FreePath(outPath);
                 outPath = nullptr;
             }
             return;

@@ -67,6 +67,7 @@ add_subdirectory(${AD5933_TEMPERATURE_DIR} ${CMAKE_BINARY_DIR}/AD5933_temperatur
 add_subdirectory(${AD5933_DEBUG_DATA_DIR} ${CMAKE_BINARY_DIR}/AD5933_debug_data)
 add_subdirectory(${JSON_DIR})
 add_subdirectory(${NATIVE_FILE_DIALOG_DIR})
+target_compile_definitions(nfd PRIVATE NFD_NATIVE)
 add_subdirectory(${SEMVER_DIR})
 
 # This just creates an alias that the CMakeLists.txt inside the ${UTFCONV_DIR} is looking for
@@ -134,6 +135,8 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	# This macro _WIN32_WINNT is for some reason needed for using boost libraries because they can't detect the Windows version themselves?
 	target_compile_definitions(${PROJECT_NAME} PRIVATE _WIN32_WINNT=0x0A00)
 endif()
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE NFD_NATIVE)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
 	${CMAKE_CURRENT_LIST_DIR}/include

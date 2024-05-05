@@ -1,7 +1,7 @@
 #include <thread>
 #include <fstream>
 
-#include <nfd.hpp>
+#include <nfd.h>
 #include <utf/utf.hpp>
 
 #include "imgui_internal.h"
@@ -343,30 +343,58 @@ namespace GUI {
         }
 
         void Calibrate::save() const {
-            nfdchar_t* outPath = nullptr;
-            const std::array<nfdfilteritem_t, 1> filterItem { { "Calibration", "json" } };
-            nfdresult_t result = NFD::SaveDialog(outPath, filterItem.data(), static_cast<nfdfiltersize_t>(filterItem.size()), nullptr, "calibration.json");
-            if(result == NFD_OKAY) {
-                const json j = calibration_file;
-                std::ofstream(outPath) << std::setw(4) << j;
+            nfdnchar_t* outPath { nullptr };
+            try {
+                const std::array<nfdnfilteritem_t, 1> filterItem {
+                    #ifdef _MSC_VER
+                        { L"Graph", L"json" }
+                    #else
+                        { "Graph", "json" }
+                    #endif
+                };
+                
+                const auto ret {
+                    NFD_SaveDialogN(
+                        &outPath,
+                        filterItem.data(),
+                        static_cast<nfdfiltersize_t>(filterItem.size()),
+                        nullptr,
+                        #ifdef _MSC_VER
+                            L"calibration.json"
+                        #else
+                            "calibration.json"
+                        #endif
+                    )
+                };
+                if(ret == NFD_OKAY) {
+                    const std::filesystem::path path { outPath };
+                    const json j = calibration_file;
+                    std::ofstream(path) << std::setw(4) << j;
+                    if(outPath != nullptr) {
+                        NFD_FreePath(outPath);
+                        outPath = nullptr;
+                    }
+                    return;
+                } else if(ret == NFD_CANCEL) {
+                    std::printf("User pressed cancel!\n");
+                    if(outPath != nullptr) {
+                        NFD_FreePath(outPath);
+                        outPath = nullptr;
+                    }
+                    return;
+                } else {
+                    std::printf("Error: %s\n", NFD_GetError());
+                    if(outPath != nullptr) {
+                        NFD_FreePath(outPath);
+                        outPath = nullptr;
+                    }
+                    return;
+                }
+            } catch(...) {
                 if(outPath != nullptr) {
-                    NFD::FreePath(outPath);
+                    NFD_FreePath(outPath);
                     outPath = nullptr;
                 }
-            } else if(result == NFD_CANCEL) {
-                std::printf("User pressed cancel!\n");
-                if(outPath != nullptr) {
-                    NFD::FreePath(outPath);
-                    outPath = nullptr;
-                }
-                return;
-            } else {
-                std::printf("Error: %s\n", NFD::GetError());
-                if(outPath != nullptr) {
-                    NFD::FreePath(outPath);
-                    outPath = nullptr;
-                }
-                return;
             }
         }
 
