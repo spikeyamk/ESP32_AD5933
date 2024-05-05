@@ -43,11 +43,10 @@ set(BLE_CLIENT_SRCS
 	lib/child_main.cpp
 	"lib/shm/names.cpp"
 	lib/state_machines/adapter/adapter.cpp
-	lib/state_machines/adapter/states.cpp
+	lib/state_machines/adapter/events.cpp
 	lib/state_machines/adapter/checker.cpp
 	lib/state_machines/killer/killer.cpp
 	lib/state_machines/connection/connection.cpp
-	lib/state_machines/connector/connector.cpp
 )
 
 set(BLE_CLIENT_INCLUDE_DIRS

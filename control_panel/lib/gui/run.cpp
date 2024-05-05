@@ -13,7 +13,7 @@
 #include "gui/run.hpp"
 
 namespace GUI {
-    DockspaceIDs split_left_center(ImGuiID dockspace_id) {
+    DockspaceIDs split_left_center(const ImGuiID dockspace_id) {
         const ImGuiDockNodeFlags dockspace_flags { ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_DockSpace };
         ImGui::DockBuilderRemoveNode(dockspace_id);
         ImGui::DockBuilderAddNode(dockspace_id, dockspace_flags);
@@ -21,31 +21,6 @@ namespace GUI {
         ImGuiID dock_id_center;
         const ImGuiID dock_id_left = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.225f, nullptr, &dock_id_center);
         return { dock_id_left, dock_id_center };
-    }
-
-    void draw_quit_popup(bool& sdl_event_quit, bool& done, const auto& client_windows) {
-        if(sdl_event_quit) {
-            if(client_windows.empty()) {
-                done = true;
-            } else {
-                ImGui::OpenPopup("Quit");
-                ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-            }
-            sdl_event_quit = false;
-        }
-
-        if(ImGui::BeginPopupModal("Quit")) {
-            ImGui::Text("Some connections are still open.\nAre you sure you want to quit?");
-            if(ImGui::Button("OK", ImVec2(64.0f * Boilerplate::get_scale(), 0.0f))) {
-                ImGui::CloseCurrentPopup();
-                done = true;
-            }
-            ImGui::SameLine();
-            if(ImGui::Button("Cancel", ImVec2(64.0f * Boilerplate::get_scale(), 0.0f))) {
-                ImGui::CloseCurrentPopup();
-            }
-            ImGui::EndPopup();
-        }
     }
 }
 
@@ -68,28 +43,46 @@ namespace GUI {
             return;
         }
 
-        bool sdl_event_quit { false };
-        Boilerplate::process_events(window, renderer, sdl_event_quit);
+        bool event_quit { false };
+        Boilerplate::process_events(window, renderer, event_quit);
         Boilerplate::start_new_frame();
 
-        Top top { settings_file };
-        bool reload { false };
-        ImGuiID top_id = top.draw(done, reload);
-        DockspaceIDs top_ids { split_left_center(top_id) };
-        std::vector<Windows::Client> client_windows;
         Windows::PopupQueue popup_queue {};
+        Top top { settings_file};
+        const ImGuiID top_id { top.draw(event_quit) };
+        const DockspaceIDs top_ids { split_left_center(top_id) };
+        std::vector<Windows::Client> client_windows;
 
         Windows::BLE_Adapter ble_adapter { shm, client_windows, popup_queue };
         ble_adapter.draw(top.menu_bar_enables.ble_adapter, top_ids.left);
         Boilerplate::render(renderer);
 
-        bool reloaded { false };
         while(done == false) {
-            Boilerplate::process_events(window, renderer, sdl_event_quit);
-
+            Boilerplate::process_events(window, renderer, event_quit);
             Boilerplate::start_new_frame();
-            draw_quit_popup(sdl_event_quit, done, client_windows);
-            top_id = top.draw(done, reload);
+            top.draw(event_quit);
+
+            if(event_quit) {
+                if(client_windows.empty()) {
+                    done = true;
+                } else {
+                    popup_queue.push_back(
+                        "Quit",
+                        "",
+                        [&done, &popup_queue]() {
+                            ImGui::Text("Some connections are still open.\nAre you sure you want to quit?");
+                            if(ImGui::Button("OK", ImVec2(64.0f * Boilerplate::get_scale(), 0.0f))) {
+                                done = true;
+                                popup_queue.deactivate();
+                            }
+                            ImGui::SameLine();
+                            if(ImGui::Button("Cancel", ImVec2(64.0f * Boilerplate::get_scale(), 0.0f))) {
+                                popup_queue.deactivate();
+                            }
+                    });
+                }
+                event_quit = false;
+            }
             
             ble_adapter.draw(top.menu_bar_enables.ble_adapter, top_ids.left);
             for(size_t i = 0; i < client_windows.size(); i++) {
@@ -116,11 +109,11 @@ namespace GUI {
             }
 
             if(top.menu_bar_enables.imgui_demo) {
-                ImGui::ShowDemoWindow();
+                ImGui::ShowDemoWindow(&top.menu_bar_enables.imgui_demo);
             }
 
             if(top.menu_bar_enables.implot_demo) {
-                ImPlot::ShowDemoWindow();
+                ImPlot::ShowDemoWindow(&top.menu_bar_enables.implot_demo);
             }
 
             if(popup_queue.empty() == false && popup_queue.active() == false) {
@@ -135,18 +128,7 @@ namespace GUI {
                 ImPlotDenseTest::draw(top.menu_bar_enables.implot_dense_test);
             }
 
-            if(reloaded) {
-                reloaded = false;
-                Boilerplate::render_skip_frame(renderer);
-            } else {
-                Boilerplate::render(renderer);
-            }
-            
-            if(reload) {
-                reload = false;
-                Boilerplate::reload(window, renderer);
-                reloaded = true;
-            }
+            Boilerplate::render(renderer);
         }
         Boilerplate::shutdown(renderer, window);
 

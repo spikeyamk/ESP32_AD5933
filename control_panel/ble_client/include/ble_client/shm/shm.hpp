@@ -5,7 +5,6 @@
 
 #include "ble_client/shm/specialized.hpp"
 #include "ble_client/state_machines/adapter/states.hpp"
-#include "ble_client/state_machines/connector/events.hpp"
 
 namespace BLE_Client {
     namespace SHM {
@@ -21,7 +20,7 @@ namespace BLE_Client {
             std::shared_ptr<std::vector<Device>> active_devices { std::make_shared<std::vector<Device>>() };
             BLE_Client::StateMachines::Adapter::States::T_Variant active_state;
             SHM() = default;
-            void attach_device(const BLE_Client::StateMachines::Connector::Events::connect& connect_event);
+            void attach_device(const BLE_Client::StateMachines::Adapter::Events::connect& connect_event);
         };
     }
 }

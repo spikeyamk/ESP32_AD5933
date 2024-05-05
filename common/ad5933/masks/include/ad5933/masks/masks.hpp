@@ -52,14 +52,15 @@ namespace AD5933 {
                     FourTimes  = 0b0000'0110u,
                 };
 
-                constexpr inline float get_multiplier_float(Multiplier multiplier) {
+                template <typename T> requires std::is_floating_point_v<T>
+                constexpr inline T get_multiplier_float(Multiplier multiplier) {
                     switch(multiplier) {
                         case AD5933::Masks::Or::SettlingTimeCyclesHB::Multiplier::FourTimes:
-                            return 4.0f;
+                            return static_cast<T>(4.0f);
                         case AD5933::Masks::Or::SettlingTimeCyclesHB::Multiplier::TwoTimes:
-                            return 2.0f;
+                            return static_cast<T>(2.0f);
                         default:
-                            return 1.0f;
+                            return static_cast<T>(1.0f);
                     }
                 }
             } 

@@ -84,7 +84,6 @@ add_executable(${PROJECT_NAME}
 	lib/imgui_custom/spinner.cpp
 	lib/imgui_custom/input_items.cpp
 	lib/imgui_custom/char_filters.cpp
-	lib/imgui_custom/markdown.cpp
 
 	lib/implot_custom/setup_axis_label.cpp
 

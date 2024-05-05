@@ -8,18 +8,19 @@
 
 namespace GUI {
     namespace Windows {
-        Client::Client(const std::string name, const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> parent_shm) :
+            Client::Client(const std::string name, const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> parent_shm, Windows::PopupQueue* popup_queue) :
             address{ name },
             name{ std::string(name).append("##").append(std::to_string(index)) },
             dockspace_name { std::string("DockSpace").append(name).append("##").append(std::to_string(index)) },
             index{ index },
             shm{ parent_shm },
-            calibrate_window { index, parent_shm },
+            popup_queue { popup_queue },
+            calibrate_window { index, parent_shm, popup_queue, address },
             calibration_plots_window { index },
-            measure_window { index, parent_shm },
+            measure_window { index, parent_shm, popup_queue, address },
             measurement_plots_window { index },
-            debug_window { index, parent_shm },
-            auto_window { index, parent_shm },
+            debug_window { index, parent_shm, popup_queue, address },
+            auto_window { index, parent_shm, popup_queue, address },
             auto_plots_window { index }
         {}
 
@@ -57,13 +58,16 @@ namespace GUI {
                     ImGui::DockBuilderAddNode(dockspace_id, dockspace_flags);
                     ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetWindowSize());
                     const ImGuiID right_id { ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.5f, nullptr, &dockspace_id) };
+
                     calibration_plots_window.draw(enables.calibration_plots, right_id);
                     measurement_plots_window.draw(enables.measurement_plots, right_id);
                     auto_plots_window.draw(enables.auto_plots, right_id);
-                    auto_window.draw(enables.auto_window, dockspace_id, lock);
-                    measure_window.draw(enables.measure, dockspace_id, lock);
+
                     calibrate_window.draw(enables.calibrate, dockspace_id, lock);
+                    measure_window.draw(enables.measure, dockspace_id, lock);
+                    auto_window.draw(enables.auto_window, dockspace_id, lock);
                     debug_window.draw(enables.debug, dockspace_id, lock);
+
                     ImGui::DockBuilderFinish(dockspace_id);
                     first = false;
                 } else {
@@ -92,6 +96,10 @@ namespace GUI {
                             }
                         }
 
+                        if(auto_window.save_points->size() != 0) {
+                            auto_plots_window.clear_save_vectors();
+                        }
+
                         while(auto_window.save_points->size() != 0) {
                             const auto save_point { auto_window.save_points->try_read() };
                             if(save_point.has_value()) {
@@ -100,9 +108,6 @@ namespace GUI {
                         }
 
                         auto_plots_window.draw(enables.auto_plots, ImGui::GetID(static_cast<void*>(nullptr)));
-                    }
-                    if(enables.debug) {
-                        debug_window.draw(enables.debug, ImGui::GetID(static_cast<void*>(nullptr)), lock);
                     }
                     if(enables.calibrate) {
                         calibrate_window.draw(enables.calibrate, ImGui::GetID(static_cast<void*>(nullptr)), lock);
@@ -117,29 +122,22 @@ namespace GUI {
                     if(enables.auto_window) {
                         auto_window.draw(enables.auto_window, ImGui::GetID(static_cast<void*>(nullptr)), lock);
                     }
+                    if(enables.debug) {
+                        debug_window.draw(enables.debug, ImGui::GetID(static_cast<void*>(nullptr)), lock);
+                    }
                 }
             }
             ImGui::End();
 
-            auto it { std::find_if(shm->discovery_devices.begin(), shm->discovery_devices.end(), [&](const auto& e) {
+            const auto it { std::find_if(shm->discovery_devices.begin(), shm->discovery_devices.end(), [&](const auto& e) {
                 return e.get_address() == address;
             }) };
 
             if(it != shm->discovery_devices.end()) {
                 if(it->get_connected() == false && lock != Lock::UnexpectedDisconnection ) {
-                    ImGui::OpenPopup("Error##2");
-                    // Always center this window when appearing
-                    ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+                    popup_queue->push_back("Error", std::string(address).append(": unexpectedly disconnected"));
                     lock = Lock::UnexpectedDisconnection;
                 }
-            }
-
-            if(ImGui::BeginPopupModal("Error##2", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
-                ImGui::Text("%s Unexpectedly disconnected", address.c_str());
-                if(ImGui::Button("OK", ImVec2(64.0f * GUI::Boilerplate::get_scale(), 0.0f))) {
-                    ImGui::CloseCurrentPopup();
-                }
-                ImGui::EndPopup();
             }
         }
     }

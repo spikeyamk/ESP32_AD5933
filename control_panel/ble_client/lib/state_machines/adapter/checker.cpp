@@ -23,15 +23,14 @@ namespace BLE_Client {
                         }
                     }
 
-                    adapter_sm.visit_current_states([&](auto&& visited_state) {
-                        try {
-                            shm->active_state = BLE_Client::StateMachines::Adapter::States::stupid_sml.at(visited_state.c_str());
-                        } catch(const std::exception& e) {
-                            shm->console.log(std::string("ERROR: BLE_Client::checker: exception: ") + e.what() + "\n");
-                            shm->console.log("ERROR: This compiler gives the visited_state a different prefix\n");
-                            std::exit(-1);
-                        }
-                    });
+                    if(adapter_sm.is(state<BLE_Client::StateMachines::Adapter::States::off>)) {
+                        shm->active_state = BLE_Client::StateMachines::Adapter::States::off {};
+                    } else if(adapter_sm.is(state<BLE_Client::StateMachines::Adapter::States::on>)) {
+                        shm->active_state = BLE_Client::StateMachines::Adapter::States::on {};
+                    } else if(adapter_sm.is(state<BLE_Client::StateMachines::Adapter::States::discovering>)) {
+                        shm->active_state = BLE_Client::StateMachines::Adapter::States::discovering {};
+                    }
+
                     std::this_thread::sleep_for(std::chrono::milliseconds(10));
                 }
             }

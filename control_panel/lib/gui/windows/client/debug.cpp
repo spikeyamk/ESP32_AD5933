@@ -16,9 +16,11 @@ namespace GUI {
             return status;
         }
 
-        Debug::Debug(const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> shm) :
+        Debug::Debug(const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> shm, PopupQueue* popup_queue, const std::string& address) :
             index { index },
-            shm { shm }
+            shm { shm },
+            popup_queue { popup_queue },
+            address { address }
         {
             name.append(std::to_string(index));
         }
@@ -205,12 +207,12 @@ namespace GUI {
             const auto rx_payload { shm->active_devices->at(index).information->read_for(std::chrono::milliseconds(1'000)) };
 
             if(rx_payload.has_value() == false) {
-                std::cout << "ERROR: GUI::Windows::Debug::dump: timeout\n";
+                popup_queue->push_back("Error", std::string(address).append(": GUI::Windows::Debug::dump: timeout"));
                 return false;
             }
 
             if(variant_tester<Magic::Results::Debug::Dump>(rx_payload.value()) == false) {
-                std::cout << "ERROR: GUI::Windows::Debug::dump: rx_payload: wrong variant type\n";
+                popup_queue->push_back("Error", std::string(address).append(": GUI::Windows::Debug::dump: rx_payload: wrong variant type"));
                 return false;
             }
 
@@ -224,7 +226,7 @@ namespace GUI {
                 shm->cmd.send(BLE_Client::StateMachines::Connection::Events::write_body_composition_feature{ index, Magic::Commands::Debug::End{} });
                 return true;
             } catch(const std::exception& e) {
-    		    std::cout << "ERROR: GUI::Windows::Debug::dump: exception: " << e.what() << std::endl;
+                popup_queue->push_back("Error", std::string(address).append(": GUI::Windows::Debug::dump: exception: ").append(e.what()));
                 return false;
             }
         }

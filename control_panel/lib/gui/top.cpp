@@ -7,7 +7,6 @@
 #include "legal/all.hpp"
 
 #include "gui/windows/ble_adapter.hpp"
-#include "imgui_custom/markdown.hpp"
 #include "gui/top.hpp"
 
 namespace GUI {
@@ -16,13 +15,10 @@ namespace GUI {
         scale_combo { settings_file.settings.scale_combo }
     {}
 
-    ImGuiID Top::draw(bool& done, bool& reload) {
-        // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
-        // because it would be confusing to have two docking targets within each others.
-        ImGuiViewport* viewport = ImGui::GetMainViewport();
-        ImGui::SetNextWindowPos(viewport->Pos);
-        ImGui::SetNextWindowSize(viewport->Size);
-        ImGui::SetNextWindowViewport(viewport->ID);
+    ImGuiID Top::draw(bool& event_quit) {
+        ImGui::SetNextWindowPos(ImGui::GetMainViewport()->Pos);
+        ImGui::SetNextWindowSize(ImGui::GetMainViewport()->Size);
+        ImGui::SetNextWindowViewport(ImGui::GetMainViewport()->ID);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 
@@ -44,22 +40,16 @@ namespace GUI {
         ImGui::PopStyleVar(2);
 
         // DockSpace
-        ImGuiIO& io = ImGui::GetIO();
-        ImGuiID dockspace_id = ImGui::GetID("TopDockSpace");
-        if(io.ConfigFlags & ImGuiConfigFlags_DockingEnable) {
+        const ImGuiID dockspace_id { ImGui::GetID("TopDockSpace") };
+        if(ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_DockingEnable) {
             ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
             if(ImGui::BeginMenuBar()) {
                 if(ImGui::BeginMenu("File")) {
-                    ImGui::MenuItem("Open");
-                    ImGui::MenuItem("Save");
-                    if(ImGui::MenuItem("Reload")) {
-                        reload = true;
-                    }
                     if(ImGui::MenuItem("Settings")) {
                         settings_clicked = true;
                     }
-                    if(ImGui::MenuItem("Exit")) {
-                        done = true;
+                    if(ImGui::MenuItem("Quit")) {
+                        event_quit = true;
                     }
                     ImGui::EndMenu();
                 }
@@ -97,8 +87,7 @@ namespace GUI {
 
             if(settings_clicked) {
                 ImGui::OpenPopup("Settings");
-                // Always center this window when appearing
-                const ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+                const ImVec2 center { ImGui::GetMainViewport()->GetCenter() };
                 ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
                 settings_clicked = false;
                 popup_enables.settings = true;
@@ -111,8 +100,7 @@ namespace GUI {
 
             if(about_clicked) {
                 ImGui::OpenPopup("About");
-                // Always center this window when appearing
-                const ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+                const ImVec2 center { ImGui::GetMainViewport()->GetCenter() };
                 ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
                 about_clicked = false;
                 popup_enables.about = true;
@@ -125,8 +113,7 @@ namespace GUI {
 
             if(legal_clicked) {
                 ImGui::OpenPopup("Legal");
-                // Always center this window when appearing
-                const ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+                const ImVec2 center { ImGui::GetMainViewport()->GetCenter() };
                 ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
                 legal_clicked = false;
                 popup_enables.legal = true;
@@ -146,9 +133,6 @@ namespace GUI {
     void Top::draw_about_page() {
         ImGui::Text("Version: " "0.1.8");
         ImGui::Text("Built on: " __DATE__ " " __TIME__);
-
-        static const char github_link[] { "[Contribute](https://www.github.com/spikeyamk/ESP32_AD5933)" };
-        ImGui::RenderMarkdown(github_link, sizeof(github_link) / sizeof(github_link[0]));
     }
 
     void Top::draw_license(const char* name, const char* license) const {

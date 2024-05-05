@@ -329,43 +329,6 @@ namespace GUI {
             ImPlot::GetStyle().Use24HourClock = implot_use_24_hour_clock;
         }
 
-        int reload(SDL_Window* window, SDL_Renderer* renderer) {
-            const auto active_settings { ActiveSettings::get() };
-
-            SDL_RenderClear(renderer);
-            ImGui_ImplSDLRenderer3_Shutdown();
-            ImGui_ImplSDL3_Shutdown();
-            ImPlot::DestroyContext();
-            ImGui::DestroyContext();
-            SDL_DestroyRenderer(renderer);
-
-            renderer = SDL_CreateRenderer(window, nullptr, renderer_flags);
-            if (renderer == nullptr) {
-                SDL_Log("Error: SDL_CreateRenderer(): %s\n", SDL_GetError());
-                return -1;
-            }
-
-            if(ImGui::CreateContext() == nullptr) {
-                return -2;
-            }
-
-            if(ImPlot::CreateContext() == nullptr) {
-                return -3;
-            }
-
-            if(Trielo::trielo<ImGui_ImplSDL3_InitForSDLRenderer>(Trielo::Success(true), window, renderer) == false) {
-                return -4;
-            }
-
-            if(Trielo::trielo<ImGui_ImplSDLRenderer3_Init>(Trielo::Success(true), renderer) == false) {
-                return -5;
-            }
-
-            active_settings.apply();
-
-            return 0;
-        }
-
         void shutdown(SDL_Renderer* renderer, SDL_Window* window) {
             ImGui_ImplSDLRenderer3_Shutdown();
             ImGui_ImplSDL3_Shutdown();

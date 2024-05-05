@@ -10,6 +10,7 @@
 #include "ble_client/shm/shm.hpp"
 #include "magic/results/results.hpp"
 #include "gui/windows/client/lock.hpp"
+#include "gui/windows/popup_queue.hpp"
 #include "misc/channel.hpp"
 
 namespace GUI {
@@ -22,6 +23,8 @@ namespace GUI {
             size_t index;
             std::u8string name { name_base };
             std::shared_ptr<BLE_Client::SHM::SHM> shm { nullptr };
+            PopupQueue* popup_queue { nullptr };
+            std::string address;
         public:
             enum class Status {
                 Off,
@@ -55,22 +58,6 @@ namespace GUI {
                 CreateTestFiles,
             };
             Error error { Error::Off };
-            enum class PopupShows {
-                Off,
-                Format,
-                Remove,
-            };
-            PopupShows popup_shows { PopupShows::Off };
-            struct Popup {
-                bool shown { false };
-                std::string name;
-                std::string content;
-                Popup(const std::string& name, const std::string& content) :
-                    name { name },
-                    content { content }
-                {}
-            };
-            std::optional<Popup> popup { std::nullopt };
         private:
             struct ListTable {
                 std::vector<Magic::Results::File::List> paths;
@@ -82,29 +69,10 @@ namespace GUI {
                 uint64_t total { 0 };
                 uint64_t used { 0 };
                 uint64_t free { 0 };
-                std::string text;
                 inline void update(const Magic::Results::File::Free& free_result) {
                     total = free_result.total_bytes;
                     used = free_result.used_bytes;
                     free = total - used;
-                    std::string total_str { std::string("Total: ").append(std::to_string(total)) };
-                    std::string used_str { std::string("Used: ").append(std::to_string(used)) };
-                    std::string free_str { std::string("Free:  ").append(std::to_string(free)) };
-                    const size_t max_len { std::max(std::max(total_str.length(), used_str.length()), free_str.length()) };
-                    add_padding(total_str, max_len);
-                    add_padding(used_str, max_len);
-                    add_padding(free_str, max_len);
-                    total_str.append(" [Bytes]");
-                    used_str.append(" [Bytes]");
-                    free_str.append(" [Bytes]");
-                    text = total_str;
-                    text.append("\n").append(used_str).append("\n").append(free_str);
-                }
-
-                inline void add_padding(std::string& str, const size_t max_len) {
-                    while(str.length() != max_len) {
-                        str.append(" ");
-                    }
                 }
             };
             Bytes bytes {};
@@ -120,7 +88,7 @@ namespace GUI {
             std::shared_ptr<Channel<Point>> send_points { std::make_shared<Channel<Point>>() };
             std::shared_ptr<Channel<Point>> save_points { std::make_shared<Channel<Point>>() };
             Auto() = default;
-            Auto(const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> shm);
+            Auto(const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> shm, PopupQueue* popup_queue, const std::string& address);
             ~Auto();
             void draw(bool &enable, const ImGuiID side_id, Lock& lock);
         private:
@@ -134,7 +102,7 @@ namespace GUI {
         private:
             void draw_list_table();
             void draw_list_table_rows();
-            void draw_popups();
+            void draw_bytes_table();
             void list();
             void remove();
             void download();

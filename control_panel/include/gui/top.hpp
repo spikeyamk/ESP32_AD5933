@@ -34,7 +34,7 @@ namespace GUI {
         MenuBarEnables menu_bar_enables {};
 
         Top(const ns::SettingsFile& settings_file);
-        ImGuiID draw(bool& done, bool& reload);
+        ImGuiID draw(bool& event_quit);
     private:
         struct PopupEnables {
             bool legal { true };

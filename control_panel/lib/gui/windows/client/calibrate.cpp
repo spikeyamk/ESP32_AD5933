@@ -15,9 +15,11 @@
 
 namespace GUI {
     namespace Windows {
-        Calibrate::Calibrate(const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> shm) :
+        Calibrate::Calibrate(const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> shm, PopupQueue* popup_queue, const std::string& address) :
             index { index },
-            shm{ shm }
+            shm { shm },
+            popup_queue { popup_queue },
+            address { address }
         {
             name.append(utf::as_u8(std::to_string(index)));
         }
@@ -226,22 +228,13 @@ namespace GUI {
                 }
             );
 
-            const uint16_t wished_size = self.config.get_num_of_inc().unwrap() + 1;
-            const float progress_bar_step = 1.0f / static_cast<float>(wished_size);
+            const uint16_t wished_size { self.config.get_num_of_inc().unwrap() + 1u };
+            const float progress_bar_step { 1.0f / static_cast<float>(wished_size) };
             const float timeout_ms {
-                500.0f
+                1'000.0f
                 + (
-                    (1.0f / static_cast<float>(self.config.get_start_freq().unwrap())) 
-                    * [&]() {
-                        const float ret { static_cast<float>(self.config.get_settling_time_cycles_number().unwrap()) };
-                        if(ret == 0) {
-                            return 1.0f;
-                        } else {
-                            return ret;
-                        }
-                    }()
-                    * AD5933::Masks::Or::SettlingTimeCyclesHB::get_multiplier_float(self.config.get_settling_time_cycles_multiplier())
-                    * 1'000'000.0f
+                    static_cast<float>(self.config.get_worst_case_timeout().count())
+                    / 1000.0f
                 )
             };
             const std::chrono::milliseconds boost_timeout_ms { static_cast<size_t>(timeout_ms) };

@@ -1,5 +1,3 @@
-#include "gui/boilerplate.hpp"
-
 #include "gui/windows/popup_queue.hpp"
 
 namespace GUI {
@@ -8,27 +6,24 @@ namespace GUI {
             active_popup = p_queue.front();
             p_queue.pop();
 
-            ImGui::OpenPopup(active_popup.value().name.c_str());
+            ImGui::OpenPopup(active_popup.value().title.c_str());
             // Always center this window when appearing
             ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
         }
 
         void PopupQueue::show_active() {
-            if(ImGui::BeginPopupModal(active_popup.value().name.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
-                ImGui::Text(active_popup.value().text.c_str());
-                if(ImGui::Button("OK", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f))) {
-                    ImGui::CloseCurrentPopup();
-                    deactivate();
-                }
+            if(ImGui::BeginPopupModal(active_popup.value().title.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+                (active_popup.value().func.value_or(default_window))();
                 ImGui::EndPopup();
             }
         }
 
-        void PopupQueue::push_back(const std::string& text) {
+        void PopupQueue::push_back(const std::string& title, const std::string& text = std::string(), std::optional<std::function<void()>> func) {
             p_queue.push(
                 Popup {
-                    .name = std::string("Error"),
-                    .text = text
+                    .title = title,
+                    .text = text,
+                    .func = func
                 }
             );
         }
@@ -42,6 +37,7 @@ namespace GUI {
         }
 
         void PopupQueue::deactivate() {
+            ImGui::CloseCurrentPopup();
             active_popup = std::nullopt;
         }
     }

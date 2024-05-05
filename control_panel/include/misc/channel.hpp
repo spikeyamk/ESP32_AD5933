@@ -35,11 +35,13 @@ public:
     void push(const T& obj) {
         std::scoped_lock lock(mutex);
         values.push(obj);
+        cv.notify_one();
     }
 
     void clear() {
         std::scoped_lock lock(mutex);
         values.clear();
+        cv.notify_one();
     }
 
     size_t size() {

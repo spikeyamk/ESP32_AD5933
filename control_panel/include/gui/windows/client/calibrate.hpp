@@ -15,6 +15,7 @@
 #include "ad5933/calibration/calibration.hpp"
 #include "json/conversion.hpp"
 #include "gui/windows/client/lock.hpp"
+#include "gui/windows/popup_queue.hpp"
 #include "misc/channel.hpp"
 
 namespace GUI {
@@ -80,6 +81,8 @@ namespace GUI {
         private:
             std::stop_source stop_source;
             std::shared_ptr<BLE_Client::SHM::SHM> shm;
+            PopupQueue* popup_queue { nullptr };
+            std::string address;
         public:
             std::vector<AD5933::Data> raw_calibration {};
             std::vector<AD5933::Calibration<float>> calibration {};
@@ -89,7 +92,7 @@ namespace GUI {
             float progress_bar_fraction { 0.0f };
         public:
             std::shared_ptr<Channel<ns::CalibrationFile>> calibration_queue_to_load_into_measurement { std::make_shared<Channel<ns::CalibrationFile>>() };
-            Calibrate(const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> shm);
+            Calibrate(const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> shm, PopupQueue* popup_queue, const std::string& address);
             ~Calibrate();
             void draw(bool& enable, const ImGuiID side_id, Lock& lock);
             Status get_status() const;

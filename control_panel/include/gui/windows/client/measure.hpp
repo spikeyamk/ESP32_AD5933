@@ -15,6 +15,7 @@
 #include "ad5933/calibration/calibration.hpp"
 #include "ad5933/measurement/measurement.hpp"
 #include "gui/windows/client/lock.hpp"
+#include "gui/windows/popup_queue.hpp"
 #include "misc/channel.hpp"
 
 namespace GUI {
@@ -27,6 +28,8 @@ namespace GUI {
             size_t index;
             std::u8string name { name_base };
             std::shared_ptr<BLE_Client::SHM::SHM> shm { nullptr };
+            PopupQueue* popup_queue { nullptr };
+            std::string address;
 
             static constexpr uint32_t res_freq = 1;
             static constexpr uint32_t max_9bit = 511;
@@ -90,7 +93,7 @@ namespace GUI {
             std::stop_source stop_source;
         public:
             Measure() = default;
-            Measure(const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> shm);
+            Measure(const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> shm, PopupQueue* popup_queue, const std::string& address);
             void draw(bool &enable, const ImGuiID side_id, Lock& lock);
             ~Measure();
             void load_from_memory(const ns::CalibrationFile& calibration_file);

@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <type_traits>
 #include <concepts>
+#include <chrono>
 
 #include "ad5933/register_types.hpp"
 #include "ad5933/uint_types.hpp"
@@ -320,8 +321,54 @@ namespace AD5933 {
 			return ret;
 		}
 
+		template<typename T>
+		constexpr std::vector<T> get_period_vector() const {
+			std::vector<T> ret { get_freq_vector<T>() };
+			for(auto& e: ret) {
+				e = static_cast<T>(1.0f) / e;
+			}
+			return ret;
+		}
+
 		constexpr uint_freq_t<1001> get_freq_end() const {
             return uint_freq_t<1001> { get_start_freq().unwrap() + (get_num_of_inc().unwrap() * get_inc_freq().unwrap()) };
+		}
+
+		template <typename T> requires std::is_floating_point_v<T>
+		constexpr T get_settling_time_cycles_factor() const {
+			const T ret {
+                static_cast<T>(get_settling_time_cycles_number().unwrap())
+                * AD5933::Masks::Or::SettlingTimeCyclesHB::get_multiplier_float<T>(get_settling_time_cycles_multiplier())
+			};
+			return ret;
+		}
+
+		constexpr std::vector<std::chrono::microseconds> get_timeout_vector() const {
+			const auto timeout_us {
+				[&]() {
+					auto period { get_period_vector<double>() };
+					
+					const double factor { get_settling_time_cycles_factor<double>() * 1'000'000.0 };
+					for(auto& e: period) {
+						e *= 1'000'000.0 * factor;
+					}
+
+					return period;
+				}()
+			};
+
+			std::vector<std::chrono::microseconds> ret;
+			ret.resize(timeout_us.size());
+			std::generate(ret.begin(), ret.end(), [index = static_cast<size_t>(0), &timeout_us]() mutable {
+				return std::chrono::microseconds { static_cast<decltype(std::chrono::microseconds().count())>(timeout_us[index++]) };
+			});
+			return ret;
+		}
+		
+		constexpr std::chrono::microseconds get_worst_case_timeout() const {
+			const double start_period { 1.0 / static_cast<double>(get_start_freq().unwrap()) };
+			const double factor { get_settling_time_cycles_factor<double>() * 1'000'000.0 };
+			return std::chrono::microseconds { static_cast<decltype(std::chrono::microseconds().count())>(start_period * factor) };
 		}
 	};
 }

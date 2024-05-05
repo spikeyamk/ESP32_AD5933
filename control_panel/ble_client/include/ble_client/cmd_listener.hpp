@@ -8,7 +8,6 @@
 
 #include "ble_client/state_machines/adapter/adapter.hpp"
 #include "ble_client/state_machines/killer/killer.hpp"
-#include "ble_client/state_machines/connector/connector.hpp"
 #include "ble_client/state_machines/connection/connection.hpp"
 
 namespace BLE_Client {
@@ -18,7 +17,6 @@ namespace BLE_Client {
         BLE_Client::StateMachines::Killer::T_StateMachine& killer,
         BLE_Client::StateMachines::Adapter::T_StateMachine& adapter_sm,
         std::vector<BLE_Client::StateMachines::Connection::Dummy*>& connections,
-        SimpleBLE::Adapter& simpleble_adapter,
-        BLE_Client::StateMachines::Connector::T_StateMachine& connector
+        SimpleBLE::Adapter& simpleble_adapter
     );
 }
