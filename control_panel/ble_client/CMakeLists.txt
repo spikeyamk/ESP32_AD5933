@@ -43,11 +43,10 @@ set(BLE_CLIENT_SRCS
 	lib/child_main.cpp
 	"lib/shm/names.cpp"
 	lib/state_machines/adapter/adapter.cpp
-	lib/state_machines/adapter/states.cpp
+	lib/state_machines/adapter/events.cpp
 	lib/state_machines/adapter/checker.cpp
 	lib/state_machines/killer/killer.cpp
 	lib/state_machines/connection/connection.cpp
-	lib/state_machines/connector/connector.cpp
 )
 
 set(BLE_CLIENT_INCLUDE_DIRS
@@ -123,19 +122,19 @@ if(BLE_CLIENT_TEST)
 		AD5933_data
 		${PROJECT_NAME}
 	)
-	#add_test_case(ble_client_thread_connect_sync_scan thread/connect/sync_scan.cpp)
-	#add_test_case(ble_client_thread_connect_async_scan thread/connect/async_scan.cpp)
+	add_test_case(ble_client_thread_connect_sync_scan thread/connect/sync_scan.cpp)
+	add_test_case(ble_client_thread_connect_async_scan thread/connect/async_scan.cpp)
 
-	#add_test_case(ble_client_thread_debug_dump thread/debug/dump.cpp)
-	#add_test_case(ble_client_thread_debug_program_and_dump thread/debug/program_and_dump.cpp)
+	add_test_case(ble_client_thread_debug_dump thread/debug/dump.cpp)
+	add_test_case(ble_client_thread_debug_program_and_dump thread/debug/program_and_dump.cpp)
 
-	#add_test_case(ble_client_thread_auto_send thread/auto/send.cpp)
+	add_test_case(ble_client_thread_auto_send thread/auto/send.cpp)
 	add_test_case(ble_client_thread_freq_sweep_periodic thread/freq_sweep/periodic.cpp)
 
-	#add_test_case(ble_client_thread_file_free thread/file/free.cpp)
-	#add_test_case(ble_client_thread_file_list_count thread/file/list_count.cpp)
-	#add_test_case(ble_client_thread_file_list thread/file/list.cpp)
-	#add_test_case(ble_client_thread_file_size thread/file/size.cpp)
-	#add_test_case(ble_client_thread_file_remove thread/file/remove.cpp)
-	#add_test_case(ble_client_thread_file_download thread/file/download.cpp)
+	add_test_case(ble_client_thread_file_free thread/file/free.cpp)
+	add_test_case(ble_client_thread_file_list_count thread/file/list_count.cpp)
+	add_test_case(ble_client_thread_file_list thread/file/list.cpp)
+	add_test_case(ble_client_thread_file_size thread/file/size.cpp)
+	add_test_case(ble_client_thread_file_remove thread/file/remove.cpp)
+	add_test_case(ble_client_thread_file_download thread/file/download.cpp)
 endif()

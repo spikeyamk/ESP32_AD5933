@@ -19,9 +19,11 @@
 
 namespace GUI {
     namespace Windows {
-        Measure::Measure(const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> shm) :
+        Measure::Measure(const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> shm, PopupQueue* popup_queue, const std::string& address) :
             index { index },
-            shm { shm }
+            shm { shm },
+            popup_queue { popup_queue },
+            address { address }
         {
             name.append(utf::as_u8(std::to_string(index)));
         }
@@ -61,8 +63,6 @@ namespace GUI {
                 draw_input_elements();
                 ImGui::EndDisabled();
 
-                ImGui::Separator();
-
                 if(status == Status::MeasuringSingle || status == Status::MeasuringPeriodic) {
                     ImGui::BeginDisabled();
                     ImGui::Button("Load", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f));
@@ -74,6 +74,8 @@ namespace GUI {
                         }
                     }
                 }
+
+                ImGui::Separator();
 
                 ImGui::BeginDisabled();
 
@@ -106,13 +108,14 @@ namespace GUI {
             } else {
                 draw_input_elements();
 
-                ImGui::Separator();
-
                 if(ImGui::Button("Load", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f))) {
                     if(load_from_disk()) {
                         status = Status::Loaded;
                     }
                 }
+
+                ImGui::Separator();
+
                 if(ImGui::Button("Single", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f))) {
                     single();
                 }
@@ -200,7 +203,7 @@ namespace GUI {
         }
 
         void Measure::single_cb(std::stop_token st, Measure& self) {
-            self.shm->active_devices[self.index].information->clear();
+            self.shm->active_devices->at(self.index).information->clear();
             const auto freq_start_it { std::find(self.calibration_vectors.freq_float.begin(), self.calibration_vectors.freq_float.end(), static_cast<float>(self.configs.measurement.get_start_freq().unwrap())) };
             if(freq_start_it == self.calibration_vectors.freq_float.end()) {
                 self.status = Status::Failed;
@@ -236,23 +239,13 @@ namespace GUI {
             assert(wished_size <= self.calibration_vectors.calibration.size());
             const float progress_bar_step = 1.0f / static_cast<float>(wished_size);
             const float timeout_ms {
-                500.0f
+                1'000.0f
                 + (
-                    (1.0f / static_cast<float>(self.configs.measurement.get_start_freq().unwrap())) 
-                    * [&]() {
-                        const float ret { static_cast<float>(self.configs.measurement.get_settling_time_cycles_number().unwrap()) };
-                        if(ret == 0) {
-                            return 1.0f;
-                        } else {
-                            return ret;
-                        }
-                    }()
-                    * AD5933::Masks::Or::SettlingTimeCyclesHB::get_multiplier_float(self.configs.measurement.get_settling_time_cycles_multiplier())
-                    * 1'000'000.0f
+                    static_cast<float>(self.configs.measurement.get_worst_case_timeout().count())
+                    / 1000.0f
                 )
             };
-
-            const auto boost_timeout_ms { std::chrono::milliseconds(static_cast<size_t>(timeout_ms)) };
+            const std::chrono::milliseconds boost_timeout_ms { static_cast<size_t>(timeout_ms) };
 
             SingleVectors tmp_single_vectors {
                 .raw_measurement = {},
@@ -274,10 +267,10 @@ namespace GUI {
                     }
                 );
                 do {
-                    const auto rx_payload { self.shm->active_devices[self.index].information->read_for(boost_timeout_ms) };
+                    const auto rx_payload { self.shm->active_devices->at(self.index).information->read_for(boost_timeout_ms) };
                     if(rx_payload.has_value() == false) {
                         self.status = Status::Failed;
-                        std::cout << "ERROR: GUI::Windows::Measure::single_cb: sweep: timeout\n";
+                        self.popup_queue->push_back("Error", std::string(self.address).append(": GUI::Windows::Measure::single_cb: sweep: timeout"));
                         return;
                     }
 
@@ -306,7 +299,7 @@ namespace GUI {
 
                     if(is_valid_data == false) {
                         self.status = Status::Failed;
-                        std::cout << "ERROR: GUI::Windows::Measure::single_cb: measure received wrong event result packet\n";
+                        self.popup_queue->push_back("Error", std::string(self.address).append(": GUI::Windows::Measure::single_cb: measure received wrong event result packet"));
                         return;
                     }
                     self.progress_bar_fraction += progress_bar_step;
@@ -356,7 +349,7 @@ namespace GUI {
         }
 
         void Measure::periodic_cb(std::stop_token st, Measure& self) {
-            self.shm->active_devices[self.index].information->clear();
+            self.shm->active_devices->at(self.index).information->clear();
             const auto freq_start_it { std::find(self.calibration_vectors.freq_float.begin(), self.calibration_vectors.freq_float.end(), static_cast<float>(self.configs.measurement.get_start_freq().unwrap())) };
             if(freq_start_it == self.calibration_vectors.freq_float.end()) {
                 self.status = Status::Failed;
@@ -391,23 +384,13 @@ namespace GUI {
             assert(wished_size <= self.calibration_vectors.calibration.size());
             const float progress_bar_step = 1.0f / static_cast<float>(wished_size);
             const float timeout_ms {
-                500.0f
+                1'000.0f
                 + (
-                    (1.0f / static_cast<float>(self.configs.measurement.get_start_freq().unwrap())) 
-                    * [&]() {
-                        const float ret { static_cast<float>(self.configs.measurement.get_settling_time_cycles_number().unwrap()) };
-                        if(ret == 0) {
-                            return 1.0f;
-                        } else {
-                            return ret;
-                        }
-                    }()
-                    * AD5933::Masks::Or::SettlingTimeCyclesHB::get_multiplier_float(self.configs.measurement.get_settling_time_cycles_multiplier())
-                    * 1'000'000.0f
+                    static_cast<float>(self.configs.measurement.get_worst_case_timeout().count())
+                    / 1000.0f
                 )
             };
-
-            const auto boost_timeout_ms { std::chrono::milliseconds(static_cast<size_t>(timeout_ms)) };
+            const std::chrono::milliseconds boost_timeout_ms { static_cast<size_t>(timeout_ms) };
 
             bool first_iteration { true };
             uint8_t timeout_counter { 0 };
@@ -426,7 +409,7 @@ namespace GUI {
                     }
                 );
                 do {
-                    const auto rx_payload { self.shm->active_devices[self.index].information->read_for(boost_timeout_ms) };
+                    const auto rx_payload { self.shm->active_devices->at(self.index).information->read_for(boost_timeout_ms) };
                     if(rx_payload.has_value() == false) {
                         std::cout << "ERROR: GUI::Windows::Measure::periodic_cb: sweep: timeout: timeout_counter: " << timeout_counter << std::endl;
                         if(timeout_counter < timeout_stopper) {
@@ -464,7 +447,7 @@ namespace GUI {
 
                     if(is_valid_data == false) {
                         self.status = Status::Failed;
-                        std::cout << "ERROR: GUI::Windows::Measure::periodic_cb: measure received wrong event result packet\n";
+                        self.popup_queue->push_back("Error", std::string(self.address).append(": GUI::Windows::Measure::periodic_cb: measure received wrong event result packet"));
                         return;
                     }
                     self.progress_bar_fraction += progress_bar_step;

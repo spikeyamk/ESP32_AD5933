@@ -32,6 +32,7 @@ namespace GUI {
                 Auto(const size_t index);
                 void draw(bool& enable, const ImGuiID side_id);
                 void update_send_vectors(const Windows::Auto::Point& send_point);
+                void clear_save_vectors();
                 void update_save_vectors(const Windows::Auto::Point& save_point);
             private:
                 struct Vectors {

@@ -17,6 +17,7 @@ namespace BLE_Client {
             {}
 
             void send(const T& message) {
+                std::scoped_lock lock(this->mutex);
                 this->data.push_back(message);
                 this->condition.notify_one();
             }
@@ -24,7 +25,7 @@ namespace BLE_Client {
             T read() {
                 std::unique_lock lock(this->mutex);
                 this->condition.wait(lock, [&]() { return !this->data.empty(); });
-                const T ret = this->data.front();
+                const T ret { this->data.front() };
                 this->data.pop_front();
                 return ret;
             }

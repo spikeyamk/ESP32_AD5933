@@ -17,9 +17,9 @@
 #include "esp_system.h"
 #include "util.hpp"
 #include "sd_card.hpp"
+#include "default.hpp"
 #include "ad5933/data/data.hpp"
 #include "ad5933/measurement/measurement.hpp"
-#include "default.hpp"
 
 namespace BLE {
 	namespace Actions {
@@ -196,7 +196,7 @@ namespace BLE {
 
 			void end(AD5933::Extension &ad5933, std::shared_ptr<Server::Sender> &sender, StopSources& stop_sources) {
 				ad5933.set_command(AD5933::Masks::Or::Ctrl::HB::Command::PowerDownMode);
-				sender->release();
+				//sender->release();
 				stop_sources.run = false;
 			}
 		}
@@ -366,7 +366,7 @@ namespace BLE {
 
 			void end(std::shared_ptr<Server::Sender> &sender, StopSources& stop_sources) {
 				stop_sources.download = false;
-				sender->release();
+				//sender->release();
 			}
 		}
 
@@ -532,12 +532,12 @@ namespace BLE {
 
 			void stop_saving(std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources) {
 				stop_sources.save = false;
-				sender->release();
+				//sender->release();
 			}
 
 			void stop_sending(std::shared_ptr<Server::Sender>& sender, StopSources& stop_sources) {
 				stop_sources.send = false;
-				sender->release();
+				//sender->release();
 			}
 		}
 	}

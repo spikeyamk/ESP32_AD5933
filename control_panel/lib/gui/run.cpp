@@ -6,7 +6,6 @@
 
 #include "gui/boilerplate.hpp"
 #include "gui/top.hpp"
-#include "gui/windows/console.hpp"
 #include "gui/windows/ble_adapter.hpp"
 #include "gui/windows/client/client.hpp"
 #include "gui/windows/implot_dense_test.hpp"
@@ -14,39 +13,14 @@
 #include "gui/run.hpp"
 
 namespace GUI {
-    DockspaceIDs split_left_center(ImGuiID dockspace_id) {
-        const ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_DockSpace;
+    DockspaceIDs split_left_center(const ImGuiID dockspace_id) {
+        const ImGuiDockNodeFlags dockspace_flags { ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_DockSpace };
         ImGui::DockBuilderRemoveNode(dockspace_id);
         ImGui::DockBuilderAddNode(dockspace_id, dockspace_flags);
         ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->Size);
         ImGuiID dock_id_center;
         const ImGuiID dock_id_left = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.225f, nullptr, &dock_id_center);
         return { dock_id_left, dock_id_center };
-    }
-
-    void draw_quit_popup(bool& sdl_event_quit, bool& done, const auto& client_windows) {
-        if(sdl_event_quit) {
-            if(client_windows.empty()) {
-                done = true;
-            } else {
-                ImGui::OpenPopup("Quit");
-                ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-            }
-            sdl_event_quit = false;
-        }
-
-        if(ImGui::BeginPopupModal("Quit")) {
-            ImGui::Text("Some connections are still open.\nAre you sure you want to quit?");
-            if(ImGui::Button("OK", ImVec2(64.0f * Boilerplate::get_scale(), 0.0f))) {
-                ImGui::CloseCurrentPopup();
-                done = true;
-            }
-            ImGui::SameLine();
-            if(ImGui::Button("Cancel", ImVec2(64.0f * Boilerplate::get_scale(), 0.0f))) {
-                ImGui::CloseCurrentPopup();
-            }
-            ImGui::EndPopup();
-        }
     }
 }
 
@@ -69,42 +43,48 @@ namespace GUI {
             return;
         }
 
-        bool sdl_event_quit { false };
-        Boilerplate::process_events(window, renderer, sdl_event_quit);
+        bool event_quit { false };
+        Boilerplate::process_events(window, renderer, event_quit);
         Boilerplate::start_new_frame();
 
-        Top top { settings_file };
-        bool reload { false };
-        ImGuiID top_id = top.draw(done, reload);
-        DockspaceIDs top_ids { split_left_center(top_id) };
+        Windows::PopupQueue popup_queue {};
+        Top top { settings_file};
+        const ImGuiID top_id { top.draw(event_quit) };
+        const DockspaceIDs top_ids { split_left_center(top_id) };
         std::vector<Windows::Client> client_windows;
 
-        Windows::BLE_Adapter ble_connector { shm, client_windows };
-        ble_connector.draw(top.menu_bar_enables.ble_adapter, top_ids.left);
-        Windows::Console console { top.menu_bar_enables.console };
-        std::jthread stdout_reader(
-            [](Windows::Console& console, std::shared_ptr<BLE_Client::SHM::SHM> shm) {
-                const auto ret { shm->console.read_for(std::chrono::milliseconds(1)) };
-                if(ret.has_value()) {
-                    console.log(ret.value());
-                }
-            },
-            std::ref(console),
-            shm
-        );
-        console.draw();
+        Windows::BLE_Adapter ble_adapter { shm, client_windows, popup_queue };
+        ble_adapter.draw(top.menu_bar_enables.ble_adapter, top_ids.left);
         Boilerplate::render(renderer);
 
-        bool reloaded { false };
         while(done == false) {
-            Boilerplate::process_events(window, renderer, sdl_event_quit);
-
+            Boilerplate::process_events(window, renderer, event_quit);
             Boilerplate::start_new_frame();
-            draw_quit_popup(sdl_event_quit, done, client_windows);
-            top_id = top.draw(done, reload);
+            top.draw(event_quit);
+
+            if(event_quit) {
+                if(client_windows.empty()) {
+                    done = true;
+                } else {
+                    popup_queue.push_back(
+                        "Quit",
+                        "",
+                        [&done, &popup_queue]() {
+                            ImGui::Text("Some connections are still open.\nAre you sure you want to quit?");
+                            if(ImGui::Button("OK", ImVec2(64.0f * Boilerplate::get_scale(), 0.0f))) {
+                                done = true;
+                                popup_queue.deactivate();
+                            }
+                            ImGui::SameLine();
+                            if(ImGui::Button("Cancel", ImVec2(64.0f * Boilerplate::get_scale(), 0.0f))) {
+                                popup_queue.deactivate();
+                            }
+                    });
+                }
+                event_quit = false;
+            }
             
-            ble_connector.draw(top.menu_bar_enables.ble_adapter, top_ids.left);
-            console.draw();
+            ble_adapter.draw(top.menu_bar_enables.ble_adapter, top_ids.left);
             for(size_t i = 0; i < client_windows.size(); i++) {
                 client_windows[i].draw(top_ids.center, top.menu_bar_enables);
             }
@@ -118,7 +98,7 @@ namespace GUI {
                     std::thread([](auto shm, const size_t index) {
                         shm->cmd.send(BLE_Client::StateMachines::Connection::Events::disconnect{ index });
                         std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
-                        shm->active_devices.erase(shm->active_devices.begin() + index);
+                        shm->active_devices->erase(shm->active_devices->begin() + index);
                     }, shm, e.index).detach();
                     return true;
                 })
@@ -129,33 +109,30 @@ namespace GUI {
             }
 
             if(top.menu_bar_enables.imgui_demo) {
-                ImGui::ShowDemoWindow();
+                ImGui::ShowDemoWindow(&top.menu_bar_enables.imgui_demo);
             }
 
             if(top.menu_bar_enables.implot_demo) {
-                ImPlot::ShowDemoWindow();
+                ImPlot::ShowDemoWindow(&top.menu_bar_enables.implot_demo);
+            }
+
+            if(popup_queue.empty() == false && popup_queue.active() == false) {
+                popup_queue.activate_front();
+            }
+
+            if(popup_queue.active()) {
+                popup_queue.show_active();
             }
 
             if(top.menu_bar_enables.implot_dense_test) {
                 ImPlotDenseTest::draw(top.menu_bar_enables.implot_dense_test);
             }
 
-            if(reloaded) {
-                reloaded = false;
-                Boilerplate::render_skip_frame(renderer);
-            } else {
-                Boilerplate::render(renderer);
-            }
-            
-            if(reload) {
-                reload = false;
-                Boilerplate::reload(window, renderer);
-                reloaded = true;
-            }
+            Boilerplate::render(renderer);
         }
         Boilerplate::shutdown(renderer, window);
 
-        for(size_t i = 0; i < shm->active_devices.size(); i++) {
+        for(size_t i = 0; i < shm->active_devices->size(); i++) {
             shm->cmd.send(BLE_Client::StateMachines::Connection::Events::disconnect{i});
         }
         shm->cmd.send_killer(BLE_Client::StateMachines::Killer::Events::kill{});

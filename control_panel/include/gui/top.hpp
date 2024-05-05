@@ -27,7 +27,6 @@ namespace GUI {
             bool measurement_plots { true };
             bool calibration_plots { true };
             bool auto_plots { true };
-            bool console { false };
             bool imgui_demo { false };
             bool implot_demo { false };
             bool implot_dense_test { false };
@@ -35,7 +34,7 @@ namespace GUI {
         MenuBarEnables menu_bar_enables {};
 
         Top(const ns::SettingsFile& settings_file);
-        ImGuiID draw(bool& done, bool& reload);
+        ImGuiID draw(bool& event_quit);
     private:
         struct PopupEnables {
             bool legal { true };

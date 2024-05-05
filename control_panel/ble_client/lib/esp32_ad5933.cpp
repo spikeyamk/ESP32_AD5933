@@ -117,7 +117,7 @@ namespace BLE_Client {
             static constexpr std::string_view TIME_UPDATE_CONTROL_POINT_UUID { "00002a16-0000-1000-8000-00805f9b34fb" };
             static constexpr std::string_view HID_INFORMATION_UUID { "00002a4a-0000-1000-8000-00805f9b34fb" };
 
-            static const auto is_characteristic_body_composition_measurement = [&](SimpleBLE::Characteristic &characteristic) {
+            static constexpr auto is_characteristic_body_composition_measurement = [&](SimpleBLE::Characteristic &characteristic) {
                 if(
                     (characteristic.uuid() == BODY_COMPOSITION_MEASUREMENT_UUID)
                     && characteristic.can_notify()
@@ -128,7 +128,7 @@ namespace BLE_Client {
                 }
             };
 
-            static const auto is_characteristic_body_composition_feature = [&](SimpleBLE::Characteristic &characteristic) {
+            static constexpr auto is_characteristic_body_composition_feature = [&](SimpleBLE::Characteristic &characteristic) {
                 if(
                     (characteristic.uuid() == BODY_COMPOSITION_FEATURE_UUID)
                     && characteristic.can_write_request()
@@ -139,7 +139,7 @@ namespace BLE_Client {
                 }
             };
 
-            static const auto is_time_update_control_point = [&](SimpleBLE::Characteristic &characteristic) {
+            static constexpr auto is_time_update_control_point = [&](SimpleBLE::Characteristic &characteristic) {
                 if(
                     (characteristic.uuid() == TIME_UPDATE_CONTROL_POINT_UUID)
                     && characteristic.can_write_request()
@@ -150,7 +150,7 @@ namespace BLE_Client {
                 }
             };
 
-            static const auto is_hid_information = [&](SimpleBLE::Characteristic &characteristic) {
+            static constexpr auto is_hid_information = [&](SimpleBLE::Characteristic &characteristic) {
                 if(
                     (characteristic.uuid() == HID_INFORMATION_UUID)
                     && characteristic.can_notify()
@@ -172,7 +172,7 @@ namespace BLE_Client {
 
             auto characteristics { it_service->characteristics() };
 
-            static const auto find_it_characteristic = [&](auto predicate) -> std::optional<std::vector<SimpleBLE::Characteristic>::iterator> {
+            const auto find_it_characteristic = [&](auto predicate) -> std::optional<std::vector<SimpleBLE::Characteristic>::iterator> {
                 const auto find_it = std::find_if(characteristics.begin(), characteristics.end(), [&](SimpleBLE::Characteristic& e) {
                     return predicate(e);
                 });

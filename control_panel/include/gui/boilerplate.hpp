@@ -22,6 +22,5 @@ namespace GUI {
         void render(SDL_Renderer* renderer);
         void shutdown(SDL_Renderer* renderer, SDL_Window* window);
         float get_scale();
-        int reload(SDL_Window* window, SDL_Renderer* renderer);
     }
 }

@@ -125,28 +125,28 @@ namespace GUI {
             }
 
             void Measurement::draw_periodic_raw_data() {
-                if(ImPlot::BeginPlot("Measurement Periodic Raw Real Data")) {
+                if(ImPlot::BeginPlot("Measurement Periodic Raw Real Data", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.periodic.raw) {
-                        ImPlot::SetupAxes("Time", "REAL_DATA", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("Time", "REAL_DATA [1/Ohm]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                     } else {
-                        ImPlot::SetupAxesLabels("Time", "REAL_DATA");
+                        ImPlot::SetupAxesLabels("Time", "REAL_DATA [1/Ohm]");
                     }
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
                     if(periodic_vectors.points.empty() == false) {
-                        ImPlot::PlotLine("REAL_DATA [1/Ohm]", periodic_vectors.time_points.data(), periodic_vectors.points[periodic_index_selects.raw].raw.real_data.data(), std::min(periodic_vectors.time_points.size(), periodic_vectors.points[periodic_index_selects.raw].raw.real_data.size()));
+                        ImPlot::PlotLine("REAL_DATA", periodic_vectors.time_points.data(), periodic_vectors.points[periodic_index_selects.raw].raw.real_data.data(), std::min(periodic_vectors.time_points.size(), periodic_vectors.points[periodic_index_selects.raw].raw.real_data.size()));
                     }
                     ImPlot::EndPlot();
                 }
-                if(ImPlot::BeginPlot("Measurement Perioidc Raw Imag Data")) {
+                if(ImPlot::BeginPlot("Measurement Perioidc Raw Imag Data", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.periodic.raw) {
-                        ImPlot::SetupAxes("Time", "IMAG_DATA", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("Time", "IMAG_DATA [1/Ohm]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                         firsts.periodic.raw = false;
                     } else {
-                        ImPlot::SetupAxesLabels("Time", "IMAG_DATA");
+                        ImPlot::SetupAxesLabels("Time", "IMAG_DATA [1/Ohm]");
                     }
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
                     if(periodic_vectors.points.empty() == false) {
-                        ImPlot::PlotLine("IMAG_DATA [1/Ohm]", periodic_vectors.time_points.data(), periodic_vectors.points[periodic_index_selects.raw].raw.imag_data.data(), std::min(periodic_vectors.time_points.size(), periodic_vectors.points[periodic_index_selects.raw].raw.imag_data.size()));
+                        ImPlot::PlotLine("IMAG_DATA", periodic_vectors.time_points.data(), periodic_vectors.points[periodic_index_selects.raw].raw.imag_data.data(), std::min(periodic_vectors.time_points.size(), periodic_vectors.points[periodic_index_selects.raw].raw.imag_data.size()));
                     }
                     ImPlot::EndPlot();
                 }
@@ -183,28 +183,28 @@ namespace GUI {
             }
 
             void Measurement::draw_periodic_calculated_data() {
-                if(ImPlot::BeginPlot("Measurement Periodic Calculated Magnitude")) {
+                if(ImPlot::BeginPlot("Measurement Periodic Calculated Magnitude", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.periodic.calculated) {
-                        ImPlot::SetupAxes("Time", "RAW_MAGNITUDE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("Time", "RAW_MAGNITUDE [1/Ohm]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                     } else {
-                        ImPlot::SetupAxesLabels("Time", "RAW_MAGNITUDE");
+                        ImPlot::SetupAxesLabels("Time", "RAW_MAGNITUDE [1/Ohm]");
                     }
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
                     if(periodic_vectors.points.empty() == false) {
-                        ImPlot::PlotLine("RAW_MAGNITUDE [1/Ohm]", periodic_vectors.time_points.data(), periodic_vectors.points[periodic_index_selects.calculated].raw.magnitude.data(), std::min(periodic_vectors.time_points.size(), periodic_vectors.points[periodic_index_selects.calculated].raw.magnitude.size()));
+                        ImPlot::PlotLine("RAW_MAGNITUDE", periodic_vectors.time_points.data(), periodic_vectors.points[periodic_index_selects.calculated].raw.magnitude.data(), std::min(periodic_vectors.time_points.size(), periodic_vectors.points[periodic_index_selects.calculated].raw.magnitude.size()));
                     }
                     ImPlot::EndPlot();
                 }
-                if(ImPlot::BeginPlot("Measurement Periodic Calculated Phase")) {
+                if(ImPlot::BeginPlot("Measurement Periodic Calculated Phase", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.periodic.calculated) {
-                        ImPlot::SetupAxes("Time", "RAW_PHASE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("Time", "RAW_Phase [rad]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                         firsts.periodic.calculated = false;
                     } else {
-                        ImPlot::SetupAxesLabels("Time", "RAW_PHASE");
+                        ImPlot::SetupAxesLabels("Time", "RAW_Phase [rad]");
                     }
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
                     if(periodic_vectors.points.empty() == false) {
-                        ImPlot::PlotLine("RAW_PHASE [rad]", periodic_vectors.time_points.data(), periodic_vectors.points[periodic_index_selects.calculated].raw.phase.data(), std::min(periodic_vectors.time_points.size(), periodic_vectors.points[periodic_index_selects.calculated].raw.phase.size()));
+                        ImPlot::PlotLine("RAW_Phase", periodic_vectors.time_points.data(), periodic_vectors.points[periodic_index_selects.calculated].raw.phase.data(), std::min(periodic_vectors.time_points.size(), periodic_vectors.points[periodic_index_selects.calculated].raw.phase.size()));
                     }
                     ImPlot::EndPlot();
                 }
@@ -241,29 +241,29 @@ namespace GUI {
             }
 
             void Measurement::draw_periodic_corrected_gon_data() {
-                if(ImPlot::BeginPlot("Measurement Periodic Corrected Impedance")) {
+                if(ImPlot::BeginPlot("Measurement Periodic Corrected Impedance", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.periodic.corrected_gon) {
-                        ImPlot::SetupAxes("Time", "IMPEDANCE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("Time", "Impedance [Ohm]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                     } else {
-                        ImPlot::SetupAxesLabels("Time", "IMPEDANCE");
+                        ImPlot::SetupAxesLabels("Time", "Impedance [Ohm]");
                     }
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
                     if(periodic_vectors.points.empty() == false) {
-                        ImPlot::PlotLine("IMPEDANCE [Ohm]", periodic_vectors.time_points.data(), periodic_vectors.points[periodic_index_selects.corrected_gon].corrected.impedance.data(), std::min(periodic_vectors.time_points.size(), periodic_vectors.points[periodic_index_selects.corrected_gon].corrected.impedance.size()));
+                        ImPlot::PlotLine("Impedance [Ohm]", periodic_vectors.time_points.data(), periodic_vectors.points[periodic_index_selects.corrected_gon].corrected.impedance.data(), std::min(periodic_vectors.time_points.size(), periodic_vectors.points[periodic_index_selects.corrected_gon].corrected.impedance.size()));
                     }
                     ImPlot::EndPlot();
                 }
-                if(ImPlot::BeginPlot("Measurement Periodic Corrected Phase")) {
+                if(ImPlot::BeginPlot("Measurement Periodic Corrected Phase", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.periodic.corrected_gon) {
-                        ImPlot::SetupAxes("Time", "PHASE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("Time", "Phase [rad]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                         firsts.periodic.corrected_gon = false;
                     } else {
-                        ImPlot::SetupAxesLabels("Time", "PHASE");
+                        ImPlot::SetupAxesLabels("Time", "Phase [rad]");
                     }
 
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
                     if(periodic_vectors.points.empty() == false) {
-                        ImPlot::PlotLine("PHASE [rad]", periodic_vectors.time_points.data(), periodic_vectors.points[periodic_index_selects.corrected_gon].corrected.phase.data(), std::min(periodic_vectors.time_points.size(), periodic_vectors.points[periodic_index_selects.corrected_gon].corrected.phase.size()));
+                        ImPlot::PlotLine("Phase", periodic_vectors.time_points.data(), periodic_vectors.points[periodic_index_selects.corrected_gon].corrected.phase.data(), std::min(periodic_vectors.time_points.size(), periodic_vectors.points[periodic_index_selects.corrected_gon].corrected.phase.size()));
                     }
                     ImPlot::EndPlot();
                 }
@@ -300,29 +300,29 @@ namespace GUI {
             }
 
             void Measurement::draw_periodic_corrected_alg_data() {
-                if(ImPlot::BeginPlot("Measurement Periodic Resistance Data")) {
+                if(ImPlot::BeginPlot("Measurement Periodic Resistance Data", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.periodic.corrected_alg) {
-                        ImPlot::SetupAxes("Time", "RESISTANCE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("Time", "Resistance [Ohm]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                     } else {
-                        ImPlot::SetupAxesLabels("Time", "RESISTANCE");
+                        ImPlot::SetupAxesLabels("Time", "Resistance [Ohm]");
                     }
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
                     if(periodic_vectors.points.empty() == false) {
-                        ImPlot::PlotLine("RESISTANCE [Ohm]", periodic_vectors.time_points.data(), periodic_vectors.points[periodic_index_selects.corrected_alg].corrected.resistance.data(), std::min(periodic_vectors.time_points.size(), periodic_vectors.points[periodic_index_selects.corrected_alg].corrected.resistance.size()));
+                        ImPlot::PlotLine("Resistance", periodic_vectors.time_points.data(), periodic_vectors.points[periodic_index_selects.corrected_alg].corrected.resistance.data(), std::min(periodic_vectors.time_points.size(), periodic_vectors.points[periodic_index_selects.corrected_alg].corrected.resistance.size()));
                     }
                     ImPlot::EndPlot();
                 }
-                if(ImPlot::BeginPlot("Measurement Periodic Reactance Data")) {
+                if(ImPlot::BeginPlot("Measurement Periodic Reactance Data", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.periodic.corrected_alg) {
-                        ImPlot::SetupAxes("Time", "REACTANCE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("Time", "Reactance [Ohm]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                         firsts.periodic.corrected_alg = false;
                     } else {
-                        ImPlot::SetupAxesLabels("Time", "REACTANCE");
+                        ImPlot::SetupAxesLabels("Time", "Reactance [Ohm]");
                     }
 
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
                     if(periodic_vectors.points.empty() == false) {
-                        ImPlot::PlotLine("REACTANCE [Ohm]", periodic_vectors.time_points.data(), periodic_vectors.points[periodic_index_selects.corrected_alg].corrected.reactance.data(), std::min(periodic_vectors.time_points.size(), periodic_vectors.points[periodic_index_selects.corrected_alg].corrected.reactance.size()));
+                        ImPlot::PlotLine("Reactance", periodic_vectors.time_points.data(), periodic_vectors.points[periodic_index_selects.corrected_alg].corrected.reactance.data(), std::min(periodic_vectors.time_points.size(), periodic_vectors.points[periodic_index_selects.corrected_alg].corrected.reactance.size()));
                     }
                     ImPlot::EndPlot();
                 }
@@ -427,24 +427,24 @@ namespace GUI {
             }
 
             void Measurement::draw_single_raw_data() {
-                if(ImPlot::BeginPlot("Measurement Single Raw Real Data")) {
+                if(ImPlot::BeginPlot("Measurement Single Raw Real Data", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.single.raw) {
-                        ImPlot::SetupAxes("f [Hz]", "REAL_DATA", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("f [Hz]", "Real Data [1/Ohm]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                     } else {
-                        ImPlot::SetupAxesLabels("f [Hz]", "REAL_DATA");
+                        ImPlot::SetupAxesLabels("f [Hz]", "Real Data [1/Ohm]");
                     }
-                    ImPlot::PlotLine("REAL_DATA [1/Ohm]", single_vectors.freq.data(), single_vectors.raw.real_data.data(), std::min(single_vectors.freq.size(), single_vectors.raw.real_data.size()));
+                    ImPlot::PlotLine("Real Data", single_vectors.freq.data(), single_vectors.raw.real_data.data(), std::min(single_vectors.freq.size(), single_vectors.raw.real_data.size()));
                     ImPlot::EndPlot();
                 }
-                if(ImPlot::BeginPlot("Measurement Single Raw Imag Data")) {
+                if(ImPlot::BeginPlot("Measurement Single Raw Imag Data", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.single.raw) {
-                        ImPlot::SetupAxes("f [Hz]", "IMAG_DATA", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("f [Hz]", "Imag Data [1/Ohm]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                         firsts.single.raw = false;
                     } else {
-                        ImPlot::SetupAxesLabels("f [Hz]", "IMAG_DATA");
+                        ImPlot::SetupAxesLabels("f [Hz]", "Imag Data [1/Ohm]");
                     }
 
-                    ImPlot::PlotLine("IMAG_DATA [1/Ohm]", single_vectors.freq.data(), single_vectors.raw.imag_data.data(), std::min(single_vectors.freq.size(), single_vectors.raw.imag_data.size()));
+                    ImPlot::PlotLine("Imag Data", single_vectors.freq.data(), single_vectors.raw.imag_data.data(), std::min(single_vectors.freq.size(), single_vectors.raw.imag_data.size()));
                     ImPlot::EndPlot();
                 }
 
@@ -462,25 +462,25 @@ namespace GUI {
             }
 
             void Measurement::draw_single_calculated_data() {
-                if(ImPlot::BeginPlot("Measurement Calculated Magnitude")) {
+                if(ImPlot::BeginPlot("Measurement Calculated Magnitude", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.single.calculated) {
-                        ImPlot::SetupAxes("f [Hz]", "RAW_MAGNITUDE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("f [Hz]", "Raw Magnitude [1/Ohm]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                     } else {
-                        ImPlot::SetupAxesLabels("f [Hz]", "RAW_MAGNITUDE");
+                        ImPlot::SetupAxesLabels("f [Hz]", "Raw Magnitude [1/Ohm]");
                     }
 
-                    ImPlot::PlotLine("RAW_MAGNITUDE [1/Ohm]", single_vectors.freq.data(), single_vectors.raw.magnitude.data(), std::min(single_vectors.freq.size(), single_vectors.raw.magnitude.size()));
+                    ImPlot::PlotLine("Raw Magnitude", single_vectors.freq.data(), single_vectors.raw.magnitude.data(), std::min(single_vectors.freq.size(), single_vectors.raw.magnitude.size()));
                     ImPlot::EndPlot();
                 }
-                if(ImPlot::BeginPlot("Measurement Calculated Phase")) {
+                if(ImPlot::BeginPlot("Measurement Calculated Phase", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.single.calculated) {
-                        ImPlot::SetupAxes("f [Hz]", "RAW_PHASE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("f [Hz]", "Raw Phase [rad]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                         firsts.single.calculated = false;
                     } else {
-                        ImPlot::SetupAxesLabels("f [Hz]", "RAW_PHASE");
+                        ImPlot::SetupAxesLabels("f [Hz]", "Raw Phase [rad]");
                     }
 
-                    ImPlot::PlotLine("RAW_PHASE [rad]", single_vectors.freq.data(), single_vectors.raw.phase.data(), std::min(single_vectors.freq.size(), single_vectors.raw.phase.size()));
+                    ImPlot::PlotLine("Raw Phase", single_vectors.freq.data(), single_vectors.raw.phase.data(), std::min(single_vectors.freq.size(), single_vectors.raw.phase.size()));
                     ImPlot::EndPlot();
                 }
 
@@ -498,25 +498,25 @@ namespace GUI {
             }
 
             void Measurement::draw_single_corrected_gon_data() {
-                if(ImPlot::BeginPlot("Measurement Single Corrected Impedance")) {
+                if(ImPlot::BeginPlot("Measurement Single Corrected Impedance", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.single.corrected_gon) {
-                        ImPlot::SetupAxes("f [Hz]", "IMPEDANCE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("f [Hz]", "Impedance [Ohm]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                     } else {
-                        ImPlot::SetupAxesLabels("f [Hz]", "IMPEDANCE");
+                        ImPlot::SetupAxesLabels("f [Hz]", "Impedance [Ohm]");
                     }
 
-                    ImPlot::PlotLine("IMPEDANCE [Ohm]", single_vectors.freq.data(), single_vectors.corrected.impedance.data(), std::min(single_vectors.freq.size(), single_vectors.corrected.impedance.size()));
+                    ImPlot::PlotLine("Impedance", single_vectors.freq.data(), single_vectors.corrected.impedance.data(), std::min(single_vectors.freq.size(), single_vectors.corrected.impedance.size()));
                     ImPlot::EndPlot();
                 }
-                if(ImPlot::BeginPlot("Measurement Single Calculated Phase")) {
+                if(ImPlot::BeginPlot("Measurement Single Calculated Phase", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.single.corrected_gon) {
-                        ImPlot::SetupAxes("f [Hz]", "PHASE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("f [Hz]", "Phase [rad]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                         firsts.single.corrected_gon = false;
                     } else {
-                        ImPlot::SetupAxesLabels("f [Hz]", "PHASE");
+                        ImPlot::SetupAxesLabels("f [Hz]", "Phase [rad]");
                     }
 
-                    ImPlot::PlotLine("PHASE [rad]", single_vectors.freq.data(), single_vectors.corrected.phase.data(), std::min(single_vectors.freq.size(), single_vectors.corrected.phase.size()));
+                    ImPlot::PlotLine("Phase", single_vectors.freq.data(), single_vectors.corrected.phase.data(), std::min(single_vectors.freq.size(), single_vectors.corrected.phase.size()));
                     ImPlot::EndPlot();
                 }
 
@@ -534,25 +534,25 @@ namespace GUI {
             }
 
             void Measurement::draw_single_corrected_alg_data() {
-                if(ImPlot::BeginPlot("Measurement Single Corrected Resistance")) {
+                if(ImPlot::BeginPlot("Measurement Single Corrected Resistance", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.single.corrected_alg) {
-                        ImPlot::SetupAxes("f [Hz]", "RESISTANCE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("f [Hz]", "Resistance [Ohm]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                     } else {
-                        ImPlot::SetupAxesLabels("f [Hz]", "RESISTANCE");
+                        ImPlot::SetupAxesLabels("f [Hz]", "Resistance [Ohm]");
                     }
 
-                    ImPlot::PlotLine("RESISTANCE [Ohm]", single_vectors.freq.data(), single_vectors.corrected.resistance.data(), std::min(single_vectors.freq.size(), single_vectors.corrected.resistance.size()));
+                    ImPlot::PlotLine("Resistance", single_vectors.freq.data(), single_vectors.corrected.resistance.data(), std::min(single_vectors.freq.size(), single_vectors.corrected.resistance.size()));
                     ImPlot::EndPlot();
                 }
-                if(ImPlot::BeginPlot("Measurement Single Corrected Reactance")) {
+                if(ImPlot::BeginPlot("Measurement Single Corrected Reactance", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.single.corrected_alg) {
-                        ImPlot::SetupAxes("f [Hz]", "REACTANCE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("f [Hz]", "Reactance [Ohm]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                         firsts.single.corrected_alg = false;
                     } else {
-                        ImPlot::SetupAxesLabels("f [Hz]", "REACTANCE");
+                        ImPlot::SetupAxesLabels("f [Hz]", "Reactance [Ohm]");
                     }
 
-                    ImPlot::PlotLine("REACTANCE [Ohm]", single_vectors.freq.data(), single_vectors.corrected.reactance.data(), std::min(single_vectors.freq.size(), single_vectors.corrected.reactance.size()));
+                    ImPlot::PlotLine("Reactance", single_vectors.freq.data(), single_vectors.corrected.reactance.data(), std::min(single_vectors.freq.size(), single_vectors.corrected.reactance.size()));
                     ImPlot::EndPlot();
                 }
 

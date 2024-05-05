@@ -7,14 +7,13 @@ namespace BLE_Client {
         BLE_Client::StateMachines::Killer::T_StateMachine& killer,
         BLE_Client::StateMachines::Adapter::T_StateMachine& adapter_sm,
         std::vector<BLE_Client::StateMachines::Connection::Dummy*>& connections,
-        SimpleBLE::Adapter& simpleble_adapter,
-        BLE_Client::StateMachines::Connector::T_StateMachine& connector
+        SimpleBLE::Adapter& simpleble_adapter
     ) {
         std::stop_token st { stop_source.get_token() };
         while(st.stop_requested() == false) {
             const auto read { shm->cmd.read() };
 
-            std::visit([&killer, &adapter_sm, &connections, shm, &simpleble_adapter, &connector](auto&& event_variant) {
+            std::visit([&killer, &adapter_sm, &connections, shm, &simpleble_adapter](auto&& event_variant) {
                 using T_EventVariantDecay = std::decay_t<decltype(event_variant)>;
                 if constexpr (std::is_same_v<T_EventVariantDecay, BLE_Client::StateMachines::Killer::Events::T_Variant>) {
                     std::visit([&killer](auto&& event) {
@@ -24,8 +23,6 @@ namespace BLE_Client {
                     std::visit([&adapter_sm](auto&& event) {
                         adapter_sm.process_event(event);
                     }, event_variant);
-                } else if constexpr (std::is_same_v<T_EventVariantDecay, BLE_Client::StateMachines::Connector::Events::connect>) {
-                    connector.process_event(event_variant);
                 } else if constexpr (std::is_same_v<T_EventVariantDecay, BLE_Client::StateMachines::Connection::Events::T_Variant>) {
                     std::visit([&connections](auto&& event) {
                         using T_EventDecay = std::decay_t<decltype(event)>;

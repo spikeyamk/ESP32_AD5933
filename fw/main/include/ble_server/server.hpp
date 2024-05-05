@@ -13,7 +13,6 @@
 #include <memory>
 
 #include <boost/sml.hpp>
-#include <freertos/semphr.h>
 #include <driver/i2c_master.h>
 
 #include "ad5933/extension/extension.hpp"
@@ -40,8 +39,6 @@ namespace BLE {
 
     namespace Server {
         class Sender {
-		private:
-			//SemaphoreHandle_t sem { xSemaphoreCreateCounting(10, 10) };
         public:
             std::mutex mutex;
             Sender() = default;
@@ -49,20 +46,14 @@ namespace BLE {
 			template<typename T_OutComingPacket>
 			inline bool notify_hid_information(const T_OutComingPacket& event) {
 				auto tmp_array { Magic::Results::Serializer::run(event) };
-				//xSemaphoreTake(sem, portMAX_DELAY);
 				return BLE::Server::notify_hid_information(std::span(tmp_array.begin(), tmp_array.end()));
             }
 
 			template<typename T_OutComingPacket>
 			inline bool notify_body_composition_measurement(const T_OutComingPacket& event) {
 				auto tmp_array { Magic::Results::Serializer::run(event) };
-				//xSemaphoreTake(sem, portMAX_DELAY);
 				return BLE::Server::notify_body_composition_measurement(std::span(tmp_array.begin(), tmp_array.end()));
             }
-
-			inline void release() {
-				//xSemaphoreGive(sem);
-			}
         };
     }
 

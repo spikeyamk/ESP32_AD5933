@@ -10,6 +10,7 @@
 #include "ble_client/shm/shm.hpp"
 #include "magic/results/results.hpp"
 #include "gui/windows/client/lock.hpp"
+#include "gui/windows/popup_queue.hpp"
 #include "misc/channel.hpp"
 
 namespace GUI {
@@ -22,6 +23,8 @@ namespace GUI {
             size_t index;
             std::u8string name { name_base };
             std::shared_ptr<BLE_Client::SHM::SHM> shm { nullptr };
+            PopupQueue* popup_queue { nullptr };
+            std::string address;
         public:
             enum class Status {
                 Off,
@@ -55,22 +58,6 @@ namespace GUI {
                 CreateTestFiles,
             };
             Error error { Error::Off };
-            enum class PopupShows {
-                Off,
-                Format,
-                Remove,
-            };
-            PopupShows popup_shows { PopupShows::Off };
-            struct Popup {
-                bool shown { false };
-                std::string name;
-                std::string content;
-                Popup(const std::string& name, const std::string& content) :
-                    name { name },
-                    content { content }
-                {}
-            };
-            std::optional<Popup> popup { std::nullopt };
         private:
             struct ListTable {
                 std::vector<Magic::Results::File::List> paths;
@@ -79,8 +66,14 @@ namespace GUI {
             ListTable list_table {};
             std::optional<size_t> selected { std::nullopt };
             struct Bytes {
-                uint64_t used { 0 };
                 uint64_t total { 0 };
+                uint64_t used { 0 };
+                uint64_t free { 0 };
+                inline void update(const Magic::Results::File::Free& free_result) {
+                    total = free_result.total_bytes;
+                    used = free_result.used_bytes;
+                    free = total - used;
+                }
             };
             Bytes bytes {};
             float progress_bar_fraction { 0.0f };
@@ -95,7 +88,7 @@ namespace GUI {
             std::shared_ptr<Channel<Point>> send_points { std::make_shared<Channel<Point>>() };
             std::shared_ptr<Channel<Point>> save_points { std::make_shared<Channel<Point>>() };
             Auto() = default;
-            Auto(const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> shm);
+            Auto(const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> shm, PopupQueue* popup_queue, const std::string& address);
             ~Auto();
             void draw(bool &enable, const ImGuiID side_id, Lock& lock);
         private:
@@ -109,7 +102,7 @@ namespace GUI {
         private:
             void draw_list_table();
             void draw_list_table_rows();
-            void draw_popups();
+            void draw_bytes_table();
             void list();
             void remove();
             void download();

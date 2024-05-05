@@ -83,26 +83,26 @@ namespace GUI {
             }
 
             void Auto::draw_send_corrected_gon_data() {
-                if(ImPlot::BeginPlot("Auto Send Measurement Corrected Data")) {
+                if(ImPlot::BeginPlot("Auto Send Measurement Corrected Data", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.send.corrected_gon) {
-                        ImPlot::SetupAxes("Time", "IMPEDANCE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("Time", "Impedance [Ohm]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                     } else {
-                        ImPlot::SetupAxesLabels("Time", "IMPEDANCE");
+                        ImPlot::SetupAxesLabels("Time", "Impedance [Ohm]");
                     }
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
-                    ImPlot::PlotLine("IMPEDANCE [Ohm]", send_vectors.time.data(), send_vectors.impedance.data(), std::min(send_vectors.time.size(), send_vectors.impedance.size()));
+                    ImPlot::PlotLine("Impedance", send_vectors.time.data(), send_vectors.impedance.data(), std::min(send_vectors.time.size(), send_vectors.impedance.size()));
                     ImPlot::EndPlot();
                 }
 
-                if(ImPlot::BeginPlot("Auto Send Measurement Calculated Phase")) {
+                if(ImPlot::BeginPlot("Auto Send Measurement Calculated Phase", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.send.corrected_gon) {
-                        ImPlot::SetupAxes("Time", "PHASE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("Time", "Phase [rad]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                         firsts.send.corrected_gon = false;
                     } else {
-                        ImPlot::SetupAxesLabels("Time", "PHASE");
+                        ImPlot::SetupAxesLabels("Time", "Phase [rad]");
                     }
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
-                    ImPlot::PlotLine("PHASE [rad]", send_vectors.time.data(), send_vectors.phase.data(), std::min(send_vectors.time.size(), send_vectors.phase.size()));
+                    ImPlot::PlotLine("Phase", send_vectors.time.data(), send_vectors.phase.data(), std::min(send_vectors.time.size(), send_vectors.phase.size()));
                     ImPlot::EndPlot();
                 }
 
@@ -120,26 +120,26 @@ namespace GUI {
             }
 
             void Auto::draw_send_corrected_alg_data() {
-                if(ImPlot::BeginPlot("Auto Send Measurement Resistance Data")) {
+                if(ImPlot::BeginPlot("Auto Send Measurement Resistance Data", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.send.corrected_alg) {
-                        ImPlot::SetupAxes("Time", "RESISTANCE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("Time", "Resistance [Ohm]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                     } else {
-                        ImPlot::SetupAxesLabels("Time", "RESISTANCE");
+                        ImPlot::SetupAxesLabels("Time", "Resistance [Ohm]");
                     }
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
-                    ImPlot::PlotLine("RESISTANCE [Ohm]", send_vectors.time.data(), send_vectors.resistance.data(), std::min(send_vectors.time.size(), send_vectors.resistance.size()));
+                    ImPlot::PlotLine("Resistance", send_vectors.time.data(), send_vectors.resistance.data(), std::min(send_vectors.time.size(), send_vectors.resistance.size()));
                     ImPlot::EndPlot();
                 }
 
-                if(ImPlot::BeginPlot("Auto Send Measurement Reactance Data")) {
+                if(ImPlot::BeginPlot("Auto Send Measurement Reactance Data", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.send.corrected_alg) {
-                        ImPlot::SetupAxes("Time", "REACTANCE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("Time", "Reactance [Ohm]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                         firsts.send.corrected_alg = false;
                     } else {
-                        ImPlot::SetupAxesLabels("Time", "REACTANCE");
+                        ImPlot::SetupAxesLabels("Time", "Reactance [Ohm]");
                     }
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
-                    ImPlot::PlotLine("REACTANCE [Ohm]", send_vectors.time.data(), send_vectors.reactance.data(), std::min(send_vectors.time.size(), send_vectors.reactance.size()));
+                    ImPlot::PlotLine("Reactance", send_vectors.time.data(), send_vectors.reactance.data(), std::min(send_vectors.time.size(), send_vectors.reactance.size()));
                     ImPlot::EndPlot();
                 }
 
@@ -155,33 +155,36 @@ namespace GUI {
                     ns::save_to_fs(graph_file);
                 }
             }
+
+            void Auto::clear_save_vectors() {
+                save_vectors = Vectors {};
+            }
         
             void Auto::update_save_vectors(const Windows::Auto::Point& save_point) {
-                save_vectors = Vectors {};
                 update_vectors(save_point, save_vectors);
             }
 
             void Auto::draw_save_corrected_gon_data() {
-                if(ImPlot::BeginPlot("Auto Save Measurement Corrected Data")) {
+                if(ImPlot::BeginPlot("Auto Save Measurement Corrected Data", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.save.corrected_gon) {
-                        ImPlot::SetupAxes("Time", "IMPEDANCE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("Time", "Impedance [Ohm]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                     } else {
-                        ImPlot::SetupAxesLabels("Time", "IMPEDANCE");
+                        ImPlot::SetupAxesLabels("Time", "Impedance [Ohm]");
                     }
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
-                    ImPlot::PlotLine("IMPEDANCE [Ohm]", save_vectors.time.data(), save_vectors.impedance.data(), std::min(save_vectors.time.size(), save_vectors.impedance.size()));
+                    ImPlot::PlotLine("Impedance", save_vectors.time.data(), save_vectors.impedance.data(), std::min(save_vectors.time.size(), save_vectors.impedance.size()));
                     ImPlot::EndPlot();
                 }
 
-                if(ImPlot::BeginPlot("Auto Save Measurement Calculated Phase")) {
+                if(ImPlot::BeginPlot("Auto Save Measurement Calculated Phase", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.save.corrected_gon) {
-                        ImPlot::SetupAxes("Time", "PHASE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("Time", "Phase [rad]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                         firsts.save.corrected_gon = false;
                     } else {
-                        ImPlot::SetupAxesLabels("Time", "PHASE");
+                        ImPlot::SetupAxesLabels("Time", "Phase [rad]");
                     }
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
-                    ImPlot::PlotLine("PHASE [rad]", save_vectors.time.data(), save_vectors.phase.data(), std::min(save_vectors.time.size(), save_vectors.phase.size()));
+                    ImPlot::PlotLine("Phase", save_vectors.time.data(), save_vectors.phase.data(), std::min(save_vectors.time.size(), save_vectors.phase.size()));
                     ImPlot::EndPlot();
                 }
 
@@ -199,26 +202,26 @@ namespace GUI {
             }
 
             void Auto::draw_save_corrected_alg_data() {
-                if(ImPlot::BeginPlot("Auto Save Measurement Resistance Data")) {
+                if(ImPlot::BeginPlot("Auto Save Measurement Resistance Data", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.save.corrected_alg) {
-                        ImPlot::SetupAxes("Time", "RESISTANCE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("Time", "Resistance [Ohm]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                     } else {
-                        ImPlot::SetupAxesLabels("Time", "RESISTANCE");
+                        ImPlot::SetupAxesLabels("Time", "Resistance [Ohm]");
                     }
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
-                    ImPlot::PlotLine("RESISTANCE [Ohm]", save_vectors.time.data(), save_vectors.resistance.data(), std::min(save_vectors.time.size(), save_vectors.resistance.size()));
+                    ImPlot::PlotLine("Resistance", save_vectors.time.data(), save_vectors.resistance.data(), std::min(save_vectors.time.size(), save_vectors.resistance.size()));
                     ImPlot::EndPlot();
                 }
 
-                if(ImPlot::BeginPlot("Auto Save Measurement Reactance Data")) {
+                if(ImPlot::BeginPlot("Auto Save Measurement Reactance Data", ImVec2(-1, 0), ImPlotFlags_NoLegend)) {
                     if(firsts.save.corrected_alg) {
-                        ImPlot::SetupAxes("Time", "REACTANCE", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+                        ImPlot::SetupAxes("Time", "Reactance [Ohm]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
                         firsts.save.corrected_alg = false;
                     } else {
-                        ImPlot::SetupAxesLabels("Time", "REACTANCE");
+                        ImPlot::SetupAxesLabels("Time", "Reactance [Ohm]");
                     }
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
-                    ImPlot::PlotLine("REACTANCE [Ohm]", save_vectors.time.data(), save_vectors.reactance.data(), std::min(save_vectors.time.size(), save_vectors.reactance.size()));
+                    ImPlot::PlotLine("Reactance", save_vectors.time.data(), save_vectors.reactance.data(), std::min(save_vectors.time.size(), save_vectors.reactance.size()));
                     ImPlot::EndPlot();
                 }
 

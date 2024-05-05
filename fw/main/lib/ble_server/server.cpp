@@ -132,7 +132,7 @@ namespace BLE {
                 break;
             case BLE_GAP_EVENT_NOTIFY_TX:
                 if((event->notify_tx.status == 0) || (event->notify_tx.status == BLE_HS_EDONE)) {
-                    sender->release();
+                    //sender->release();
                 }
                 break;
             case BLE_GAP_EVENT_NOTIFY_RX:

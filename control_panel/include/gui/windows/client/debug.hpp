@@ -20,6 +20,7 @@
 
 #include "ble_client/shm/shm.hpp"
 #include "gui/windows/client/lock.hpp"
+#include "gui/windows/popup_queue.hpp"
 
 namespace GUI {
     namespace Windows {
@@ -176,8 +177,10 @@ namespace GUI {
         private:
             bool first { true };
             size_t index;
-            std::string name {  name_base };
+            std::string name { name_base };
             std::shared_ptr<BLE_Client::SHM::SHM> shm { nullptr };
+            std::string address;
+            PopupQueue* popup_queue { nullptr };
         public:
             enum class Status {
                 NotDumped,
@@ -189,7 +192,7 @@ namespace GUI {
         public:
             Status get_status() const;
             Debug() = default;
-            Debug(const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> shm);
+            Debug(const size_t index, std::shared_ptr<BLE_Client::SHM::SHM> shm, PopupQueue* popup_queue, const std::string& address);
             void draw(bool &enable, const ImGuiID side_id, const Lock lock);
         private:
             void draw_inner();

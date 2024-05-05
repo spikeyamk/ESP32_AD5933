@@ -10,9 +10,10 @@
 
 namespace GUI {
     namespace Windows {
-        BLE_Adapter::BLE_Adapter(std::shared_ptr<BLE_Client::SHM::SHM> shm, std::vector<Windows::Client>& client_windows) :
+        BLE_Adapter::BLE_Adapter(std::shared_ptr<BLE_Client::SHM::SHM> shm, std::vector<Windows::Client>& client_windows, PopupQueue& popup_queue) :
             shm { shm },
-            client_windows { client_windows }
+            client_windows { client_windows },
+            popup_queue { popup_queue }
         {
             shm->cmd.send_adapter(BLE_Client::StateMachines::Adapter::Events::turn_on{});
             validate_start_attempt();
@@ -27,7 +28,7 @@ namespace GUI {
                     } else {
                         if(variant_tester<BLE_Client::StateMachines::Adapter::States::off>(self.shm->active_state)) {
                             first = true;
-                            self.show_ble_off_error_pop_up = true;
+                            self.popup_queue.push_back("Error", "bluetooth_was_turned_off");
                         }
                     }
                     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -67,7 +68,6 @@ namespace GUI {
                         validate_start_attempt();
                     }
                 } else {
-                    static bool connecting = false;
                     if(
                         shm->discovery_devices.empty() == false
                         && selected.has_value()
@@ -85,24 +85,24 @@ namespace GUI {
                     ) {
                         if(ImGui::Button("Connect", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f))) {
                             connecting = true;
-                            const BLE_Client::StateMachines::Connector::Events::connect connect_event { shm->discovery_devices.at(selected.value()).get_address() };
-                            std::jthread t1([](std::stop_token st, std::shared_ptr<BLE_Client::SHM::SHM> shm, const BLE_Client::StateMachines::Connector::Events::connect connect_event, bool& connecting, std::vector<Windows::Client>& client_windows, bool& show_connection_attempt_timeout_error_pop_up) {
-                                const size_t size_before { shm->active_devices.size() };
-                                shm->cmd.send(connect_event);
-                                for(size_t i = 0, timeout_ms = 25'000; i < timeout_ms; i++) {
+                            const BLE_Client::StateMachines::Adapter::Events::connect connect_event { shm->discovery_devices.at(selected.value()).get_address() };
+                            std::jthread t1([](std::stop_token st, BLE_Adapter& self, const BLE_Client::StateMachines::Adapter::Events::connect connect_event) {
+                                const size_t size_before { self.shm->active_devices->size() };
+                                self.shm->cmd.send(connect_event);
+                                for(size_t i = 0, timeout_ms = 30'000; i < timeout_ms; i++) {
                                     if(st.stop_requested()) {
                                         return;
                                     }
-                                    if(shm->active_devices.size() != size_before) {
-                                        client_windows.push_back(std::move(Windows::Client{std::string(connect_event.get_address()), client_windows.size(), shm }));
-                                        connecting = false;
+                                    if(self.shm->active_devices->size() != size_before) {
+                                        self.client_windows.push_back(std::move(Windows::Client{std::string(connect_event.get_address()), self.client_windows.size(), self.shm, &self.popup_queue }));
+                                        self.connecting = false;
                                         return;
                                     }
                                     std::this_thread::sleep_for(std::chrono::milliseconds(1));
                                 }
-                                show_connection_attempt_timeout_error_pop_up = true;
-                                connecting = false;
-                            }, shm, connect_event, std::ref(connecting), std::ref(client_windows), std::ref(show_connection_attempt_timeout_error_pop_up));
+                                self.popup_queue.push_back("Error", std::string(connect_event.get_address()).append(" connect_timeout"));
+                                self.connecting = false;
+                            }, std::ref(*this), connect_event);
                             t1.detach();
                             stop_sources.push_back(t1.get_stop_source());
                         }
@@ -110,47 +110,15 @@ namespace GUI {
                         show_disabled_connect_button();
                         ImGui::SameLine();
                         const float scale = GUI::Boilerplate::get_scale();
-                        Spinner::Spinner("ClientSpinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
+                        ImGui::Spinner("ClientSpinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                     } else {
                         show_disabled_connect_button();
                     }
                     show_table();
-                    const float scale { GUI::Boilerplate::get_scale() };
-                    Spinner::Spinner("ScanningSpinner", 5.0f * scale, 2.0f * scale, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]));
                 }
             }, shm->active_state);
 
             ImGui::End();
-
-            if(show_ble_off_error_pop_up) {
-                ImGui::OpenPopup("Error##0");
-                // Always center this window when appearing
-                ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-                show_ble_off_error_pop_up = false;
-            }
-
-            if(ImGui::BeginPopupModal("Error##0", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
-                ImGui::Text("Bluetooth is turned off.");
-                if(ImGui::Button("OK", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f))) {
-                    ImGui::CloseCurrentPopup();
-                }
-                ImGui::EndPopup();
-            }
-
-            if(show_connection_attempt_timeout_error_pop_up) {
-                ImGui::OpenPopup("Error##1");
-                // Always center this window when appearing
-                ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-                show_connection_attempt_timeout_error_pop_up = false;
-            }
-
-            if(ImGui::BeginPopupModal("Error##1", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
-                ImGui::Text("Connection attempt timed out");
-                if(ImGui::Button("OK", ImVec2(64 * GUI::Boilerplate::get_scale(), 0.0f))) {
-                    ImGui::CloseCurrentPopup();
-                }
-                ImGui::EndPopup();
-            }
         }
 
         void BLE_Adapter::show_table() {
@@ -205,7 +173,7 @@ namespace GUI {
                     }
                     std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 }
-                self.show_ble_off_error_pop_up = true;
+                self.popup_queue.push_back("Error", "start_failed");
             }, std::ref(*this));
             t1.detach();
             stop_sources.push_back(t1.get_stop_source());

@@ -17,7 +17,13 @@ namespace AD5933 {
         explicit constexpr uint_freq_t(const uint32_t in_value) :
             value { 
                 [](const uint32_t in_value) -> uint32_t {
-                    assert((in_value >= min) && (in_value <= max));
+                    #ifdef __cpp_exceptions
+                        if((in_value >= min) && (in_value <= max) == false) {
+                            throw std::runtime_error("(in_value >= min) && (in_value <= max) == false");
+                        }
+                    #else
+                        assert((in_value >= min) && (in_value <= max));
+                    #endif
                     return in_value;
                 }(in_value)
             }
