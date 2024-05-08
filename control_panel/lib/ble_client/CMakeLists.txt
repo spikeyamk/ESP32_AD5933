@@ -41,7 +41,9 @@ set(BLE_CLIENT_SRCS
 	lib/esp32_ad5933.cpp
 	lib/cmd_listener.cpp
 	lib/child_main.cpp
-	"lib/shm/names.cpp"
+	lib/shm/names.cpp
+	lib/shm/shm.cpp
+	lib/shm/specialized.cpp
 	lib/state_machines/adapter/adapter.cpp
 	lib/state_machines/adapter/events.cpp
 	lib/state_machines/adapter/checker.cpp

@@ -1,3 +1,5 @@
 build*
 .vscode*
 .cache*
+control_panel/lib/legal/include/legal/legal.hpp
+control_panel/lib/legal/lib/legal.cpp
