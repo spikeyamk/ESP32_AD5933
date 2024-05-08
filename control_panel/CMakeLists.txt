@@ -13,7 +13,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 endif()
 
 set(TRIELO_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/trielo_wrapper/trielo)
-set(SDL3_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/SDL3)
+set(SDL3_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/SDL)
 set(IMGUI_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/imgui)
 set(IMPLOT_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/implot)
 set(MAGIC_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/magic)
@@ -22,7 +22,8 @@ set(AD5933_CONFIG_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/ad5933/ad5933_config)
 set(AD5933_MEASUREMENT_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/ad5933/ad5933_measurement)
 set(AD5933_TEMPERATURE_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/ad5933/ad5933_temperature)
 set(AD5933_DEBUG_DATA_DIR ${CMAKE_CURRENT_LIST_DIR}/../common/ad5933/ad5933_debug_data)
-set(BLE_CLIENT_DIR ${CMAKE_CURRENT_LIST_DIR}/ble_client)
+set(BLE_CLIENT_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/ble_client)
+set(LEGAL_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/legal)
 set(JSON_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/json)
 set(NATIVE_FILE_DIALOG_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/nativefiledialog-extended)
 set(SEMVER_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/extern/semver)
@@ -75,12 +76,10 @@ add_subdirectory(${SEMVER_DIR})
 add_library(mbits::semver ALIAS semver)
 add_subdirectory(${UTFCONV_DIR})
 add_subdirectory(${BLE_CLIENT_DIR})
+add_subdirectory(${LEGAL_DIR})
 
 add_executable(${PROJECT_NAME}
 	main.cpp
-	"ble_client/lib/shm/names.cpp"
-	ble_client/lib/shm/specialized.cpp
-	ble_client/lib/shm/shm.cpp
 
 	lib/imgui_custom/spinner.cpp
 	lib/imgui_custom/input_items.cpp
@@ -113,18 +112,6 @@ add_executable(${PROJECT_NAME}
 	lib/json/conversion.cpp
 	lib/json/settings.cpp
 
-	lib/legal/boost.cpp
-	lib/legal/dear_imgui.cpp
-	lib/legal/implot.cpp
-	lib/legal/json.cpp
-	lib/legal/nativefiledialog_extended.cpp
-	lib/legal/sdl3.cpp
-	lib/legal/semver.cpp
-	lib/legal/simpleble.cpp
-	lib/legal/sml.cpp
-	lib/legal/ubuntu_sans_fonts.cpp
-	lib/legal/utfconv.cpp
-	lib/legal/fmt.cpp
 	${IMGUI_SRCS}
 	${IMPLOT_SRCS}
 )
@@ -137,6 +124,14 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 endif()
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE NFD_NATIVE)
+target_compile_definitions(${PROJECT_NAME} PRIVATE VERSION="0.1.12")
+execute_process(
+    COMMAND git rev-parse --short HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_COMMIT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+target_compile_definitions(${PROJECT_NAME} PRIVATE GIT_COMMIT_HASH="${GIT_COMMIT_HASH}")
 
 target_include_directories(${PROJECT_NAME} PRIVATE
 	${CMAKE_CURRENT_LIST_DIR}/include
@@ -158,6 +153,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 	nfd
 	nlohmann_json 
 	ble_client
+	legal
 	utfconv
 	serde 
 )

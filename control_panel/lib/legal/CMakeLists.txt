@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project("esp32_ad5933_control_panel_legal" CXX)
+project("legal" CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)

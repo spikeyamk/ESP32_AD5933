@@ -79,7 +79,8 @@ namespace GUI {
                             if(ImGui::Button("Cancel", ImVec2(64.0f * Boilerplate::get_scale(), 0.0f))) {
                                 popup_queue.deactivate();
                             }
-                    });
+                        }
+                    );
                 }
                 event_quit = false;
             }

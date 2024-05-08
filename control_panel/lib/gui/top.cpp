@@ -1,10 +1,9 @@
 #include <fstream>
+#include <string>
 
 #include <trielo/trielo.hpp>
 #include <imgui_internal.h>
 #include <implot.h>
-
-#include "legal/all.hpp"
 
 #include "gui/windows/ble_adapter.hpp"
 #include "gui/top.hpp"
@@ -131,50 +130,47 @@ namespace GUI {
     }
 
     void Top::draw_about_page() {
-        ImGui::Text("Version: " "0.1.12");
-        ImGui::Text("Built on: " __DATE__ " " __TIME__);
+        static const std::string about_page_text {
+            std::format(
+                "Version: " VERSION "\n"
+                "Built on: " __DATE__ " " __TIME__ "\n"
+                "Git Commit: " GIT_COMMIT_HASH "\n"
+                #ifdef _MSC_VER
+                    "Microsoft Visual C++ Version: {}\n"
+                #endif
+                #ifdef _MSVC_STL_VERSION
+                    "MSVC STL Version: {}\n"
+                #endif
+                "SDL Version: {}.{}\n"
+                "ImGui Version: {}\n" 
+                "ImPlot Version: {}\n",
+                _MSC_VER,
+                _MSVC_STL_VERSION,
+                SDL_MAJOR_VERSION,
+                SDL_MINOR_VERSION,
+                IMGUI_VERSION,
+                IMPLOT_VERSION
+            ) 
+        };
+        ImGui::Text(about_page_text.c_str());
+        if(ImGui::Button("Copy to Clipboard")) {
+            ImGui::LogToClipboard();
+            ImGui::LogText(about_page_text.c_str());
+            ImGui::LogFinish();
+        }
     }
 
-    void Top::draw_license(const char* name, const char* license) const {
-        if(ImGui::TreeNode(name)) {
-            ImGui::Text("%s", license);
+    void Top::draw_license(const Legal::License& license) const {
+        if(ImGui::TreeNode(license.name.data())) {
+            ImGui::Text("%s", license.text.data());
             ImGui::TreePop();
         }
     }
 
     void Top::draw_legal() const {
-        draw_license(
-            "SimpleBLE"
-            "          "
-            "          "
-            "          "
-            "          "
-            "          "
-            "          "
-            "          "
-            "          "
-            "          "
-            "          "
-            "          "
-            "          "
-            "          "
-            "          "
-            "          "
-            "          "
-            "          "
-            , Legal::simpleble
-        );
-        draw_license("Dear ImGui", Legal::dear_imgui);
-        draw_license("implot", Legal::implot);
-        draw_license("json", Legal::json);
-        draw_license("nativefiledialog-extended", Legal::nativefiledialog_extended);
-        draw_license("boost", Legal::boost);
-        draw_license("sml", Legal::sml);
-        draw_license("SDL3", Legal::sdl3);
-        draw_license("semver", Legal::semver);
-        draw_license("utfconv", Legal::utfconv);
-        draw_license("fmt", Legal::fmt);
-        draw_license("Ubuntu-Sans-fonts", Legal::ubuntu_sans_fonts);
+        for(const auto& e: Legal::licenses) {
+            draw_license(e);
+        }
     }
 
     void Top::draw_settings() {

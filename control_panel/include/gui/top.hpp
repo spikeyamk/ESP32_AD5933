@@ -7,6 +7,7 @@
 
 #include "gui/boilerplate.hpp"
 #include "json/settings.hpp"
+#include "legal/legal.hpp"
 
 namespace GUI {
     class Top {
@@ -46,7 +47,7 @@ namespace GUI {
         void draw_about_page();
         void draw_settings();
         void draw_legal() const;
-        void draw_license(const char* name, const char* license) const;
+        void draw_license(const Legal::License& license) const;
     private:
         void save_settings();
         void update_theme();
