@@ -13,9 +13,6 @@
 [submodule "control_panel/lib/extern/implot"]
 	path = control_panel/lib/extern/implot
 	url = https://github.com/epezent/implot.git
-[submodule "control_panel/lib/extern/SDL"]
-	path = control_panel/lib/extern/SDL3
-	url = https://github.com/libsdl-org/SDL.git
 [submodule "control_panel/lib/extern/imgui"]
 	path = control_panel/lib/extern/imgui
 	url = https://github.com/ocornut/imgui.git
@@ -37,3 +34,6 @@
 [submodule "common/serde_wrapper/serde/lib/extern/pfr"]
 	path = common/serde_wrapper/serde/lib/extern/pfr
 	url = https://github.com/boostorg/pfr.git
+[submodule "control_panel/lib/extern/SDL"]
+	path = control_panel/lib/extern/SDL
+	url = https://github.com/libsdl-org/SDL.git
