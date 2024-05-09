@@ -28,9 +28,6 @@
 [submodule "control_panel/ble_client/lib/extern/fmt"]
 	path = control_panel/lib/ble_client/lib/extern/fmt
 	url = https://github.com/fmtlib/fmt.git
-[submodule "fw/components/esp_littlefs"]
-	path = fw/components/esp_littlefs
-	url = https://github.com/joltwallet/esp_littlefs.git
 [submodule "common/serde_wrapper/serde/lib/extern/pfr"]
 	path = common/serde_wrapper/serde/lib/extern/pfr
 	url = https://github.com/boostorg/pfr.git

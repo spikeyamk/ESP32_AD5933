@@ -132,24 +132,40 @@ namespace GUI {
     void Top::draw_about_page() {
         static const std::string about_page_text {
             std::format(
-                "Version: " VERSION "\n"
-                "Built on: " __DATE__ " " __TIME__ "\n"
-                "Git Commit: " GIT_COMMIT_HASH "\n"
-                #ifdef _MSC_VER
-                    "Microsoft Visual C++ Version: {}\n"
+                "Version: {}\n"
+                "Built on: {}\n"
+                "Commit: {}\n"
+                #ifdef _MSC_FULL_VER
+                    "Microsoft Visual C++ version: {}\n"
+                #endif
+                #ifdef _MSVC_LANG
+                    "MSVC C++ language standard: {}\n"
                 #endif
                 #ifdef _MSVC_STL_VERSION
-                    "MSVC STL Version: {}\n"
+                    "MSVC STL version: {}\n"
                 #endif
-                "SDL Version: {}.{}\n"
-                "ImGui Version: {}\n" 
-                "ImPlot Version: {}\n",
-                _MSC_VER,
+                "SDL version: {}.{}\n"
+                "ImGui version: {}\n" 
+                "ImPlot version: {}\n"
+                "OS: {}",
+                VERSION,
+                __DATE__ " " __TIME__,
+                GIT_COMMIT_HASH,
+                _MSC_FULL_VER,
+                _MSVC_LANG,
                 _MSVC_STL_VERSION,
-                SDL_MAJOR_VERSION,
-                SDL_MINOR_VERSION,
+                SDL_MAJOR_VERSION, SDL_MINOR_VERSION,
                 IMGUI_VERSION,
-                IMPLOT_VERSION
+                IMPLOT_VERSION,
+                #ifdef _WIN64
+                    "Windows_NT 64-bit"
+                #elif __APPLE__ || __MACH__
+                    "Mac OSX"
+                #elif __linux__
+                    "Linux"
+                #else
+                    "UKNOWN"
+                #endif
             ) 
         };
         ImGui::Text(about_page_text.c_str());
@@ -162,7 +178,7 @@ namespace GUI {
 
     void Top::draw_license(const Legal::License& license) const {
         if(ImGui::TreeNode(license.name.data())) {
-            ImGui::Text("%s", license.text.data());
+            ImGui::Text(license.text.data());
             ImGui::TreePop();
         }
     }

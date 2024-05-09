@@ -4,10 +4,14 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
+# Create empty files
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/lib/legal.cpp" "")
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/include/legal/legal.hpp" "")
+
 find_package(Python3 COMPONENTS Interpreter)
 
 execute_process(
-    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_LIST_DIR}/misc/license.py"
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_LIST_DIR}/gen_source.py" ${CMAKE_CURRENT_BINARY_DIR}
     WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
     RESULT_VARIABLE PYTHON_SCRIPT_RESULT
     OUTPUT_VARIABLE PYTHON_SCRIPT_OUTPUT
@@ -24,5 +28,5 @@ else()
     message(FATAL_ERROR "Error running Python script: ${PYTHON_SCRIPT_ERROR}")
 endif()
 
-add_library(${PROJECT_NAME} lib/legal.cpp)
-target_include_directories(${PROJECT_NAME} PUBLIC include)
+add_library(${PROJECT_NAME} ${CMAKE_CURRENT_BINARY_DIR}/lib/legal.cpp)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/include)
